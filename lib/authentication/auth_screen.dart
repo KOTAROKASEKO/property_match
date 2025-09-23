@@ -181,6 +181,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (userCredential.user != null) {
           await _createUserProfile(userCredential.user!, _displayNameController.text.trim());
           await uploadFcm();
+          userData.setUser(FirebaseAuth.instance.currentUser);
           if (mounted) {
             Navigator.of(context).popUntil((route) => route.isFirst);
           }
@@ -399,6 +400,7 @@ class _SignInModalState extends State<SignInModal> {
                   });
                   final userCredential = await _signInWithGoogle();
                   if (mounted) {
+                    userData.setUser(FirebaseAuth.instance.currentUser);
                     Navigator.pop(context, userCredential != null);
                   }
                 },
@@ -442,6 +444,7 @@ class _SignOutModalState extends State<SignOutModal> {
                 await GoogleSignIn.instance.disconnect();
                 await FirebaseAuth.instance.signOut();
                 if (mounted) {
+                  userData.setUser(null);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Sign out successful.'),
