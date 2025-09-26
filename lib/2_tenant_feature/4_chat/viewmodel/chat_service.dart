@@ -5,11 +5,14 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/model/chat_thread.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/repo/isar_helper.dart';
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance; 
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final IsarService _isarService = IsarService();
 
   Future<void> updateViewingDetails({
     required String threadId,
@@ -22,9 +25,9 @@ class ChatService {
 
     for (var image in images) {
       if (image is String) {
-        finalImageUrls.add(image); 
+        finalImageUrls.add(image);
       } else if (image is File) {
-        filesToUpload.add(image); 
+        filesToUpload.add(image);
       }
     }
 
@@ -66,8 +69,28 @@ class ChatService {
     });
   }
 
-    Future<void> updateGeneralNoteAndImages({
-    required String threadId,
+  Future<void> deleteChat(String threadId) async {
+    // 1. Delete from Firestore
+    // First, get all messages in the subcollection
+    final messagesRef = _firestore.collection('chats').doc(threadId).collection('messages');
+    final messagesSnapshot = await messagesRef.get();
+
+    // Use a batch to delete all messages efficiently
+    final WriteBatch batch = _firestore.batch();
+    for (var doc in messagesSnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+
+    // After deleting the subcollection, delete the main chat document
+    await _firestore.collection('chats').doc(threadId).delete();
+    
+    // 2. Delete from the local Isar database
+    await _isarService.deleteChatThreadAndMessages(threadId);
+  }
+
+  Future<void> updateGeneralNoteAndImages({
+    required ChatThread thread,
     required String note,
     required List<dynamic> images,
   }) async {
@@ -85,15 +108,20 @@ class ChatService {
 
     // Upload new files and get their URLs
     if (filesToUpload.isNotEmpty) {
-      List<String> newImageUrls = await _uploadImages(threadId, filesToUpload);
+      List<String> newImageUrls = await _uploadImages(thread.id, filesToUpload);
       finalImageUrls.addAll(newImageUrls);
     }
 
     // Update the document with the note and the complete list of image URLs
-    await _firestore.collection('chats').doc(threadId).update({
+    await _firestore.collection('chats').doc(thread.id).update({
       'generalNote': note,
       'generalImageUrls': finalImageUrls,
     });
+    //update isar
+    thread.generalNote = note;
+    thread.generalImageUrls = finalImageUrls; 
+    
+    _isarService.saveChatThread(thread);
   }
 
   Future<List<String>> _uploadImages(String threadId, List<File> files) async {

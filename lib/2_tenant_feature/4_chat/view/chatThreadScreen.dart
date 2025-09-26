@@ -14,9 +14,9 @@ import 'package:re_conver/2_tenant_feature/4_chat/view/chat_rooms/viewing_proper
 import 'package:re_conver/2_tenant_feature/4_chat/view/date_time_picker_modal.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/report_user_dialogue.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/chat_service.dart';
-import 'package:re_conver/app/debug_print.dart';
 import 'package:re_conver/authentication/userdata.dart';
 
+// ViewingAppointmentクラスは変更なし
 class ViewingAppointment {
   final ChatThread thread;
   final DateTime viewingTime;
@@ -47,103 +47,100 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
   final ChatService _chatService = ChatService();
   
   late final TabController _tabController;
-  bool _isDataInitialized = false;
+  StreamSubscription? _threadsSubscription; 
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _initializeScreen();
+    _initializeAndListenToThreads(); 
   }
 
   @override
   void dispose() {
+    _threadsSubscription?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
-  Future<void> _initializeScreen() async {
-    await _loadDataFromIsar();
-    await _syncDataFromFirestoreToIsar();
-  }
+   Future<void> _confirmDeleteChat(BuildContext context, ChatThread thread) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Chat?'),
+        content: const Text(
+            'This will permanently delete all messages in this conversation. This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
 
-  Future<void> _loadDataFromIsar() async {
-    if (!mounted) return;
-    final threads = await _isarService.getAllChatThreads();
-    if (threads.isNotEmpty && mounted) {
-      setState(() {
-        _isDataInitialized = true;
-      });
-    }else{
-      pr('No chat threads found in Isar DB during initialization.');
+    if (confirm == true && mounted) {
+      try {
+        await _chatService.deleteChat(thread.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Chat deleted successfully.')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete chat: $e')),
+          );
+        }
+      }
     }
   }
 
-  Future<void> _syncDataFromFirestoreToIsar() async {
-  if (!mounted) return;
 
-  try {
-    final threadsSnapshot = await _firestore
+
+
+  void _initializeAndListenToThreads() {
+    _threadsSubscription = _firestore
         .collection('chats')
         .where(Filter.or(
           Filter('whoSent', isEqualTo: userData.userId),
           Filter('whoReceived', isEqualTo: userData.userId),
         ))
-        .get();
+        .snapshots()
+        .listen((snapshot) async {
+      if (!mounted) return;
 
-    final threadsFromFirestore =
-        threadsSnapshot.docs.map((doc) => ChatThread.fromFirestore(doc)).toList();
+      // 変更があったドキュメントだけを処理
+      for (var change in snapshot.docChanges) {
+        if (!change.doc.exists || change.doc.data() == null) continue;
 
-    // ユーザー情報をまとめて取得するための準備
-    final userIdsToFetch = threadsFromFirestore
-        .where((thread) => thread.hisName == null || thread.hisPhotoUrl == null)
-        .map((thread) => _getOtherParticipantId(thread, userData.userId))
-        .toSet() // 重複を削除
-        .toList();
+        final thread = ChatThread.fromFirestore(
+          change.doc,
+        );
 
-        for(String id in userIdsToFetch){
-          pr('Need to fetch user profile for userId: $id');
-        }
-
-    final Map<String, Map<String, dynamic>> userProfiles = {};
-    if (userIdsToFetch.isNotEmpty) {
-      final userDocs = await Future.wait(userIdsToFetch
-          .map((userId) => _firestore.collection('users_prof').doc(userId).get()));
-      for (var userDoc in userDocs) {
-        if (userDoc.exists) {
-          pr('Fetched profile for the user ${userDoc.data()?["displayName"]}');
-          userProfiles[userDoc.id] = userDoc.data()!;
-        }
-      }
-    }
-
-    for (final thread in threadsFromFirestore) {
-      if (thread.hisName == null || thread.hisPhotoUrl == null) {
         final otherUserId = _getOtherParticipantId(thread, userData.userId);
-        final userProfile = userProfiles[otherUserId];
-        if (userProfile != null) {
-          pr('display name : ${userProfile['displayName']}');
-          thread.hisName = userProfile['displayName'];
-          thread.hisPhotoUrl = userProfile['profileImageUrl'];
+        final userDoc = await _firestore.collection('users_prof').doc(otherUserId).get();
+        if (userDoc.exists && userDoc.data() != null) {
+          thread.hisName = userDoc.data()!['displayName'];
+          thread.hisPhotoUrl = userDoc.data()!['profileImageUrl'];
         }
+        // Isarに保存 (これがUIを自動更新する)
+        await _isarService.saveChatThread(thread);
       }
-    }
-    if (threadsFromFirestore.isNotEmpty) {
-
-      pr('final check hisName field: ${threadsFromFirestore[0].hisName}');
-      await _isarService.saveAllChatThreads(threadsFromFirestore);
-    }
-  } catch (e) {
-    print("Error syncing data from Firestore to Isar: $e");
-  } finally {
-    // UIの初期化が完了したことを通知
-    if (mounted && !_isDataInitialized) {
-      setState(() {
-        _isDataInitialized = true;
-      });
-    }
+    }, onError: (error) {
+      print("Error listening to chat threads: $error");
+    });
   }
-}
   
   String _getOtherParticipantId(ChatThread thread, String currentUserId) {
     return thread.whoReceived != currentUserId
@@ -151,6 +148,10 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
         : thread.whoSent;
   }
 
+  // _showReportUserDialog, _showChatOptions, _addViewingTime など、
+  // 他のメソッドはこの下に変更なく続きます...
+  
+  // (ここに _showReportUserDialog, _showChatOptions などのメソッドをペースト)
   void _showReportUserDialog(String reportedUserId) async {
     final reason = await showDialog<String>(
       context: context,
@@ -285,6 +286,14 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
           );
         },
       ),
+      ListTile(
+        leading: Icon(Icons.delete_forever_outlined, color: Colors.red[700]),
+        title: Text('Delete Chat', style: TextStyle(color: Colors.red[700])),
+        onTap: () {
+          Navigator.of(ctx).pop(); // Close the bottom sheet
+          _confirmDeleteChat(context, thread);
+        },
+      ),
     ];
   }
 
@@ -331,6 +340,14 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
         onTap: () {
           Navigator.of(ctx).pop();
           _removeViewingTime(appointment.thread, appointment.viewingTime);
+        },
+      ),
+      ListTile(
+        leading: Icon(Icons.delete_forever_outlined, color: Colors.red[700]),
+        title: Text('Delete Chat', style: TextStyle(color: Colors.red[700])),
+        onTap: () {
+          Navigator.of(ctx).pop(); // Close the bottom sheet
+          _confirmDeleteChat(context, appointment.thread);
         },
       ),
       ListTile(
@@ -426,6 +443,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     if (userData.userId.isEmpty) {
@@ -452,83 +470,70 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
           ],
         ),
       ),
-      body: !_isDataInitialized
-          ? const Center(child: CircularProgressIndicator())
-          : StreamBuilder<List<ChatThread>>(
-              stream: _isarService.watchChatThreads(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    !_isDataInitialized) {
-                  return const Center(child: CircularProgressIndicator());
+      body: StreamBuilder<List<ChatThread>>(
+        stream: _isarService.watchChatThreads(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+          if (snapshot.data!.isEmpty) {
+            return const Center(child: Text("No chats yet."));
+          }
+
+          final allThreads = snapshot.data!;
+          allThreads.sort((a, b) => b.timeStamp.compareTo(a.timeStamp));
+
+          final viewingAppointments = allThreads.expand<ViewingAppointment>((thread) {
+            return thread.viewingTimes.asMap().entries.map((entry) {
+              int index = entry.key;
+              DateTime time = entry.value;
+              String? note = (index < thread.viewingNotes.length) ? thread.viewingNotes[index] : null;
+              List<String> imageUrls = [];
+              if (index < thread.viewingImageUrls.length && thread.viewingImageUrls[index].isNotEmpty) {
+                try {
+                  var decoded = jsonDecode(thread.viewingImageUrls[index]);
+                  if (decoded is String) {
+                    decoded = jsonDecode(decoded);
+                  }
+                  if (decoded is List) {
+                    imageUrls = List<String>.from(decoded);
+                  }
+                } catch (e) {
+                  print("Error decoding image urls: $e");
                 }
-                if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No chats yet."));
-                }
+              }
+              return ViewingAppointment(
+                thread: thread,
+                viewingTime: time,
+                note: note,
+                imageUrls: imageUrls,
+                viewingIndex: index,
+              );
+            });
+          }).toList();
 
-                final allThreads = snapshot.data!;
-                allThreads.sort((a, b) => b.timeStamp.compareTo(a.timeStamp));
+          viewingAppointments.sort((a, b) => a.viewingTime.compareTo(b.viewingTime));
 
-                final viewingAppointments =
-                    allThreads.expand<ViewingAppointment>((thread) {
-                  return thread.viewingTimes.asMap().entries.map((entry) {
-                    int index = entry.key;
-                    DateTime time = entry.value;
-                    String? note = (index < thread.viewingNotes.length)
-                        ? thread.viewingNotes[index]
-                        : null;
-                    List<String> imageUrls = [];
-                    if (index < thread.viewingImageUrls.length &&
-                        thread.viewingImageUrls[index].isNotEmpty) {
-                      try {
-                        var decoded =
-                            jsonDecode(thread.viewingImageUrls[index]);
-                        if (decoded is String) {
-                          decoded = jsonDecode(decoded);
-                        }
-                        if (decoded is List) {
-                          imageUrls = List<String>.from(decoded);
-                        }
-                      } catch (e) {
-                        print("Error decoding image urls: $e");
-                      }
-                    }
-                    return ViewingAppointment(
-                      thread: thread,
-                      viewingTime: time,
-                      note: note,
-                      imageUrls: imageUrls,
-                      viewingIndex: index,
-                    );
-                  });
-                }).toList();
-
-                viewingAppointments
-                    .sort((a, b) => a.viewingTime.compareTo(b.viewingTime));
-
-                return TabBarView(
-                  controller: _tabController,
-                  children: [
-                    ChatThreadList(
-                      threads: allThreads,
-                      getOtherParticipantId: _getOtherParticipantId,
-                      onLongPress: (thread) =>
-                          _showChatOptions(context, thread, null),
-                    ),
-                    ViewingAppointmentList(
-                      appointments: viewingAppointments,
-                      getOtherParticipantId: _getOtherParticipantId,
-                      onLongPress: (appointment) => _showChatOptions(
-                          context, appointment.thread, appointment),
-                    ),
-                  ],
-                );
-              },
-            ),
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              ChatThreadList(
+                threads: allThreads,
+                getOtherParticipantId: _getOtherParticipantId,
+                onLongPress: (thread) => _showChatOptions(context, thread, null),
+              ),
+              ViewingAppointmentList(
+                appointments: viewingAppointments,
+                getOtherParticipantId: _getOtherParticipantId,
+                onLongPress: (appointment) => _showChatOptions(context, appointment.thread, appointment),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
-
-

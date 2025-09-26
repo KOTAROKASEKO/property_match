@@ -28,7 +28,7 @@ class RoleSelectionScreen extends StatelessWidget {
         });
       } else {
         await FirebaseFirestore.instance
-            .collection('agents_prof')
+            .collection('users_prof')
             .doc(user.uid)
             .set({
           'displayName': user.displayName ?? 'New Agent',
@@ -45,6 +45,7 @@ class RoleSelectionScreen extends StatelessWidget {
           builder: (context) => const MainScaffold(),
         ),
       );
+      
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error setting role: $e')),

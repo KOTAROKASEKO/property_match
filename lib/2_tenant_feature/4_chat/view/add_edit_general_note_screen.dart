@@ -53,7 +53,7 @@ class _AddEditGeneralNoteScreenState extends State<AddEditGeneralNoteScreen> {
     try {
       // 新しいサービスメソッドを呼び出す
       await _chatService.updateGeneralNoteAndImages(
-        threadId: widget.thread.id,
+        thread: widget.thread,
         note: _noteController.text.trim(),
         images: _images,
       );
@@ -114,7 +114,6 @@ class _AddEditGeneralNoteScreenState extends State<AddEditGeneralNoteScreen> {
   }
 
   Widget _buildImagePickerGrid() {
-    // ... (このウィジェットのコードは add_edit_viewing_note_screen.dart からそのままコピー)
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),

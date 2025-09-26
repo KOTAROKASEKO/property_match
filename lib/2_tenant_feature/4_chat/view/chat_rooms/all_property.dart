@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/chat_thread.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/providerIndividualChat.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/viewing_details_bottomsheet.dart';
+import 'package:re_conver/app/debug_print.dart';
 import 'package:re_conver/authentication/userdata.dart';
 
 class ChatThreadList extends StatelessWidget {
@@ -37,10 +38,7 @@ class ChatThreadList extends StatelessWidget {
         final displayName = thread.hisName ?? 'Chat User';
         final imageUrl = thread.hisPhotoUrl;
         final unreadCount = thread.unreadCountMap[userData.userId] ?? 0;
-        final note = (thread.viewingNotes.isNotEmpty &&
-                thread.viewingNotes[0].isNotEmpty)
-            ? thread.generalNote
-            : null;
+        final note = thread.generalNote;
 
         List<String> imageUrls = [];
         if (thread.generalImageUrls.isNotEmpty &&
@@ -109,6 +107,7 @@ class ChatThreadList extends StatelessWidget {
                       ],
                     ),
                     onTap: () {
+                      pr('thread id is ::::  ${thread.id}');
                       Navigator.of(context).push(
                         PageRouteBuilder(
                           pageBuilder:
@@ -136,7 +135,7 @@ class ChatThreadList extends StatelessWidget {
                     },
                     onLongPress: () => onLongPress(thread),
                   ),
-                   if (imageUrls.isNotEmpty || (note != null && note.isNotEmpty))
+                  if (imageUrls.isNotEmpty || (note != null && note.isNotEmpty))
                     const Divider(height: 24),
                   GestureDetector(
                     onTap: () {

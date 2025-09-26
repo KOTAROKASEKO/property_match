@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:re_conver/MainScaffold.dart';
+import 'package:re_conver/app/debug_print.dart';
+import 'package:re_conver/app/localDB_Manager.dart';
 import 'package:re_conver/authentication/forgotpassword.dart';
 import 'package:re_conver/authentication/role_selection_screen.dart';
 import 'package:re_conver/authentication/userdata.dart';
@@ -431,18 +433,24 @@ class _SignOutModalState extends State<SignOutModal> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                await GoogleSignIn.instance.disconnect();
-                await FirebaseAuth.instance.signOut();
-                if (mounted) {
-                  userData.setUser(null);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Sign out successful.'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  Navigator.pop(context, true);
+                try{
+                  await deleteAllData();
+                  await GoogleSignIn.instance.disconnect();
+                  await FirebaseAuth.instance.signOut();
+                  if (mounted) {
+                    userData.setUser(null);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sign out successful.'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    Navigator.pop(context, true);
+                  }
+                }catch(error){
+                  pr('Error in logging out : ${error}');
                 }
+                
               },
               child: const Text('Sign Out'),
             ),

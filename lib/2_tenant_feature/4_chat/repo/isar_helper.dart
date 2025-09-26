@@ -74,10 +74,34 @@ class IsarService {
       await isar.chatThreads.putAll(threads);
     });
   }
+
+  // Add this new method inside the IsarService class
+
+  Future<void> deleteChatThreadAndMessages(String threadId) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      // First, delete all messages that belong to the chat room
+      await isar.messageModels.filter().chatRoomIdEqualTo(threadId).deleteAll();
+      
+      // Then, find the chat thread by its unique ID and delete it
+      final threadToDelete = await isar.chatThreads.filter().idEqualTo(threadId).findFirst();
+      if (threadToDelete != null) {
+        await isar.chatThreads.delete(threadToDelete.isarId);
+      }
+    });
+  }
   
   Stream<List<ChatThread>> watchChatThreads() async* {
     final isar = await db;
     yield* isar.chatThreads.where().watch(fireImmediately: true);
+  }
+
+  Future<void> clearDatabaseOnLogout() async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.clear();
+    });
+    pr("✅ Isar database has been cleared on logout.");
   }
 
     Future<List<ChatThread>> getAllChatThreads() async {

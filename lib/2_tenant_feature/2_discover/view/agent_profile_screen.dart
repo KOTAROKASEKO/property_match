@@ -7,7 +7,6 @@ import 'package:re_conver/2_tenant_feature/2_discover/model/agent_profile_model.
 import 'package:re_conver/2_tenant_feature/2_discover/view/post_card.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/viewmodel/discover_viewmodel.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/viewmodel/agent_profile_viewmodel.dart' show ProfileViewModel;
-import 'package:re_conver/2_tenant_feature/3_profile/services/user_service.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/providerIndividualChat.dart';
 import 'package:re_conver/authentication/auth_service.dart';
 import 'package:re_conver/authentication/userdata.dart';
@@ -38,7 +37,6 @@ class _ProfileView extends StatefulWidget {
 }
 
 class _ProfileViewState extends State<_ProfileView> {
-  // ✅ REMOVED: No longer need initState to load data
   @override
   Widget build(BuildContext context) {
     return Consumer<ProfileViewModel>(
