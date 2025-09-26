@@ -6,6 +6,7 @@ import 'package:re_conver/authentication/auth_screen.dart';
 import 'package:re_conver/authentication/auth_service.dart';
 import 'package:re_conver/authentication/role_selection_screen.dart';
 import 'package:re_conver/authentication/userdata.dart';
+import 'package:re_conver/service/FirebaseApi.dart';
 
 class LoginPlaceholderScreen extends StatelessWidget {
   const LoginPlaceholderScreen({super.key});
@@ -99,14 +100,13 @@ class LoginPlaceholderScreen extends StatelessWidget {
                     final user = userData.userId;
                     final navigator = Navigator.of(context);
 
-                    // Check if user profile exists in Firestore
                     final userDoc = await FirebaseFirestore.instance.collection('users_prof').doc(user).get();
                     final agentDoc = await FirebaseFirestore.instance.collection('agents_prof').doc(user).get();
                     print(userDoc.exists);
                     print(agentDoc.exists);
                     if (!userDoc.exists && !agentDoc.exists) {
                       
-                      // New user -> Navigate to Role Selection
+                      saveTokenToDatabase();
                       navigator.pushAndRemoveUntil(
                         MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
                         (route) => false,
@@ -117,6 +117,7 @@ class LoginPlaceholderScreen extends StatelessWidget {
                       } else {
                         userData.setRole(Roles.tenant);
                       }
+                      saveTokenToDatabase();
                       navigator.pushAndRemoveUntil(
                         MaterialPageRoute(builder: (context) => const MainScaffold()),
                         (route) => false,

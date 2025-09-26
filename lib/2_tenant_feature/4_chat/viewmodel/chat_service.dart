@@ -66,6 +66,36 @@ class ChatService {
     });
   }
 
+    Future<void> updateGeneralNoteAndImages({
+    required String threadId,
+    required String note,
+    required List<dynamic> images,
+  }) async {
+    List<String> finalImageUrls = [];
+    List<File> filesToUpload = [];
+
+    // Separate existing URLs and new files to upload
+    for (var image in images) {
+      if (image is String) {
+        finalImageUrls.add(image);
+      } else if (image is File) {
+        filesToUpload.add(image);
+      }
+    }
+
+    // Upload new files and get their URLs
+    if (filesToUpload.isNotEmpty) {
+      List<String> newImageUrls = await _uploadImages(threadId, filesToUpload);
+      finalImageUrls.addAll(newImageUrls);
+    }
+
+    // Update the document with the note and the complete list of image URLs
+    await _firestore.collection('chats').doc(threadId).update({
+      'generalNote': note,
+      'generalImageUrls': finalImageUrls,
+    });
+  }
+
   Future<List<String>> _uploadImages(String threadId, List<File> files) async {
     List<Future<String>> uploadFutures = files.map((file) async {
       String fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';

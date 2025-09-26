@@ -1,7 +1,8 @@
 // lib/screens/main_scaffold.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:re_conver/authentication/login_placejolder.dart';
+import 'package:re_conver/2_tenant_feature/3_profile/view/profile_screen.dart';
+import 'package:re_conver/authentication/login_placeholder.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/view/discover_screen.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/chatThreadScreen.dart';
 
@@ -35,6 +36,21 @@ class _MainScaffoldState extends State<MainScaffold> {
         },
       ),
       const DiscoverScreen(),
+      StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasData) {
+            return  const ProfileScreen();
+          }
+          else {
+            return const LoginPlaceholderScreen();
+          }
+        },
+      ),
+      
     ];
   }
 
@@ -63,6 +79,12 @@ class _MainScaffoldState extends State<MainScaffold> {
             activeIcon: Icon(Icons.travel_explore_sharp),
             label: 'Discover',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.deepPurple,

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/view/create_post_screen.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/view/post_card.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/view/profilescreen.dart';
+import 'package:re_conver/2_tenant_feature/3_profile/view/profile_screen.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/viewmodel/discover_viewmodel.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/chatThreadScreen.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/unread_messages_viewmodel.dart';

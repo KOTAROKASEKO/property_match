@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/message_model.dart';
-import 'package:re_conver/2_tenant_feature/4_chat/model/user_profile.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/audio_player_widget.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/full_screen_image_view.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageList.dart';
@@ -15,11 +14,11 @@ import 'package:re_conver/authentication/userdata.dart';
 
 class MessageListView extends StatefulWidget {
   final String otherUserName;
-  final UserProfileForChat? otherUserProfile;
+  final String? otherUserPhotoUrl;
   const MessageListView({
     super.key,
     required this.otherUserName,
-    this.otherUserProfile,
+    this.otherUserPhotoUrl,
   });
 
   @override
@@ -171,7 +170,7 @@ class _MessageListViewState extends State<MessageListView> {
             context,
             item,
             widget.otherUserName,
-            widget.otherUserProfile,
+            widget.otherUserPhotoUrl,
           );
         }
         return const SizedBox.shrink();
@@ -205,7 +204,7 @@ class _MessageListViewState extends State<MessageListView> {
     BuildContext context,
     MessageModel message,
     String otherUserName,
-    UserProfileForChat? otherUserProfile,
+    String? otherUserPhotoUrl,
   ) {
     final provider = context.read<MessageListProvider>();
     final bool isMe = message.isOutgoing;
@@ -338,16 +337,15 @@ class _MessageListViewState extends State<MessageListView> {
                 isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (!isMe && otherUserProfile?.profileImageUrl != null)
+              if (!isMe && otherUserPhotoUrl != null)
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: CircleAvatar(
                     backgroundImage: NetworkImage(
-                      otherUserProfile!.profileImageUrl!,
+                      otherUserPhotoUrl,
                     ),
                   ),
                 ),
-              // Show timestamp before the bubble for outgoing messages
               if (isMe && message.status != 'deleted_for_everyone')
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
@@ -357,7 +355,6 @@ class _MessageListViewState extends State<MessageListView> {
                   ),
                 ),
               messageBubble,
-              // Show timestamp after the bubble for incoming messages
               if (!isMe && message.status != 'deleted_for_everyone')
                 Padding(
                   padding: const EdgeInsets.only(left: 8.0),

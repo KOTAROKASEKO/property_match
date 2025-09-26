@@ -8,8 +8,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/model/post_model.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/model/user_profile_model.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/repo/profile_repository.dart';
+import 'package:re_conver/2_tenant_feature/2_discover/model/agent_profile_model.dart';
+import 'package:re_conver/2_tenant_feature/2_discover/repo/agent_profile_repo.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   final ProfileRepository _repository = ProfileRepository();

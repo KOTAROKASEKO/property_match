@@ -3,10 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/model/post_model.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/model/user_profile_model.dart';
+import 'package:re_conver/2_tenant_feature/2_discover/model/agent_profile_model.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/view/post_card.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/viewmodel/discover_viewmodel.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/viewmodel/profile_viewmodel.dart';
+import 'package:re_conver/2_tenant_feature/2_discover/viewmodel/agent_profile_viewmodel.dart' show ProfileViewModel;
+import 'package:re_conver/2_tenant_feature/3_profile/services/user_service.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/providerIndividualChat.dart';
 import 'package:re_conver/authentication/auth_service.dart';
 import 'package:re_conver/authentication/userdata.dart';
@@ -75,6 +76,7 @@ class _ProfileViewState extends State<_ProfileView> {
 }
 
 class _ProfileHeader extends StatelessWidget {
+  
   final UserProfile userProfile;
   const _ProfileHeader({required this.userProfile});
 

@@ -1,15 +1,19 @@
-// lib/features/4_chat/view/providerIndividualChat.dart
+// lib/2_tenant_feature/4_chat/view/providerIndividualChat.dart
+
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/2_tenant_feature/4_chat/model/user_profile.dart';
-import 'package:re_conver/2_tenant_feature/4_chat/repo/isar_helper.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/message_input_widget.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/message_list_widget.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/reply_widget.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/view/template_carousel_vwidget.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageList.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageTemplate_viewmodel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // --- Main Widget & Provider Setup ---
 
@@ -17,37 +21,50 @@ class IndividualChatScreenWithProvider extends StatelessWidget {
   final String chatThreadId;
   final String otherUserUid;
   final String otherUserName;
+  final String? otherUserPhotoUrl; // Added photo url
 
   const IndividualChatScreenWithProvider({
     super.key,
     required this.chatThreadId,
     required this.otherUserUid,
     required this.otherUserName,
+    this.otherUserPhotoUrl, // Added photo url
   });
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child:ChangeNotifierProvider(
-      create:
-          (_) => MessageListProvider(
-            chatThreadId: chatThreadId,
-            otherUserUid: otherUserUid,
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => MessageListProvider(
+              chatThreadId: chatThreadId,
+              otherUserUid: otherUserUid,
+            ),
           ),
-      child: _IndividualChatScreenView(
-        otherUserName: otherUserName,
-        otherUserUid: otherUserUid,
+          ChangeNotifierProvider(
+            create: (_) => MessagetemplateViewmodel()..loadTemplates(),
+          ),
+        ],
+        child: _IndividualChatScreenView(
+          otherUserName: otherUserName,
+          otherUserUid: otherUserUid,
+          otherUserPhotoUrl: otherUserPhotoUrl, // Pass photo url
+        ),
       ),
-    ));
+    );
   }
 }
 
 class _IndividualChatScreenView extends StatefulWidget {
   final String otherUserName;
   final String otherUserUid;
+  final String? otherUserPhotoUrl; // Added photo url
+  
   const _IndividualChatScreenView({
     required this.otherUserName,
     required this.otherUserUid,
+    this.otherUserPhotoUrl, // Added photo url
   });
 
   @override
@@ -58,7 +75,6 @@ class _IndividualChatScreenView extends StatefulWidget {
 class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
   final ImagePicker _picker = ImagePicker();
   late MessageListProvider _messageListProvider;
-  UserProfileForChat? _otherUserProfile;
 
   @override
   void initState() {
@@ -70,13 +86,10 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _loadOtherUserProfile();
         _messageListProvider.clearMessages();
         _messageListProvider.loadInitialMessages().then((_) {
           if (mounted) {
-            // Start listening for new messages first
             _messageListProvider.listenToFirebaseMessages();
-            // Then, mark all current messages as read
             _messageListProvider.markMessagesAsRead();
           }
         });
@@ -84,14 +97,48 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
     });
   }
 
-    
-  Future<void> _loadOtherUserProfile() async {
-    final profile = await IsarService().getUserProfile(widget.otherUserUid);
-    if (mounted) {
-      setState(() {
-        _otherUserProfile = profile;
-      });
+  Future<void> _checkAndRequestNotificationPermission() async {
+    final prefs = await SharedPreferences.getInstance();
+    final permissionStatus = prefs.getString('notification_permission_status');
+
+    if (permissionStatus == null || permissionStatus == 'notAsked') {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Enable Notifications?'),
+          content: const Text(
+              'Get notified about new messages and important updates.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Not Now'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Enable'),
+            ),
+          ],
+        ),
+      );
+
+      if (result == true) {
+        final status = await Permission.notification.request();
+        if (status.isGranted) {
+          await prefs.setString('notification_permission_status', 'granted');
+        } else {
+          await prefs.setString('notification_permission_status', 'denied');
+        }
+      } else {
+        await prefs.setString('notification_permission_status', 'notAsked');
+      }
     }
+  }
+
+  Future<void> _sendMessageWithPermissionCheck(
+      {String? text, XFile? imageFile, File? audioFile}) async {
+    await _checkAndRequestNotificationPermission();
+    _messageListProvider.sendMessage(
+        text: text, imageFile: imageFile, audioFile: audioFile);
   }
 
   Future<void> _pickImage() async {
@@ -100,7 +147,7 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
         source: ImageSource.gallery,
       );
       if (pickedFile != null && mounted) {
-        _messageListProvider.sendMessage(imageFile: pickedFile);
+        _sendMessageWithPermissionCheck(imageFile: pickedFile);
       }
     } catch (e) {
       print("Image picker error: $e");
@@ -116,11 +163,11 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
       appBar: AppBar(
         title: Row(
           children: [
-            if (_otherUserProfile?.profileImageUrl != null &&
-                _otherUserProfile!.profileImageUrl!.isNotEmpty)
+            if (widget.otherUserPhotoUrl != null &&
+                widget.otherUserPhotoUrl!.isNotEmpty)
               CircleAvatar(
                 backgroundImage: CachedNetworkImageProvider(
-                  _otherUserProfile!.profileImageUrl!,
+                  widget.otherUserPhotoUrl!,
                 ),
               ),
             const SizedBox(width: 8),
@@ -141,28 +188,68 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
           if (provider.isLoading && provider.displayItems.isEmpty)
             const Expanded(child: Center(child: CircularProgressIndicator()))
           else if (!provider.isLoading && provider.displayItems.isEmpty)
-            const Expanded(
-              child: Center(child: Text('No messages yet. Say Hi!')),
-            )
+            const Expanded(child: _ChatTemplatesCarousel())
           else
             Expanded(
               child: MessageListView(
                 otherUserName: widget.otherUserName,
-                otherUserProfile: _otherUserProfile,
+                otherUserPhotoUrl: widget.otherUserPhotoUrl,
               ),
             ),
-
           ReplyPreviewWidget(otherUserName: widget.otherUserName),
           MessageInputWidget(
             editingMessage: provider.editingMessage,
             isSending: provider.isSending,
-            onSendMessage: provider.sendMessage,
+            onSendMessage: (
+                {File? audioFile, String? text, XFile? imageFile}) {
+              _sendMessageWithPermissionCheck(
+                  audioFile: audioFile, text: text, imageFile: imageFile);
+            },
             onSaveEditedMessage: provider.saveEditedMessage,
             onCancelEditing: provider.cancelEditing,
             onPickImage: _pickImage,
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ChatTemplatesCarousel extends StatelessWidget {
+  const _ChatTemplatesCarousel();
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<MessagetemplateViewmodel>(
+      builder: (context, viewModel, child) {
+        if (viewModel.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (viewModel.templates.isEmpty) {
+          return const Center(
+            child: Text("No message templates found."),
+          );
+        }
+
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              
+              const SizedBox(height: 20),
+              const Expanded(
+            child: Center(
+              child: TemplateCarouselWidget(isFullScreen: true),
+            ),
+          ),
+              const SizedBox(height: 16),
+              
+            ],
+          ),
+        );
+      },
     );
   }
 }

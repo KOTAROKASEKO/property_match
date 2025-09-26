@@ -49,11 +49,15 @@ dependencies:
   cached_network_image: ^3.4.1
   gallery_saver_plus: ^3.2.9
   device_info_plus: ^12.1.0
+  carousel_slider: ^5.1.1
+
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  build_runner: ^2.4.13
+  isar_generator: ^3.1.0+1
 
 flutter:
   uses-material-design: true

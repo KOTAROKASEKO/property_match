@@ -18,16 +18,23 @@ class ChatThread {
   @Index()
   late String whoReceived;
 
+  // New fields for the other user's details
+  String? hisName;
+  String? hisPhotoUrl;
+
   String? lastMessage;
   late DateTime timeStamp;
   String? messageType;
   String? lastMessageId;
 
   String? unreadCountJson;
+  
+  String? generalNote;
+  List<String> generalImageUrls = [];
 
-  List<DateTime> viewingTimes = []; // Store multiple viewing times
-  List<String> viewingNotes = []; // Corresponding notes for each time
-  List<String> viewingImageUrls = []; // This will now store JSON strings of image lists
+  List<DateTime> viewingTimes = [];
+  List<String> viewingNotes = [];
+  List<String> viewingImageUrls = [];
 
   @ignore
   Map<String, int> get unreadCountMap {
@@ -72,7 +79,6 @@ class ChatThread {
       parsedUnreadCountMap.putIfAbsent(whoReceived, () => data['unreadCount']);
     }
 
-    // --- PARSE NEW FIELDS ---
     final List<dynamic> viewingTimestamps =
         data['viewingTimes'] as List<dynamic>? ?? [];
     final List<DateTime> parsedViewingTimes = viewingTimestamps
@@ -93,15 +99,22 @@ class ChatThread {
         return e.toString();
       }).toList();
 
+    final List<dynamic> generalImageUrlsData = data['generalImageUrls'] as List<dynamic>? ?? [];
+    final List<String> parsedGeneralImageUrls = generalImageUrlsData.map((url) => url.toString()).toList();
+
     return ChatThread()
       ..id = doc.id
       ..whoSent = data['whoSent'] as String
       ..whoReceived = whoReceived
+      ..hisName = data['hisName'] as String? // Populate new field
+      ..hisPhotoUrl = data['hisPhotoUrl'] as String? // Populate new field
       ..lastMessage = data['lastMessage'] as String?
       ..timeStamp = (data['timeStamp'] as Timestamp).toDate()
       ..messageType = data['messageType'] as String?
       ..lastMessageId = data['lastMessageId'] as String?
       ..unreadCountMap = parsedUnreadCountMap
+      ..generalNote = data['generalNote'] as String?
+      ..generalImageUrls = parsedGeneralImageUrls
       ..viewingTimes = parsedViewingTimes
       ..viewingNotes = parsedViewingNotes
       ..viewingImageUrls = parsedImageUrls;

@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/model/post_model.dart';
 import 'package:re_conver/authentication/userdata.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/model/user_profile_model.dart';
+import 'package:re_conver/2_tenant_feature/2_discover/model/agent_profile_model.dart';
 
 class ProfileRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -14,63 +14,6 @@ class ProfileRepository {
 
   String? getCurrentUserId() {
     return _auth.currentUser?.uid;
-  }
-
-   String _getCacheKey(String userId, Roles role) {
-    // enumの.nameプロパティで文字列に変換
-    return '${userId}_${role.name}';
-  }
-  
-  Future<UserProfile> getUserProfile() async {
-    final userId = userData.userId;
-    final currentRole = userData.role;
-    
-    final box = Hive.box<UserProfile>(_userProfileBoxName);
-    final cacheKey = _getCacheKey(userId, currentRole);
-
-    try {
-      final collectionPath = currentRole == Roles.agent ? 'agents_prof' : 'users_prof';
-      final userDoc =
-          await _firestore.collection(collectionPath).doc(userId).get();
-      final userDataFromDoc = userDoc.data();
-
-      final postCountQuery = await _firestore
-          .collection('posts')
-          .where('userId', isEqualTo: userId)
-          .count()
-          .get();
-      final postCount = postCountQuery.count ?? 0;
-
-      final userProfile = UserProfile(
-        uid: userId,
-        displayName:
-            userDataFromDoc?['displayName'] ??
-                _auth.currentUser?.displayName ??
-                'No Name',
-        username: userDataFromDoc?['username'] ?? 'username',
-        bio: userDataFromDoc?['bio'] ?? '',
-        profileImageUrl: userDataFromDoc?['profileImageUrl'] ?? '',
-        postCount: postCount,
-      );
-
-      await box.put(cacheKey, userProfile);
-      return userProfile;
-    } catch (e) {
-      print("Error fetching profile from Firestore: $e");
-      final cachedProfile = box.get(cacheKey);
-      if (cachedProfile != null) return cachedProfile;
-      throw Exception("Failed to load profile and no cache available.");
-    }
-  }
-
-  Future<UserProfile?> getCachedUserProfile() async {
-    final userId = userData.userId;
-    final currentRole = userData.role;
-
-    if (userId == "") return null;
-    final box = Hive.box<UserProfile>(_userProfileBoxName);
-    final cacheKey = _getCacheKey(userId, currentRole);
-    return box.get(cacheKey);
   }
 
   Future<void> updateUserProfile(Map<String, dynamic> data) async {
@@ -106,6 +49,53 @@ class ProfileRepository {
       batch.update(doc.reference, dataToUpdate);
     }
     await batch.commit();
+  }
+
+  Future<UserProfile> getUserProfile() async {
+    final userId = userData.userId;
+
+    final box = Hive.box<UserProfile>(_userProfileBoxName);
+
+    try {
+      final userDoc =
+          await _firestore.collection('users_prof').doc(userId).get();
+      final userData = userDoc.data();
+
+      final postCountQuery = await _firestore
+          .collection('posts')
+          .where('userId', isEqualTo: userId)
+          .count()
+          .get();
+
+      final postCount = postCountQuery.count ?? 0;
+
+      final userProfile = UserProfile(
+        uid: userId,
+        displayName:
+            userData?['displayName'] ??
+                _auth.currentUser?.displayName ??
+                'No Name',
+        username: userData?['username'] ?? 'username',
+        bio: userData?['bio'] ?? '',
+        profileImageUrl: userData?['profileImageUrl'] ?? '',
+        postCount: postCount,
+      );
+
+      await box.put(userId, userProfile);
+      return userProfile;
+    } catch (e) {
+      print("Error fetching profile from Firestore: $e");
+      final cachedProfile = box.get(userId);
+      if (cachedProfile != null) return cachedProfile;
+      throw Exception("Failed to load profile and no cache available.");
+    }
+  }
+
+  Future<UserProfile?> getCachedUserProfile() async {
+    final userId = userData.userId;
+    if (userId == "") return null;
+    final box = Hive.box<UserProfile>(_userProfileBoxName);
+    return box.get(userId);
   }
 
   Future<List<Post>> getMyPosts(

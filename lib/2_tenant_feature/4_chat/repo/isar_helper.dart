@@ -2,7 +2,8 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/chat_thread.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/message_model.dart';
-import 'package:re_conver/2_tenant_feature/4_chat/model/user_profile.dart';
+import 'package:re_conver/app/debug_print.dart';
+
 class IsarService {
   late Future<Isar> db;
 
@@ -14,7 +15,7 @@ class IsarService {
     if (Isar.instanceNames.isEmpty) {
       final dir = await getApplicationDocumentsDirectory();
       return await Isar.open(
-        [MessageModelSchema, ChatThreadSchema, UserProfileForChatSchema],
+        [MessageModelSchema, ChatThreadSchema],
         directory: dir.path,
         inspector: true,
       );
@@ -59,23 +60,19 @@ class IsarService {
   }
 
   Future<void> saveChatThread(ChatThread thread) async {
+    pr('[repo] Saving chatThread with id: ${thread.id}');
+    pr('[repo] His/Her name : ${thread.hisName}');
+    pr('[repo] His/Her photoUrl : ${thread.hisPhotoUrl}');
+
     final isar = await db;
     await isar.writeTxn(() => isar.chatThreads.put(thread));
   }
-  
-  // Future<void> clearAllChatThreads() async {
-  //   final isar = await db;
-  //   await isar.writeTxn(() => isar.chatThreads.clear());
-  // }
-  
-  Future<UserProfileForChat?> getUserProfile(String userId) async {
-    final isar = await db;
-    return await isar.userProfileForChats.where().userIdEqualTo(userId).findFirst();
-  }
 
-  Future<void> saveUserProfile(UserProfileForChat profile) async {
+  Future<void> saveAllChatThreads(List<ChatThread> threads) async {
     final isar = await db;
-    await isar.writeTxn(() => isar.userProfileForChats.put(profile));
+    await isar.writeTxn(() async {
+      await isar.chatThreads.putAll(threads);
+    });
   }
   
   Stream<List<ChatThread>> watchChatThreads() async* {
@@ -84,6 +81,7 @@ class IsarService {
   }
 
     Future<List<ChatThread>> getAllChatThreads() async {
+      pr('[repo] Fetching all chatThreads from Isar DB');
     final isar = await db;
     return await isar.chatThreads.where().findAll();
   }

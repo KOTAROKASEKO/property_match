@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -46,6 +45,7 @@ class _SignInScreenState extends State<SignInScreen> {
           password: _passwordController.text.trim(),
         );
         userData.setUser(FirebaseAuth.instance.currentUser);
+        saveTokenToDatabase();
         if (mounted) {
           // Navigate to role selection with right-to-left slide animation
           Navigator.of(context).push(
@@ -180,7 +180,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         if (userCredential.user != null) {
           await _createUserProfile(userCredential.user!, _displayNameController.text.trim());
-          await uploadFcm();
+          await saveTokenToDatabase();
           userData.setUser(FirebaseAuth.instance.currentUser);
           if (mounted) {
             Navigator.of(context).popUntil((route) => route.isFirst);
@@ -206,12 +206,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'bio': '',
       'username': displayName.replaceAll(' ', '').toLowerCase(),
     });
-  }
-
-  Future<void> uploadFcm() async {
-    FcmService().saveTokenToDatabase(
-      await FirebaseMessaging.instance.getToken() ?? '',
-    );
   }
 
   @override
@@ -329,7 +323,7 @@ class _SignInModalState extends State<SignInModal> {
 
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
 
-      await uploadFcm();
+      await saveTokenToDatabase();
       _handleLoginSuccess(userCredential.user);
       return userCredential;
     } catch (error) {
@@ -368,11 +362,7 @@ class _SignInModalState extends State<SignInModal> {
   }
 
 
-  Future<void> uploadFcm() async {
-    FcmService().saveTokenToDatabase(
-      await FirebaseMessaging.instance.getToken() ?? '',
-    );
-  }
+  
 
   @override
   Widget build(BuildContext context) {

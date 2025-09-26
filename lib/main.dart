@@ -3,9 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/model/template_model.dart';
 import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/MainScaffold.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/model/user_profile_model.dart';
+import 'package:re_conver/2_tenant_feature/2_discover/model/agent_profile_model.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/timestamp_adopter.dart';
 import 'package:re_conver/firebase_options.dart';
 import 'package:rive/rive.dart';
@@ -20,7 +21,9 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(UserProfileAdapter());
   Hive.registerAdapter(TimestampAdapter());
+  Hive.registerAdapter(TemplateModelAdapter()); // Register the adapter
   await Hive.openBox<UserProfile>('userProfileBox');
+  await Hive.openBox<TemplateModel>('templateBox'); // Open the template box
 
   userData.setUser(FirebaseAuth.instance.currentUser);
 
@@ -38,9 +41,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const SafeArea(
-        child:MainScaffold()
-        ),
+      home: const SafeArea(child: MainScaffold()),
     );
   }
 }

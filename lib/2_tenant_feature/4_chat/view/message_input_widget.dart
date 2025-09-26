@@ -1,15 +1,21 @@
+// lib/2_tenant_feature/4_chat/view/message_input_widget.dart
+
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/message_model.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/view/template_carousel_vwidget.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageTemplate_viewmodel.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class MessageInputWidget extends StatefulWidget {
-  final Function({File? audioFile, String? text, XFile? imageFile}) onSendMessage;
+  final Function({File? audioFile, String? text, XFile? imageFile})
+      onSendMessage;
   final Function(String editedText) onSaveEditedMessage;
   final VoidCallback onCancelEditing;
   final VoidCallback onPickImage;
@@ -53,8 +59,6 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     _updateTextForEditing(isInitial: true);
   }
 
-  // --- New Helper Methods for Recording ---
-
   String _formatDuration(Duration d) {
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -71,8 +75,6 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     }
   }
 
-  // --- Updated Recording Methods ---
-
   Future<void> _startRecording() async {
     final hasPermission = await _handleMicPermission();
     if (!hasPermission) return;
@@ -84,12 +86,13 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
       const RecordConfig(encoder: AudioEncoder.aacLc),
       path: path,
     );
-    
+
     setState(() {
       _isRecording = true;
       _recordingDuration = Duration.zero;
     });
-    _recordingTimer = Timer.periodic(const Duration(milliseconds: 100), _updateTimer);
+    _recordingTimer =
+        Timer.periodic(const Duration(milliseconds: 100), _updateTimer);
   }
 
   Future<void> _stopRecordingAndSend() async {
@@ -117,14 +120,13 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
           await file.delete();
         }
       }
-    } catch(e) {
+    } catch (e) {
       print("Error cancelling recording: $e");
     } finally {
       _recordingTimer?.cancel();
       setState(() => _isRecording = false);
     }
   }
-
 
   Future<bool> _handleMicPermission() async {
     final status = await Permission.microphone.request();
@@ -183,6 +185,97 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     _messageController.clear();
   }
 
+  void _showOptionsBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return SafeArea(
+          child: Container(
+            margin: const EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16.0),
+            ),
+            child: Wrap(
+              children: <Widget>[
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined,
+                      color: Colors.deepPurple),
+                  title: const Text('Camera'),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Camera not implemented yet.')),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined,
+                      color: Colors.deepPurple),
+                  title: const Text('Photo Library'),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    widget.onPickImage();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.note_alt_outlined,
+                      color: Colors.deepPurple),
+                  title: const Text('Templates'),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _showTemplatesBottomSheet(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showTemplatesBottomSheet(BuildContext context) {
+    final templateViewModel = context.read<MessagetemplateViewmodel>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return ChangeNotifierProvider.value(
+          value: templateViewModel,
+          child: DraggableScrollableSheet(
+              initialChildSize: 0.4,
+              minChildSize: 0.3,
+              maxChildSize: 0.6,
+              expand: false,
+              builder: (_, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: TemplateCarouselWidget(
+                    onTemplateSelected: (template) {
+                      _messageController.text = template;
+                      _messageController.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _messageController.text.length));
+                      _onTextChanged();
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                );
+              }),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -203,8 +296,9 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
       key: const ValueKey('text_input_ui'),
       children: [
         IconButton(
-          icon: const Icon(Icons.photo_camera_outlined),
-          onPressed: widget.isSending ? null : widget.onPickImage,
+          icon: const Icon(Icons.add_circle_outline, color: Colors.deepPurple),
+          onPressed:
+              widget.isSending ? null : () => _showOptionsBottomSheet(context),
         ),
         Expanded(
           child: TextField(
@@ -223,7 +317,8 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
               ),
               filled: true,
               fillColor: Theme.of(context).scaffoldBackgroundColor,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
           ),
         ),
@@ -245,7 +340,8 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                   if (!_isRecording) return;
                   final endX = details.globalPosition.dx;
                   final screenWidth = MediaQuery.of(context).size.width;
-                  if (_longPressStartX != null && (_longPressStartX! - endX) > (screenWidth / 4)) {
+                  if (_longPressStartX != null &&
+                      (_longPressStartX! - endX) > (screenWidth / 4)) {
                     _cancelRecording();
                   } else {
                     _stopRecordingAndSend();
@@ -272,7 +368,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
       ],
     );
   }
-  
+
   Widget _buildRecordingUi() {
     return Row(
       key: const ValueKey('recording_ui'),
