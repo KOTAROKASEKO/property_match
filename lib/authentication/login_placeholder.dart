@@ -1,12 +1,14 @@
+// lib/authentication/login_placeholder.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:re_conver/MainScaffold.dart';
-import 'package:re_conver/authentication/auth_screen.dart';
+import 'package:re_conver/authentication/sign_in_screen.dart';
 import 'package:re_conver/authentication/auth_service.dart';
 import 'package:re_conver/authentication/role_selection_screen.dart';
 import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/service/FirebaseApi.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPlaceholderScreen extends StatelessWidget {
   const LoginPlaceholderScreen({super.key});
@@ -101,27 +103,27 @@ class LoginPlaceholderScreen extends StatelessWidget {
                     final navigator = Navigator.of(context);
 
                     final userDoc = await FirebaseFirestore.instance.collection('users_prof').doc(user).get();
-                    final agentDoc = await FirebaseFirestore.instance.collection('agents_prof').doc(user).get();
-                    print(userDoc.exists);
-                    print(agentDoc.exists);
-                    if (!userDoc.exists && !agentDoc.exists) {
-                      
-                      saveTokenToDatabase();
-                      navigator.pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
-                        (route) => false,
-                      );
+                    
+                    if (userDoc.exists && userDoc.data() != null && userDoc.data()!.containsKey('role')) {
+                        final roleData = userDoc.data()!['role'] as String;
+
+                        // SharedPreferencesにロールを保存
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('role', roleData);
+
+                        userData.setRole(roleData == 'agent' ? Roles.agent : Roles.tenant);
+                        await saveTokenToDatabase();
+                        navigator.pushAndRemoveUntil(
+                            MaterialPageRoute(builder: (context) => const MainScaffold()),
+                            (route) => false,
+                        );
                     } else {
-                      if (agentDoc.exists) {
-                        userData.setRole(Roles.agent);
-                      } else {
-                        userData.setRole(Roles.tenant);
-                      }
-                      saveTokenToDatabase();
-                      navigator.pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => const MainScaffold()),
-                        (route) => false,
-                      );
+                        // This case handles both new users and existing users without a role
+                        await saveTokenToDatabase();
+                        navigator.pushAndRemoveUntil(
+                            MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
+                            (route) => false,
+                        );
                     }
                   }
                 },

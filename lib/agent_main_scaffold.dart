@@ -1,0 +1,87 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:re_conver/1_agent_feature/tenant_list_view.dart';
+import 'package:re_conver/2_tenant_feature/2_discover/view/agent_profile_screen.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/view/chatThreadScreen.dart';
+import 'package:re_conver/authentication/login_placeholder.dart';
+
+class AgentMainScaffold extends StatefulWidget {
+  const AgentMainScaffold({super.key});
+
+  @override
+  State<AgentMainScaffold> createState() => _AgentMainScaffoldState();
+}
+
+class _AgentMainScaffoldState extends State<AgentMainScaffold> {
+  int _selectedIndex = 0;
+  final PageController _pageController = PageController();
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    
+    // This check ensures we have a user ID for the profile screen.
+    // The AuthWrapper in main.dart should prevent userId from being null here.
+    if (userId == null) {
+      _pages = [
+        const LoginPlaceholderScreen(),
+        const LoginPlaceholderScreen(),
+        const LoginPlaceholderScreen(),
+      ];
+    } else {
+      _pages = [
+        const ChatThreadsScreen(),
+        TenantListView(),
+        OtherUserProfileScreen(userId: userId),
+      ];
+    }
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    _pageController.jumpToPage(index);
+  }
+
+   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            activeIcon: Icon(Icons.chat_bubble),
+            label: 'Chat',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outline),
+            activeIcon: Icon(Icons.people),
+            label: 'Tenants',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey,
+        onTap: _onItemTapped,
+      ),
+    );
+  }
+}

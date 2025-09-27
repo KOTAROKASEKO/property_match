@@ -3,41 +3,90 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:re_conver/MainScaffold.dart';
 import 'package:re_conver/authentication/userdata.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
 
+  /// Displays a confirmation dialog before setting the user's role.
+  Future<void> _confirmAndSelectRole(BuildContext context, Roles role) async {
+    final roleString = role == Roles.agent ? 'Agent' : 'Tenant';
+    
+    final bool? shouldContinue = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // User must tap a button to dismiss
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Confirm Your Role'),
+          content: RichText(
+            text: TextSpan(
+              style: const TextStyle(fontSize: 16, color: Colors.black87, height: 1.5),
+              children: <TextSpan>[
+                const TextSpan(text: 'Do you really wish to continue as a '),
+                TextSpan(
+                    text: '"$roleString"',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                const TextSpan(text: '?\n\n'),
+                const TextSpan(
+                    text: 'You cannot change this once you register.',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Continue'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    // If the user tapped "Continue", proceed with setting the role.
+    if (shouldContinue == true) {
+      await _selectRole(context, role);
+    }
+  }
+
+  /// Sets the user role in Firestore and SharedPreferences.
   Future<void> _selectRole(BuildContext context, Roles role) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      // Handle case where user is somehow null
       return;
     }
 
     try {
-      if (role == Roles.tenant) {
-        await FirebaseFirestore.instance
-            .collection('users_prof')
-            .doc(user.uid)
-            .set({
-          'displayName': user.displayName ?? 'New User',
-          'profileImageUrl': user.photoURL ?? '',
-          'bio': '',
-          'username':
-              user.displayName?.replaceAll(' ', '').toLowerCase() ?? 'newuser',
-        });
-      } else {
-        await FirebaseFirestore.instance
-            .collection('users_prof')
-            .doc(user.uid)
-            .set({
-          'displayName': user.displayName ?? 'New Agent',
-          'profileImageUrl': user.photoURL ?? '',
-          'bio': '',
-          'username':
-              user.displayName?.replaceAll(' ', '').toLowerCase() ?? 'newagent',
-        });
-      }
+      final roleString = role == Roles.agent ? 'agent' : 'tenant';
+      
+      final userProfileData = {
+        'role': roleString,
+        'displayName': user.displayName ?? (role == Roles.agent ? 'New Agent' : 'New User'),
+        'profileImageUrl': user.photoURL ?? '',
+        'bio': '',
+        'username': user.displayName?.replaceAll(' ', '').toLowerCase() ?? (role == Roles.agent ? 'newagent' : 'newuser'),
+      };
+
+      await FirebaseFirestore.instance
+          .collection('users_prof')
+          .doc(user.uid)
+          .set(userProfileData);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('role', roleString);
 
       userData.setRole(role);
       Navigator.of(context).pushReplacement(
@@ -47,9 +96,11 @@ class RoleSelectionScreen extends StatelessWidget {
       );
       
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error setting role: $e')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error setting role: $e')),
+        );
+      }
     }
   }
 
@@ -87,14 +138,16 @@ class RoleSelectionScreen extends StatelessWidget {
                 context,
                 icon: Icons.person_outline,
                 label: "I'm a Tenant",
-                onPressed: () => _selectRole(context, Roles.tenant),
+                // Updated to call the confirmation dialog
+                onPressed: () => _confirmAndSelectRole(context, Roles.tenant),
               ),
               const SizedBox(height: 16),
               _buildRoleCard(
                 context,
                 icon: Icons.real_estate_agent_outlined,
                 label: "I'm an Agent",
-                onPressed: () => _selectRole(context, Roles.agent),
+                // Updated to call the confirmation dialog
+                onPressed: () => _confirmAndSelectRole(context, Roles.agent),
               ),
             ],
           ),
