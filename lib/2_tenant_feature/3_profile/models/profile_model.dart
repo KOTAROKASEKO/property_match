@@ -1,11 +1,10 @@
-// lib/models/user_profile.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserProfile {
   final String uid;
   final String email;
-  final String displayName; // New field for the user's display name
-  final String profileImageUrl; // Renamed from profilePictureUrl
+  final String displayName;
+  final String profileImageUrl;
   final int age;
   final String occupation;
   final String location;
@@ -14,12 +13,14 @@ class UserProfile {
   final double budget;
   final String roomType; // "Single", "Middle", "Master"
   final String propertyType; // "Condo", "Landed", "Apartment"
+  final String nationality; // Added
+  final String selfIntroduction; // Added
 
   UserProfile({
     required this.uid,
     required this.email,
-    this.displayName = 'New User', // Default display name
-    this.profileImageUrl = '', // Initialize with an empty string
+    this.displayName = 'New User',
+    this.profileImageUrl = '',
     this.age = 25,
     this.occupation = 'Not specified',
     this.location = 'Not specified',
@@ -28,16 +29,17 @@ class UserProfile {
     this.budget = 1000.0,
     this.roomType = 'Middle',
     this.propertyType = 'Condominium',
+    this.nationality = 'Not specified', // Added
+    this.selfIntroduction = '', // Added
   });
 
-  // Factory constructor to create a UserProfile from a Firestore document
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>?; // Make data nullable
+    final data = doc.data() as Map<String, dynamic>?;
     return UserProfile(
       uid: doc.id,
       email: data?['email'] as String? ?? '',
       displayName: data?['displayName'] as String? ?? 'New User',
-      profileImageUrl: data?['profileImageUrl'] as String? ?? '', // Read the renamed field
+      profileImageUrl: data?['profileImageUrl'] as String? ?? '',
       age: data?['age'] as int? ?? 25,
       occupation: data?['occupation'] as String? ?? 'Not specified',
       location: data?['location'] as String? ?? 'Not specified',
@@ -46,15 +48,16 @@ class UserProfile {
       budget: (data?['budget'] as num?)?.toDouble() ?? 1000.0,
       roomType: data?['roomType'] as String? ?? 'Middle',
       propertyType: data?['propertyType'] as String? ?? 'Condominium',
+      nationality: data?['nationality'] as String? ?? 'Not specified', // Added
+      selfIntroduction: data?['selfIntroduction'] as String? ?? '', // Added
     );
   }
 
-  // Method to convert UserProfile instance to a map for Firestore
   Map<String, dynamic> toJson() {
     return {
       'email': email,
-      'displayName': displayName, // Add the new field to the JSON
-      'profileImageUrl': profileImageUrl, // Add the renamed field to the JSON
+      'displayName': displayName,
+      'profileImageUrl': profileImageUrl,
       'age': age,
       'occupation': occupation,
       'location': location,
@@ -63,6 +66,8 @@ class UserProfile {
       'budget': budget,
       'roomType': roomType,
       'propertyType': propertyType,
+      'nationality': nationality, // Added
+      'selfIntroduction': selfIntroduction, // Added
     };
   }
 }

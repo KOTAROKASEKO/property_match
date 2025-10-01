@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:re_conver/1_agent_feature/tenant_list_view.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/view/agent_profile_screen.dart';
+import 'package:re_conver/1_agent_feature/2_profile/view/DashBoard.dart';
+import 'package:re_conver/1_agent_feature/tenant_list/view/tenant_list_view.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/chatThreadScreen.dart';
 import 'package:re_conver/authentication/login_placeholder.dart';
 
@@ -34,16 +34,26 @@ class _AgentMainScaffoldState extends State<AgentMainScaffold> {
       _pages = [
         const ChatThreadsScreen(),
         TenantListView(),
-        OtherUserProfileScreen(userId: userId),
+        MyProfilePage(),
       ];
     }
   }
+
+// agent_main_scaffold.dart
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    _pageController.jumpToPage(index);
+
+    // PageControllerが利用可能かを確認し、スムーズなアニメーションでページを切り替える
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
    @override

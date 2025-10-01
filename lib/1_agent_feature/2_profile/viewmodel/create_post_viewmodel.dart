@@ -4,35 +4,64 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/viewmodel/post_service.dart';
+import 'package:re_conver/1_agent_feature/2_profile/repo/profile_repository.dart';
 
 class CreatePostViewModel extends ChangeNotifier {
-  final List<String> _manualTags = [];
-  final PostService _postService = PostService();
+  final formKey = GlobalKey<FormState>();
+  final FirestoreProfileRepository _postService = FirestoreProfileRepository();
   final ImagePicker _picker = ImagePicker();
 
   List<File> _selectedImages = [];
-  String _caption = '';
+  String _description = '';
+  String _condominiumName = '';
+  double _rent = 0;
+  String _roomType = 'Master';
+  String _gender = 'Mix';
   bool _isPosting = false;
-  bool _hasUnsavedChanges = false; // 下書き保存のフラグ
+  bool _hasUnsavedChanges = false;
 
-  // --- MODIFIED: ゲッターもリストを返すように変更 ---
   List<File> get selectedImages => _selectedImages;
-  String get caption => _caption;
+  String get description => _description;
+  String get condominiumName => _condominiumName;
+  double get rent => _rent;
+  String get roomType => _roomType;
+  String get gender => _gender;
   bool get isPosting => _isPosting;
   bool get hasUnsavedChanges => _hasUnsavedChanges;
-  bool get canSubmit => (_caption.isNotEmpty || _selectedImages.isNotEmpty) && !_isPosting;
-  List<String> get manualTags => _manualTags;
-
   
+  bool get canSubmit =>
+      (_description.isNotEmpty || _selectedImages.isNotEmpty) && !_isPosting;
 
-  void setCaption(String value) {
-    _caption = value;
+  set description(String value) {
+    _description = value;
     _updateUnsavedChangesFlag();
   }
 
+  set condominiumName(String value) {
+    _condominiumName = value;
+    _updateUnsavedChangesFlag();
+  }
+
+  set rent(double value) {
+    _rent = value;
+    _updateUnsavedChangesFlag();
+  }
+
+  set roomType(String value) {
+    _roomType = value;
+    notifyListeners();
+  }
+
+  set gender(String value) {
+    _gender = value;
+    notifyListeners();
+  }
+
   void _updateUnsavedChangesFlag() {
-    _hasUnsavedChanges = _selectedImages.isNotEmpty || _caption.isNotEmpty;
+    _hasUnsavedChanges = _selectedImages.isNotEmpty ||
+        _description.isNotEmpty ||
+        _condominiumName.isNotEmpty ||
+        _rent > 0;
     notifyListeners();
   }
 
@@ -45,19 +74,6 @@ class CreatePostViewModel extends ChangeNotifier {
     }
   }
 
-  void addTag(String tag) {
-    final formattedTag = tag.trim().toLowerCase();
-    if (formattedTag.isNotEmpty && !_manualTags.contains(formattedTag)) {
-      _manualTags.add(formattedTag);
-      notifyListeners();
-    }
-  }
-
-  void removeTag(String tag) {
-    _manualTags.remove(tag);
-    notifyListeners();
-  }
-  
   void removeImage(int index) {
     if (index >= 0 && index < _selectedImages.length) {
       _selectedImages.removeAt(index);
@@ -68,7 +84,8 @@ class CreatePostViewModel extends ChangeNotifier {
 
   Future<File> compressAndConvertToWebP(File file) async {
     final dir = await getTemporaryDirectory();
-    final targetPath = '${dir.absolute.path}/${DateTime.now().millisecondsSinceEpoch}.webp';
+    final targetPath =
+        '${dir.absolute.path}/${DateTime.now().millisecondsSinceEpoch}.webp';
 
     final result = await FlutterImageCompress.compressAndGetFile(
       file.absolute.path,
@@ -76,7 +93,6 @@ class CreatePostViewModel extends ChangeNotifier {
       quality: 88,
       format: CompressFormat.webp,
     );
-    // resultがnullの場合を考慮
     if (result == null) {
       throw Exception("Image compression failed.");
     }
@@ -84,29 +100,29 @@ class CreatePostViewModel extends ChangeNotifier {
   }
 
   Future<bool> submitPost() async {
-    // --- MODIFIED: Use the new computed property for the guard clause ---
-    if (!canSubmit) {
+    if (!formKey.currentState!.validate() || !canSubmit) {
       return false;
     }
-    
+
     _isPosting = true;
     notifyListeners();
 
     try {
-      // Logic is the same: upload files if they exist, then create post.
       List<String> imageUrls = [];
       if (_selectedImages.isNotEmpty) {
         imageUrls = await uploadFiles(_selectedImages);
       }
 
       await _postService.createPost(
-        caption: _caption,
+        description: _description,
         imageUrls: imageUrls,
-        manualTags: _manualTags,
+        condominiumName: _condominiumName,
+        rent: _rent,
+        roomType: _roomType,
+        gender: _gender,
+        manualTags: [], // Kept for compatibility, can be removed if not needed
       );
 
-  
-      
       _hasUnsavedChanges = false;
       return true;
     } catch (e) {
@@ -118,12 +134,12 @@ class CreatePostViewModel extends ChangeNotifier {
     }
   }
 
-  // --- MODIFIED: 複数ファイルをアップロードするロジック ---
   Future<List<String>> uploadFiles(List<File> files) async {
     List<String> imageUrls = [];
     for (var file in files) {
       final compressedFile = await compressAndConvertToWebP(file);
-      final fileName = 'posts/${DateTime.now().millisecondsSinceEpoch}_${imageUrls.length}.webp';
+      final fileName =
+          'posts/${DateTime.now().millisecondsSinceEpoch}_${imageUrls.length}.webp';
       final ref = FirebaseStorage.instance.ref().child(fileName);
       final uploadTask = ref.putFile(compressedFile);
       final snapshot = await uploadTask.whenComplete(() => {});
@@ -133,11 +149,11 @@ class CreatePostViewModel extends ChangeNotifier {
     return imageUrls;
   }
 
-  
-  // --- NEW: 下書きをクリアするメソッド ---
   void clearDraft() {
     _selectedImages = [];
-    _caption = '';
+    _description = '';
+    _condominiumName = '';
+    _rent = 0;
     _hasUnsavedChanges = false;
     notifyListeners();
   }

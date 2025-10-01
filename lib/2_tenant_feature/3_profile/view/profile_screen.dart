@@ -1,7 +1,10 @@
 // lib/2_tenant_feature/3_profile/view/profilescreen.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:re_conver/2_tenant_feature/3_profile/models/profile_model.dart';
 import 'package:re_conver/2_tenant_feature/3_profile/services/user_service.dart';
+import 'package:re_conver/authentication/auth_service.dart';
+import 'package:re_conver/authentication/login_placeholder.dart';
 import 'edit_profile_screen.dart'; // We will create this next
 
 class ProfileScreen extends StatefulWidget {
@@ -30,6 +33,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                child: const Text(
+                  'Menu',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: const Text('Profile'),
+                onTap: () {
+                  if(FirebaseAuth.instance.currentUser==null){
+                    showSignInModal(context);
+                  }else{
+                    Navigator.pop(context);
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const ProfileScreen(),
+                    ));
+                  }
+                },
+              ),
+              
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: const Text('Log out'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await showSignOutModal(context);
+                  Navigator.of(context).pushReplacement(MaterialPageRoute(
+                    builder: (_) => const LoginPlaceholderScreen(),
+                  ));
+                },
+              ),
+            ],
+          ),
+        ),
+        
       appBar: AppBar(
         title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
@@ -152,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               value: userProfile.pets,
             ),
             const Divider(indent: 16, endIndent: 16),
-             _ProfileDetailRow(
+            _ProfileDetailRow(
               icon: Icons.group_outlined,
               title: 'Number of Pax',
               value: '${userProfile.pax} person(s)',
@@ -162,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Budget',
               value: 'RM ${userProfile.budget.toStringAsFixed(0)} / month',
             ),
-             _ProfileDetailRow(
+            _ProfileDetailRow(
               icon: Icons.bed_outlined,
               title: 'Room Preference',
               value: userProfile.roomType,
@@ -180,7 +229,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// A helper widget for a consistent row style
 class _ProfileDetailRow extends StatelessWidget {
   final IconData icon;
   final String title;

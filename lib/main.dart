@@ -4,12 +4,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:re_conver/1_agent_feature/2_profile/repo/profile_repository.dart';
+import 'package:re_conver/1_agent_feature/2_profile/viewmodel/profile_viewmodel.dart';
+import 'package:re_conver/1_agent_feature/tenant_list/viewodel/tenant_list_viewmodel.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/template_model.dart';
 import 'package:re_conver/authentication/login_placeholder.dart';
 import 'package:re_conver/authentication/role_selection_screen.dart';
 import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/MainScaffold.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/model/agent_profile_model.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/timestamp_adopter.dart';
 import 'package:re_conver/firebase_options.dart';
 import 'package:rive/rive.dart';
@@ -23,15 +26,23 @@ void main() async {
   );
   await RiveFile.initialize();
   await Hive.initFlutter();
-  Hive.registerAdapter(UserProfileAdapter());
   Hive.registerAdapter(TimestampAdapter());
-  Hive.registerAdapter(TemplateModelAdapter()); // Register the adapter
-  await Hive.openBox<UserProfile>('userProfileBox');
+  Hive.registerAdapter(TemplateModelAdapter());
   await Hive.openBox<TemplateModel>('templateBox'); // Open the template box
 
   userData.setUser(FirebaseAuth.instance.currentUser);
 
-  runApp(const MyApp());
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => TenantListViewModel()),
+        
+        ChangeNotifierProvider(create: (_) => ProfileViewModel(FirestoreProfileRepository())),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

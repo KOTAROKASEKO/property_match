@@ -8,39 +8,48 @@ class Post {
   final String userId;
   final String username;
   final String userProfileImageUrl;
-  final String caption;
+  final String description;
   final List<String> imageUrls;
   final Timestamp timestamp;
   final List<String> manualTags;
-  final List<String> autoTags;
   final String status;
   final List<String> reportedBy;
+  final String gender;
+  final String roomType;
+  final double rent;
+  final String condominiumName;
   int likeCount;
   List<String> likedBy;
   bool isSaved;
+
+  String caption;
 
   Post({
     required this.id,
     required this.userId,
     required this.username,
     required this.userProfileImageUrl,
-    this.caption = '',
+    required this.caption,
+    this.description = '',
     this.imageUrls = const [],
     required this.timestamp,
     required this.likeCount,
     required this.likedBy,
     this.isSaved = false,
-    required this.manualTags,
-    required this.autoTags,
-    required this.status,
-    required this.reportedBy,
+    this.manualTags = const [],
+    this.status = 'open',
+    this.reportedBy = const [],
+    this.gender = 'Mix',
+    this.roomType = 'Middle',
+    this.rent = 0.0,
+    this.condominiumName = '',
   });
 
   bool get isLikedByCurrentUser {
     return likedBy.contains(userData.userId);
   }
 
-  List<String> get allTags => [...manualTags, ...autoTags];
+  List<String> get allTags => manualTags;
 
   factory Post.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc, {bool isSaved = false}) {
     final data = doc.data();
@@ -48,27 +57,25 @@ class Post {
       throw Exception("Post data is null for document ${doc.id}");
     }
 
-    final List<String> imageUrls = List<String>.from(data['imageUrls'] ?? []);
-    final List<String> likedBy = List<String>.from(data['likedBy'] ?? []);
-    final List<String> manualTags = List<String>.from(data['manualTags'] ?? []);
-    final List<String> autoTags = List<String>.from(data['AutoTags'] ?? []);
-    final List<String> reportedBy = List<String>.from(data['reportedBy'] ?? []); // NEW: Parse reportedBy
-
     return Post(
       id: doc.id,
       userId: data['userId'] ?? '',
       username: data['username'] ?? 'Anonymous',
       userProfileImageUrl: data['userProfileImageUrl'] ?? '',
-      caption: data['caption'] ?? '',
-      imageUrls: imageUrls,
+      description: data['description'] ?? '',
+      imageUrls: List<String>.from(data['imageUrls'] ?? []),
       timestamp: data['timestamp'] ?? Timestamp.now(),
       likeCount: data['likeCount'] ?? 0,
-      likedBy: likedBy,
+      likedBy: List<String>.from(data['likedBy'] ?? []),
       isSaved: isSaved,
-      manualTags: manualTags,
-      autoTags: autoTags,
+      manualTags: List<String>.from(data['manualTags'] ?? []),
       status: data['status'] ?? 'open',
-      reportedBy: reportedBy, // NEW: Assign reportedBy
+      reportedBy: List<String>.from(data['reportedBy'] ?? []),
+      gender: data['gender'] ?? 'Mix',
+      roomType: data['roomType'] ?? 'Middle',
+      rent: (data['rent'] as num?)?.toDouble() ?? 0.0,
+      condominiumName: data['condominiumName'] ?? '',
+      caption: data['caption'] ?? '',
     );
   }
 }

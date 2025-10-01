@@ -4,14 +4,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/view/create_post_screen.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/view/post_card.dart';
 import 'package:re_conver/2_tenant_feature/3_profile/view/profile_screen.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/viewmodel/discover_viewmodel.dart';
-import 'package:re_conver/2_tenant_feature/4_chat/view/chatThreadScreen.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/unread_messages_viewmodel.dart';
 import 'package:re_conver/authentication/auth_service.dart';
-import 'package:shimmer/shimmer.dart'; // Import the shimmer package
+import 'package:shimmer/shimmer.dart';
 
 class DiscoverScreen extends StatelessWidget {
   const DiscoverScreen({super.key});
@@ -80,7 +78,6 @@ class _DiscoverViewState extends State<_DiscoverView>
   Widget build(BuildContext context) {
     super.build(context);
     final viewModel = context.watch<DiscoverViewModel>();
-
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -118,126 +115,7 @@ class _DiscoverViewState extends State<_DiscoverView>
               fillColor: Colors.grey[200],
             ),
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.add_box_outlined),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const CreatePostScreen(),
-                    fullscreenDialog: true,
-                  ),
-                );
-              },
-            ),
-            Consumer<UnreadMessagesViewModel>(
-              builder: (context, unreadViewModel, child) {
-                return Stack(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      onPressed: () {
-                        if (FirebaseAuth.instance.currentUser == null) {
-                          showSignInModal(context);
-                        } else {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ChatThreadsScreen(),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                    if (unreadViewModel.totalUnreadCount > 0)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: Text(
-                            '${unreadViewModel.totalUnreadCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-        // --- NEW: Drawerウィジェットを追加 ---
-        drawer: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                child: const Text(
-                  'Menu',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                  ),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: const Text('Profile'),
-                onTap: () {
-                  if(FirebaseAuth.instance.currentUser==null){
-                    showSignInModal(context);
-                  }else{
-                    Navigator.pop(context);
-                    Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => const ProfileScreen(),
-                    ));
-                  }
-                  
-                },
-              ),
-              FirebaseAuth.instance.currentUser == null
-              ?
-              ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: const Text('Sign in'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final bool? signedIn = await showSignInModal(context);
-                  if (signedIn == true) {
-                    viewModel.fetchInitialPosts();
-                  }
-                },
-              )
-              :
-              ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: const Text('Log out'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final bool? signedOut = await showSignOutModal(context);
-                  if (signedOut == true) {
-                    viewModel.fetchInitialPosts();
-                  }
-                },
-              ),
-            ],
           ),
-        ),
         body: viewModel.isLoading
             ? _buildShimmerLoading()
             : RefreshIndicator(
