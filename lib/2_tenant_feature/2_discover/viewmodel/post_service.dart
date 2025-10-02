@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/model/comment_model.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/model/paginated_post.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/model/post_model.dart';
+import 'package:re_conver/Common_model/PostModel.dart';
 import 'package:re_conver/authentication/userdata.dart';
 
 // Sort order enum
@@ -38,7 +38,7 @@ class PostService {
     final snapshot = await query.get();
 
     final posts = snapshot.docs
-        .map((doc) => Post.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+        .map((doc) => PostModel.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
         .toList();
 
     final DocumentSnapshot? newLastDocument = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
@@ -46,7 +46,7 @@ class PostService {
     return PaginatedPosts(posts: posts, lastDocument: newLastDocument);
   }
 
-  Future<List<Post>> getSavedPosts(String userId) async {
+  Future<List<PostModel>> getSavedPosts(String userId) async {
     try {
       // 1. Get the IDs of all saved posts.
       final savedPostsSnapshot =
@@ -64,7 +64,7 @@ class PostService {
           .get();
 
       final savedPosts = postsSnapshot.docs
-          .map((doc) => Post.fromFirestore(
+          .map((doc) => PostModel.fromFirestore(
               doc as DocumentSnapshot<Map<String, dynamic>>,
               isSaved: true))
           .toList();

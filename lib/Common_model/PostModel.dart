@@ -3,7 +3,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:re_conver/authentication/userdata.dart';
 
-class Post {
+class PostModel {
   final String id;
   final String userId;
   final String username;
@@ -22,14 +22,11 @@ class Post {
   List<String> likedBy;
   bool isSaved;
 
-  String caption;
-
-  Post({
+  PostModel({
     required this.id,
     required this.userId,
     required this.username,
     required this.userProfileImageUrl,
-    required this.caption,
     this.description = '',
     this.imageUrls = const [],
     required this.timestamp,
@@ -51,18 +48,18 @@ class Post {
 
   List<String> get allTags => manualTags;
 
-  factory Post.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc, {bool isSaved = false}) {
+  factory PostModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc, {bool isSaved = false}) {
     final data = doc.data();
     if (data == null) {
       throw Exception("Post data is null for document ${doc.id}");
     }
 
-    return Post(
+    return PostModel(
       id: doc.id,
       userId: data['userId'] ?? '',
       username: data['username'] ?? 'Anonymous',
       userProfileImageUrl: data['userProfileImageUrl'] ?? '',
-      description: data['description'] ?? '',
+      description: data['description'] ?? data['caption'] ?? '', // captionも考慮
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
       timestamp: data['timestamp'] ?? Timestamp.now(),
       likeCount: data['likeCount'] ?? 0,
@@ -75,7 +72,6 @@ class Post {
       roomType: data['roomType'] ?? 'Middle',
       rent: (data['rent'] as num?)?.toDouble() ?? 0.0,
       condominiumName: data['condominiumName'] ?? '',
-      caption: data['caption'] ?? '',
     );
   }
 }

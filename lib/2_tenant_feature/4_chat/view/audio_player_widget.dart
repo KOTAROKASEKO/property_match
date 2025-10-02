@@ -21,6 +21,7 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
   @override
   void initState() {
     super.initState();
+    _audioPlayer.setReleaseMode(ReleaseMode.stop);
     _initAudioPlayer();
 
     _audioPlayer.onPlayerStateChanged.listen((state) {
@@ -34,16 +35,26 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
     _audioPlayer.onPositionChanged.listen((position) {
       if (mounted) setState(() => _position = position);
     });
+
+    _audioPlayer.onPlayerComplete.listen((event) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = false;
+          _position = Duration.zero; // FIX: Reset position to the beginning
+        });
+      }
+    });
   }
 
   Future<void> _initAudioPlayer() async {
     Source? source;
-    if (widget.message.localPath != null && File(widget.message.localPath!).existsSync()) {
+    if (widget.message.localPath != null &&
+        File(widget.message.localPath!).existsSync()) {
       source = DeviceFileSource(widget.message.localPath!);
     } else if (widget.message.remoteUrl != null) {
       source = UrlSource(widget.message.remoteUrl!);
     }
-    
+
     if (source != null) {
       await _audioPlayer.setSource(source);
     }
@@ -52,7 +63,6 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
   @override
   void dispose() {
     _audioPlayer.stop();
-    _audioPlayer.release();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -66,12 +76,25 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          icon: Icon(_isPlaying ? Icons.pause_circle : Icons.play_circle, color: color, size: 32),
-          onPressed: () {
+          icon: Icon(
+            _isPlaying ? Icons.pause_circle : Icons.play_circle,
+            color: color,
+            size: 32,
+          ),
+          onPressed: () async {
             if (_isPlaying) {
-              _audioPlayer.pause();
+              await _audioPlayer.pause();
             } else {
-              _audioPlayer.resume();
+              if (_position > Duration.zero && _position < _duration) {
+                await _audioPlayer.resume();
+              } else {
+                await _audioPlayer.seek(Duration.zero);
+                await _audioPlayer.play(
+                  widget.message.localPath != null
+                      ? DeviceFileSource(widget.message.localPath!)
+                      : UrlSource(widget.message.remoteUrl!),
+                );
+              }
             }
           },
         ),
@@ -84,8 +107,16 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
             child: Slider(
               min: 0,
               max: _duration.inSeconds.toDouble(),
-              value: _position.inSeconds.toDouble().clamp(0.0, _duration.inSeconds.toDouble()),
-              onChanged: (value) async {
+              value: _position.inSeconds.toDouble().clamp(
+                0.0,
+                _duration.inSeconds.toDouble(),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _position = Duration(seconds: value.toInt());
+                });
+              },
+              onChangeEnd: (value) async {
                 final newPosition = Duration(seconds: value.toInt());
                 await _audioPlayer.seek(newPosition);
               },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/1_agent_feature/tenant_list/viewodel/tenant_list_viewmodel.dart';
+import 'package:re_conver/1_agent_feature/3_tenant_list/viewodel/tenant_list_viewmodel.dart';
 import 'package:re_conver/2_tenant_feature/3_profile/models/profile_model.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/providerIndividualChat.dart';
 import 'package:re_conver/authentication/userdata.dart';
@@ -144,7 +145,7 @@ class TenantCard extends StatelessWidget {
             style:
                 const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         subtitle:
-            Text('${tenant.occupation}', style: const TextStyle(fontSize: 14)),
+            Text('${tenant.location}', style: const TextStyle(fontSize: 14)),
         children: [
           const Divider(height: 1, indent: 16, endIndent: 16),
           Padding(
@@ -152,6 +153,13 @@ class TenantCard extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
             child: Column(
               children: [
+                _buildDetailRow(
+                    Icons.calendar_today_outlined,
+                    'Move-in Date',
+                    tenant.moveinDate == null
+                        ? 'Not specified'
+                        : DateFormat.yMMMd().format(tenant.moveinDate!),
+                ),
                 _buildDetailRow(
                     Icons.person_outline, 'About', tenant.selfIntroduction),
                 _buildDetailRow(
@@ -184,10 +192,10 @@ class TenantCard extends StatelessWidget {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => IndividualChatScreenWithProvider(
-                          chatThreadId: chatThreadId,
                           otherUserUid: tenant.uid,
                           otherUserName: tenant.displayName,
                           otherUserPhotoUrl: tenant.profileImageUrl,
+                          chatThreadId: chatThreadId,
                         ),
                       ),
                     );

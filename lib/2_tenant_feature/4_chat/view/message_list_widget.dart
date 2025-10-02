@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/message_model.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/audio_player_widget.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/full_screen_image_view.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/view/property_message_bubble.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageList.dart';
 import 'package:re_conver/authentication/userdata.dart';
 
@@ -200,6 +201,36 @@ class _MessageListViewState extends State<MessageListView> {
     );
   }
 
+  // New helper widget for status icons
+  Widget _buildStatusIcon(MessageModel message) {
+    IconData iconData;
+    Color iconColor;
+    const double iconSize = 16.0;
+
+    switch (message.status) {
+      case 'sending':
+        return SizedBox(
+          width: iconSize - 2,
+          height: iconSize - 2,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.5,
+            color: Colors.white.withOpacity(0.8),
+          ),
+        );
+      case 'failed':
+        iconData = Icons.error_outline;
+        iconColor = Colors.red.shade300;
+        break;
+      case 'sent':
+      default:
+        iconData = message.isRead ? Icons.done_all : Icons.done;
+        iconColor = message.isRead ? Colors.lightBlueAccent : Colors.white.withOpacity(0.8);
+        break;
+    }
+
+    return Icon(iconData, color: iconColor, size: iconSize);
+  }
+
   Widget _buildMessageItem(
     BuildContext context,
     MessageModel message,
@@ -214,7 +245,33 @@ class _MessageListViewState extends State<MessageListView> {
             : (Colors.grey[300] ?? Colors.grey);
     final textColor = isMe ? Colors.white : Colors.black87;
 
+    final timeStampAndStatus = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (message.editedAt != null)
+          Text(
+            'Edited ',
+            style: TextStyle(
+              color: textColor.withOpacity(0.8),
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        Text(
+          DateFormat.jm().format(message.timestamp),
+          style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 11),
+        ),
+        if (isMe) ...[
+          const SizedBox(width: 4),
+          _buildStatusIcon(message),
+        ],
+      ],
+    );
+
     Widget messageContent;
+    if (message.messageType == 'property_template') {
+      return PropertyMessageBubble(message: message);
+    }
     if (message.status == 'deleted_for_everyone') {
       messageContent = Row(
         mainAxisSize: MainAxisSize.min,
@@ -243,7 +300,7 @@ class _MessageListViewState extends State<MessageListView> {
           );
         },
         child: Hero(
-          tag: message.remoteUrl!,
+          tag: message.remoteUrl ?? message.localPath ?? message.messageId,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8.0),
             child: (message.localPath != null &&
@@ -272,6 +329,32 @@ class _MessageListViewState extends State<MessageListView> {
         style: TextStyle(color: textColor, fontSize: 16),
       );
     }
+    
+    Widget bubbleContent;
+    // For text messages, use a Wrap to keep content compact
+    if (message.messageType == 'text' && message.status != 'deleted_for_everyone') {
+      bubbleContent = Wrap(
+        alignment: WrapAlignment.end,
+        crossAxisAlignment: WrapCrossAlignment.end,
+        children: [
+          messageContent,
+          const SizedBox(width: 8), // Space between text and time
+          timeStampAndStatus,
+        ],
+      );
+    } else {
+      // For images, audio, or deleted messages, use a Column
+      bubbleContent = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          messageContent,
+          const SizedBox(height: 4),
+          timeStampAndStatus,
+        ],
+      );
+    }
+
 
     final messageBubble = ConstrainedBox(
       constraints: BoxConstraints(
@@ -296,11 +379,8 @@ class _MessageListViewState extends State<MessageListView> {
               ),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12.0,
-                vertical: 8.0,
-              ),
-              child: messageContent,
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              child: bubbleContent,
             ),
           ),
         ],
@@ -346,23 +426,8 @@ class _MessageListViewState extends State<MessageListView> {
                     ),
                   ),
                 ),
-              if (isMe && message.status != 'deleted_for_everyone')
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Text(
-                    DateFormat.jm().format(message.timestamp),
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
-                  ),
-                ),
+              // Timestamps are now inside the bubble
               messageBubble,
-              if (!isMe && message.status != 'deleted_for_everyone')
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Text(
-                    DateFormat.jm().format(message.timestamp),
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
-                  ),
-                ),
             ],
           ),
         ),

@@ -1,4 +1,3 @@
-// Widget for the "All" tab
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -14,11 +13,14 @@ class ChatThreadList extends StatelessWidget {
   final List<ChatThread> threads;
   final String Function(ChatThread, String) getOtherParticipantId;
   final Function(ChatThread) onLongPress;
+  final ValueChanged<ChatThread>? onThreadSelected;
 
   const ChatThreadList({
+    super.key,
     required this.threads,
     required this.getOtherParticipantId,
     required this.onLongPress,
+    this.onThreadSelected,
   });
 
   @override
@@ -107,31 +109,35 @@ class ChatThreadList extends StatelessWidget {
                       ],
                     ),
                     onTap: () {
-                      pr('thread id is ::::  ${thread.id}');
-                      Navigator.of(context).push(
-                        PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  IndividualChatScreenWithProvider(
-                            chatThreadId: thread.id,
-                            otherUserUid: otherParticipantId,
-                            otherUserName: displayName,
-                            otherUserPhotoUrl: imageUrl,
+                      if (onThreadSelected != null) {
+                        onThreadSelected!(thread);
+                      } else {
+                        pr('thread id is ::::  ${thread.id}');
+                        Navigator.of(context).push(
+                          PageRouteBuilder(
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    IndividualChatScreenWithProvider(
+                              chatThreadId: thread.id,
+                              otherUserUid: otherParticipantId,
+                              otherUserName: displayName,
+                              otherUserPhotoUrl: imageUrl,
+                            ),
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              const begin = Offset(1.0, 0.0);
+                              const end = Offset.zero;
+                              const curve = Curves.ease;
+                              final tween = Tween(begin: begin, end: end)
+                                  .chain(CurveTween(curve: curve));
+                              return SlideTransition(
+                                position: animation.drive(tween),
+                                child: child,
+                              );
+                            },
                           ),
-                          transitionsBuilder:
-                              (context, animation, secondaryAnimation, child) {
-                            const begin = Offset(1.0, 0.0);
-                            const end = Offset.zero;
-                            const curve = Curves.ease;
-                            final tween = Tween(begin: begin, end: end)
-                                .chain(CurveTween(curve: curve));
-                            return SlideTransition(
-                              position: animation.drive(tween),
-                              child: child,
-                            );
-                          },
-                        ),
-                      );
+                        );
+                      }
                     },
                     onLongPress: () => onLongPress(thread),
                   ),

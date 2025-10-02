@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/chat_thread.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/repo/isar_helper.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/add_edit_general_note_screen.dart';
@@ -15,8 +16,9 @@ import 'package:re_conver/2_tenant_feature/4_chat/view/date_time_picker_modal.da
 import 'package:re_conver/2_tenant_feature/4_chat/view/report_user_dialogue.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/chat_service.dart';
 import 'package:re_conver/authentication/userdata.dart';
+import 'package:re_conver/service/local_notification.dart';
 
-// ViewingAppointmentクラスは変更なし
+
 class ViewingAppointment {
   final ChatThread thread;
   final DateTime viewingTime;
@@ -34,7 +36,8 @@ class ViewingAppointment {
 }
 
 class ChatThreadsScreen extends StatefulWidget {
-  const ChatThreadsScreen({super.key});
+  final ValueChanged<ChatThread>? onThreadSelected;
+  const ChatThreadsScreen({super.key, this.onThreadSelected});
 
   @override
   State<ChatThreadsScreen> createState() => _ChatThreadsScreenState();
@@ -120,7 +123,6 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
         .listen((snapshot) async {
       if (!mounted) return;
 
-      // 変更があったドキュメントだけを処理
       for (var change in snapshot.docChanges) {
         if (!change.doc.exists || change.doc.data() == null) continue;
 
@@ -134,7 +136,6 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
           thread.hisName = userDoc.data()!['displayName'];
           thread.hisPhotoUrl = userDoc.data()!['profileImageUrl'];
         }
-        // Isarに保存 (これがUIを自動更新する)
         await _isarService.saveChatThread(thread);
       }
     }, onError: (error) {
@@ -147,11 +148,6 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
         ? thread.whoReceived
         : thread.whoSent;
   }
-
-  // _showReportUserDialog, _showChatOptions, _addViewingTime など、
-  // 他のメソッドはこの下に変更なく続きます...
-  
-  // (ここに _showReportUserDialog, _showChatOptions などのメソッドをペースト)
   void _showReportUserDialog(String reportedUserId) async {
     final reason = await showDialog<String>(
       context: context,
@@ -362,6 +358,19 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
   }
 
   Future<void> _addViewingTime(ChatThread thread, DateTime newTime) async {
+     final notificationService = NotificationService();
+    var status = await Permission.notification.status;
+    if (status.isDenied) {
+      final bool granted = await notificationService.requestPermissions();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('通知を送信するには許可が必要です。')),
+          );
+        }
+        return; // 許可されなければここで処理を中断
+      }
+    }
     try {
       await _firestore.collection('chats').doc(thread.id).update({
         'viewingTimes': FieldValue.arrayUnion([Timestamp.fromDate(newTime)]),
@@ -524,6 +533,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
                 threads: allThreads,
                 getOtherParticipantId: _getOtherParticipantId,
                 onLongPress: (thread) => _showChatOptions(context, thread, null),
+                onThreadSelected: widget.onThreadSelected,
               ),
               ViewingAppointmentList(
                 appointments: viewingAppointments,

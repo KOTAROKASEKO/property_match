@@ -15,6 +15,7 @@ class UserProfile {
   final String propertyType; // "Condo", "Landed", "Apartment"
   final String nationality; // Added
   final String selfIntroduction; // Added
+  final DateTime? moveinDate; // Added
 
   UserProfile({
     required this.uid,
@@ -31,6 +32,7 @@ class UserProfile {
     this.propertyType = 'Condominium',
     this.nationality = 'Not specified', // Added
     this.selfIntroduction = '', // Added
+    this.moveinDate,
   });
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
@@ -50,6 +52,7 @@ class UserProfile {
       propertyType: data?['propertyType'] as String? ?? 'Condominium',
       nationality: data?['nationality'] as String? ?? 'Not specified', // Added
       selfIntroduction: data?['selfIntroduction'] as String? ?? '', // Added
+      moveinDate: (data?['moveinDate'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -68,6 +71,7 @@ class UserProfile {
       'propertyType': propertyType,
       'nationality': nationality, // Added
       'selfIntroduction': selfIntroduction, // Added
+      'moveinDate': moveinDate != null ? Timestamp.fromDate(moveinDate!) : null,
     };
   }
 }

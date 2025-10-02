@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/model/post_model.dart';
+import 'package:re_conver/Common_model/PostModel.dart';
 
 class PaginatedPosts {
-  final List<Post> posts;
+  final List<PostModel> posts;
   final DocumentSnapshot? lastDocument;
 
   PaginatedPosts({

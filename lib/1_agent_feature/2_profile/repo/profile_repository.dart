@@ -4,13 +4,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:re_conver/1_agent_feature/2_profile/model/agent_profile_model.dart';
-import 'package:re_conver/1_agent_feature/2_profile/model/post_model.dart';
+import 'package:re_conver/Common_model/PostModel.dart';
 import 'package:re_conver/app/debug_print.dart';
 
-// データ操作のインターフェースを定義
 abstract class ProfileRepository {
   Future<AgentProfile?> fetchAgentProfile(String userId);
-  Future<List<Post>> fetchAgentPosts(String userId);
+  Future<List<PostModel>> fetchAgentPosts(String userId);
   Future<void> updateUserProfile(AgentProfile updatedProfile);
   Future<String> uploadProfileImage(String userId, XFile imageFile);
   Future<void> createPost({
@@ -22,6 +21,7 @@ abstract class ProfileRepository {
     required String gender,
     required List<String> manualTags,
   });
+  Future<void> deletePost(String postId);
 }
 
 // Firestoreに対する具体的な実装クラス
@@ -32,6 +32,7 @@ class FirestoreProfileRepository implements ProfileRepository {
 
   @override
   Future<AgentProfile?> fetchAgentProfile(String userId) async {
+    pr('fetching agent profile for userId: $userId');
     try {
       final doc = await _firestore.collection('users_prof').doc(userId).get();
       if (doc.exists) {
@@ -45,14 +46,14 @@ class FirestoreProfileRepository implements ProfileRepository {
   }
 
   @override
-  Future<List<Post>> fetchAgentPosts(String userId) async {
+  Future<List<PostModel>> fetchAgentPosts(String userId) async {
     try {
       final querySnapshot = await _firestore
           .collection('posts')
           .where('userId', isEqualTo: userId)
           .orderBy('timestamp', descending: true)
           .get();
-      return querySnapshot.docs.map((doc) => Post.fromFirestore(doc)).toList();
+      return querySnapshot.docs.map((doc) => PostModel.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>)).toList();
     } catch (e) {
       print("Failed to fetch posts: ${e.toString()}");
       throw Exception('Failed to fetch posts: ${e.toString()}');
@@ -122,6 +123,16 @@ class FirestoreProfileRepository implements ProfileRepository {
       });
     } catch (e) {
       print("Error creating post: $e");
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deletePost(String postId) async {
+    try {
+      await _firestore.collection('posts').doc(postId).delete();
+    } catch (e) {
+      print("Error deleting post: $e");
       rethrow;
     }
   }

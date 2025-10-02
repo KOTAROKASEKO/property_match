@@ -6,9 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
+import 'package:re_conver/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/message_model.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/template_carousel_vwidget.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageList.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageTemplate_viewmodel.dart';
+import 'package:re_conver/authentication/userdata.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -42,15 +46,23 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
   late ValueNotifier<bool> _canPerformActionNotifier;
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecording = false;
+  late MessageListProvider _messageListProvider;
 
-  // New state variables for recording UI
   Timer? _recordingTimer;
   Duration _recordingDuration = Duration.zero;
-  double? _longPressStartX;
+
+
+  bool _isCancelled = false;
+  static const double _cancelThreshold = 100.0; // Slide distance to cancel
+
 
   @override
   void initState() {
     super.initState();
+    _messageListProvider = Provider.of<MessageListProvider>(
+      context,
+      listen: false,
+    );
     _messageController = TextEditingController();
     _canPerformActionNotifier = ValueNotifier<bool>(
       _calculateCanPerformAction(),
@@ -90,43 +102,37 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     setState(() {
       _isRecording = true;
       _recordingDuration = Duration.zero;
+      _isCancelled = false;
     });
     _recordingTimer =
         Timer.periodic(const Duration(milliseconds: 100), _updateTimer);
   }
 
-  Future<void> _stopRecordingAndSend() async {
+  Future<void> _stopRecording({bool cancelled = false}) async {
     if (!_isRecording) return;
     try {
       final path = await _audioRecorder.stop();
-      if (path != null) {
+      if (path != null && !cancelled) {
         widget.onSendMessage(audioFile: File(path));
-      }
-    } catch (e) {
-      print("Recording error: $e");
-    } finally {
-      _recordingTimer?.cancel();
-      setState(() => _isRecording = false);
-    }
-  }
-
-  Future<void> _cancelRecording() async {
-    if (!_isRecording) return;
-    try {
-      final path = await _audioRecorder.stop();
-      if (path != null) {
+      } else if (path != null && cancelled) {
         final file = File(path);
         if (await file.exists()) {
           await file.delete();
         }
       }
     } catch (e) {
-      print("Error cancelling recording: $e");
+      print("Recording error: $e");
     } finally {
       _recordingTimer?.cancel();
-      setState(() => _isRecording = false);
+      if(mounted) {
+        setState(() {
+          _isRecording = false;
+          _isCancelled = false; // Reset cancellation state
+        });
+      }
     }
   }
+
 
   Future<bool> _handleMicPermission() async {
     final status = await Permission.microphone.request();
@@ -185,6 +191,120 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     _messageController.clear();
   }
 
+  void _showTextTemplatesBottomSheet(BuildContext context) {
+  final templateViewModel = context.read<MessagetemplateViewmodel>();
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      return ChangeNotifierProvider.value(
+        value: templateViewModel,
+        child: DraggableScrollableSheet(
+            initialChildSize: 0.4,
+            minChildSize: 0.3,
+            maxChildSize: 0.6,
+            expand: false,
+            builder: (_, scrollController) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: TemplateCarouselWidget(
+                  onTemplateSelected: (template) {
+                    _messageController.text = template;
+                    _messageController.selection = TextSelection.fromPosition(
+                        TextPosition(offset: _messageController.text.length));
+                    _onTextChanged();
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+              );
+            }),
+      );
+    },
+  );
+}
+
+  void showPropertyTemplatesBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return ChangeNotifierProvider.value(
+          value: context.read<AgentTemplateViewModel>(),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.6,
+            minChildSize: 0.4,
+            maxChildSize: 0.8,
+            expand: false,
+            builder: (_, scrollController) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: PropertyTemplateCarouselWidget(
+                  onTemplateSelected: (template) {
+                    _messageListProvider.sendMessage(propertyTemplate: template);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAgentTemplateSelectionSheet(BuildContext context) {
+    showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) {
+          return SafeArea(
+            child: Container(
+              margin: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              child: Wrap(
+                children: <Widget>[
+                  ListTile(
+                    leading: const Icon(Icons.apartment_outlined,
+                        color: Colors.deepPurple),
+                    title: const Text('Property Template'),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      showPropertyTemplatesBottomSheet(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.note_alt_outlined,
+                        color: Colors.deepPurple),
+                    title: const Text('Message Template'),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _showTextTemplatesBottomSheet(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+  }
+
   void _showOptionsBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -200,18 +320,6 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
             child: Wrap(
               children: <Widget>[
                 ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined,
-                      color: Colors.deepPurple),
-                  title: const Text('Camera'),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Camera not implemented yet.')),
-                    );
-                  },
-                ),
-                ListTile(
                   leading: const Icon(Icons.photo_library_outlined,
                       color: Colors.deepPurple),
                   title: const Text('Photo Library'),
@@ -226,7 +334,13 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                   title: const Text('Templates'),
                   onTap: () {
                     Navigator.of(ctx).pop();
-                    _showTemplatesBottomSheet(context);
+                    if (userData.role == Roles.agent) {
+                      // エージェントの場合は、まず種類を選択させる
+                      _showAgentTemplateSelectionSheet(context);
+                    } else {
+                      // テナントの場合は、直接メッセージテンプレートを表示
+                      _showTextTemplatesBottomSheet(context);
+                    }
                   },
                 ),
               ],
@@ -237,153 +351,138 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     );
   }
 
-  void _showTemplatesBottomSheet(BuildContext context) {
-    final templateViewModel = context.read<MessagetemplateViewmodel>();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return ChangeNotifierProvider.value(
-          value: templateViewModel,
-          child: DraggableScrollableSheet(
-              initialChildSize: 0.4,
-              minChildSize: 0.3,
-              maxChildSize: 0.6,
-              expand: false,
-              builder: (_, scrollController) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
-                    ),
-                  ),
-                  child: TemplateCarouselWidget(
-                    onTemplateSelected: (template) {
-                      _messageController.text = template;
-                      _messageController.selection = TextSelection.fromPosition(
-                          TextPosition(offset: _messageController.text.length));
-                      _onTextChanged();
-                      Navigator.of(ctx).pop();
-                    },
-                  ),
-                );
-              }),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(8.0),
       color: Theme.of(context).cardColor,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        transitionBuilder: (child, animation) {
-          return ScaleTransition(scale: animation, child: child);
-        },
-        child: _isRecording ? _buildRecordingUi() : _buildTextInputUi(),
+      child: Row(
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+            child: _isRecording
+                ? Row(
+                    key: const ValueKey('recording_timer'),
+                    children: [
+                      Icon(Icons.mic, color: Colors.red.shade400),
+                      const SizedBox(width: 8),
+                      Text(
+                        _formatDuration(_recordingDuration),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: 0.5),
+                      ),
+                    ],
+                  )
+                : IconButton(
+                    key: const ValueKey('add_button'),
+                    icon: const Icon(Icons.add_circle_outline, color: Colors.deepPurple),
+                    onPressed: widget.isSending ? null : () => _showOptionsBottomSheet(context),
+                  ),
+          ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              transitionBuilder: (child, animation) {
+                final offsetAnimation = Tween<Offset>(
+                  begin: const Offset(0.0, 0.3),
+                  end: Offset.zero,
+                ).animate(animation);
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(position: offsetAnimation, child: child),
+                );
+              },
+              child: _isRecording ? _buildSlideToCancel() : _buildTextInput(),
+            ),
+          ),
+          ValueListenableBuilder<bool>(
+            valueListenable: _canPerformActionNotifier,
+            builder: (context, canPerformAction, child) {
+              if (canPerformAction && !_isRecording) {
+                return IconButton(
+                  icon: const Icon(Icons.send, color: Colors.deepPurple),
+                  onPressed: _handleSendOrSave,
+                );
+              } else {
+                return GestureDetector(
+                   onLongPressStart: (_) => _startRecording(),
+                  onLongPressMoveUpdate: (details) {
+                    if (!_isRecording) return;
+                    final newSlidePosition = details.localPosition.dx;
+                    setState(() {
+                      if (newSlidePosition < -_cancelThreshold && !_isCancelled) {
+                        HapticFeedback.mediumImpact();
+                        _isCancelled = true;
+                      } else if (newSlidePosition >= -_cancelThreshold && _isCancelled) {
+                        _isCancelled = false;
+                      }
+                    });
+                  },
+                  onLongPressEnd: (_) => _stopRecording(cancelled: _isCancelled),
+                  onLongPressCancel: () => _stopRecording(cancelled: true),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: _isRecording ? 80 : 48,
+                    height: _isRecording ? 80 : 48,
+                    decoration: BoxDecoration(
+                      color: _isRecording
+                          ? (_isCancelled ? Colors.red.shade300 : Colors.green.shade400)
+                          : Colors.transparent, // Not recording, so transparent
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.mic,
+                      color: _isRecording ? Colors.white : Theme.of(context).iconTheme.color,
+                      size: _isRecording ? 40 : 28,
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTextInputUi() {
-    return Row(
-      key: const ValueKey('text_input_ui'),
-      children: [
-        IconButton(
-          icon: const Icon(Icons.add_circle_outline, color: Colors.deepPurple),
-          onPressed:
-              widget.isSending ? null : () => _showOptionsBottomSheet(context),
-        ),
-        Expanded(
-          child: TextField(
-            cursorColor: Colors.deepPurple,
-            keyboardType: TextInputType.multiline,
-            textInputAction: TextInputAction.newline,
-            minLines: 1,
-            maxLines: 5,
-            controller: _messageController,
-            focusNode: _textFieldFocusNode,
-            decoration: InputDecoration(
-              hintText: 'Type a message...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Theme.of(context).scaffoldBackgroundColor,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            ),
+  Widget _buildTextInput() {
+    return Padding(
+      key: const ValueKey('text_input'),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: TextField(
+        cursorColor: Colors.deepPurple,
+        keyboardType: TextInputType.multiline,
+        textInputAction: TextInputAction.newline,
+        minLines: 1,
+        maxLines: 5,
+        controller: _messageController,
+        focusNode: _textFieldFocusNode,
+        decoration: InputDecoration(
+          hintText: 'Type a message...',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
           ),
+          filled: true,
+          fillColor: Theme.of(context).scaffoldBackgroundColor,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         ),
-        ValueListenableBuilder<bool>(
-          valueListenable: _canPerformActionNotifier,
-          builder: (context, canPerformAction, child) {
-            if (canPerformAction) {
-              return IconButton(
-                icon: const Icon(Icons.send, color: Colors.deepPurple),
-                onPressed: _handleSendOrSave,
-              );
-            } else {
-              return GestureDetector(
-                onLongPressStart: (details) {
-                  _longPressStartX = details.globalPosition.dx;
-                  _startRecording();
-                },
-                onLongPressEnd: (details) {
-                  if (!_isRecording) return;
-                  final endX = details.globalPosition.dx;
-                  final screenWidth = MediaQuery.of(context).size.width;
-                  if (_longPressStartX != null &&
-                      (_longPressStartX! - endX) > (screenWidth / 4)) {
-                    _cancelRecording();
-                  } else {
-                    _stopRecordingAndSend();
-                  }
-                  _longPressStartX = null;
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Icon(
-                    Icons.mic_none_outlined,
-                    color: Theme.of(context).iconTheme.color,
-                    size: 28,
-                  ),
-                ),
-              );
-            }
-          },
-        ),
-        if (widget.editingMessage != null)
-          IconButton(
-            icon: const Icon(Icons.cancel),
-            onPressed: widget.onCancelEditing,
-          ),
-      ],
+      ),
     );
   }
-
-  Widget _buildRecordingUi() {
-    return Row(
-      key: const ValueKey('recording_ui'),
-      children: [
-        const Icon(Icons.mic, color: Colors.red),
-        const SizedBox(width: 16),
-        Text(
-          _formatDuration(_recordingDuration),
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-        ),
-        const Spacer(),
-        const Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey),
-        const Text("Slide to cancel", style: TextStyle(color: Colors.grey)),
-        const SizedBox(width: 16),
-      ],
+  
+  Widget _buildSlideToCancel() {
+    return Container(
+      key: const ValueKey('slide_to_cancel'),
+      alignment: Alignment.center,
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.arrow_back_ios, color: Colors.grey, size: 14),
+          SizedBox(width: 8),
+          Text("Slide to cancel", style: TextStyle(color: Colors.grey)),
+        ],
+      ),
     );
   }
 }

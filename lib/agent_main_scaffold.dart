@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:re_conver/1_agent_feature/2_profile/view/DashBoard.dart';
-import 'package:re_conver/1_agent_feature/tenant_list/view/tenant_list_view.dart';
+import 'package:re_conver/1_agent_feature/3_tenant_list/view/tenant_list_view.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/chatThreadScreen.dart';
 import 'package:re_conver/authentication/login_placeholder.dart';
 

@@ -1,26 +1,36 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/model/post_model.dart';
+import 'package:re_conver/2_tenant_feature/2_discover/view/agent_profile_screen.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/view/comment_bottomsheet.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/viewmodel/discover_viewmodel.dart';
+import 'package:re_conver/Common_model/PostModel.dart';
+import 'package:re_conver/app/debug_print.dart';
 import 'package:re_conver/authentication/auth_service.dart';
-import 'package:rive/rive.dart' hide Image; // Import the Rive package
+import 'package:rive/rive.dart' hide Image;
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class PostCard extends StatefulWidget {
-  final Post post;
+  final PostModel post;
+  // Define function parameters for the actions
+  final Function(String) onToggleLike;
+  final Function(String) onToggleSave;
 
-  const PostCard({super.key, required this.post});
+  const PostCard({
+    super.key, 
+    required this.post,
+    required this.onToggleLike,
+    required this.onToggleSave,
+  });
 
   @override
   State<PostCard> createState() => _PostCardState();
 }
 
 class _PostCardState extends State<PostCard> {
-  final CarouselSliderController _carouselController = CarouselSliderController();
+  final CarouselSliderController _carouselController =
+      CarouselSliderController();
   int _currentPage = 0;
   Artboard? _riveArtboard;
   SMIInput<bool>? _isLikedInput;
@@ -33,7 +43,8 @@ class _PostCardState extends State<PostCard> {
         try {
           final file = RiveFile.import(data);
           final artboard = file.mainArtboard;
-          var controller = StateMachineController.fromArtboard(artboard, 'State Machine 1');
+          var controller =
+              StateMachineController.fromArtboard(artboard, 'State Machine 1');
           if (controller != null) {
             artboard.addController(controller);
             _isLikedInput = controller.findInput<bool>('isLiked');
@@ -47,11 +58,19 @@ class _PostCardState extends State<PostCard> {
     );
   }
 
- 
+  void _sharePost() {
+    final post = widget.post;
+    final String textToShare = 'Check out this listing on Re:Conver:\n\n'
+        '🏠 *Property:* ${post.condominiumName}\n'
+        '💰 *Rent:* RM ${post.rent.toStringAsFixed(0)}/month\n'
+        '🚪 *Room Type:* ${post.roomType}\n\n'
+        '${post.description}\n\n'
+        'View more in the app!';
+    Share.share(textToShare);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<DiscoverViewModel>();
     _isLikedInput?.value = widget.post.isLikedByCurrentUser;
 
     return Card(
@@ -64,7 +83,7 @@ class _PostCardState extends State<PostCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildImageCarousel(context),
-          _buildContent(context, viewModel),
+          _buildContent(context),
         ],
       ),
     );
@@ -101,17 +120,6 @@ class _PostCardState extends State<PostCard> {
             );
           }).toList(),
         ),
-        Positioned(
-          top: 8,
-          right: 8,
-          child: Chip(
-            backgroundColor: Colors.black54,
-            label: Text(
-              'RM ${widget.post.rent.toStringAsFixed(0)}',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
         if (widget.post.imageUrls.length > 1)
           Positioned(
             bottom: 8.0,
@@ -126,7 +134,9 @@ class _PostCardState extends State<PostCard> {
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _currentPage == index ? Colors.white : Colors.white.withOpacity(0.4),
+                    color: _currentPage == index
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.4),
                   ),
                 );
               }),
@@ -136,7 +146,8 @@ class _PostCardState extends State<PostCard> {
     );
   }
 
-  Widget _buildContent(BuildContext context, DiscoverViewModel viewModel) {
+  // FIXED: Changed parameter type from DiscoverViewModel to PostActionsViewModel
+   Widget _buildContent(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
@@ -147,6 +158,11 @@ class _PostCardState extends State<PostCard> {
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            'RM ${widget.post.rent.toStringAsFixed(0)}',
+            style: const TextStyle(
+                color: Colors.black, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Row(
@@ -168,7 +184,7 @@ class _PostCardState extends State<PostCard> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildUserHeader(context),
-              _buildActionButtons(context, viewModel),
+              _buildActionButtons(context),
             ],
           ),
         ],
@@ -194,7 +210,12 @@ class _PostCardState extends State<PostCard> {
         if (FirebaseAuth.instance.currentUser == null) {
           showSignInModal(context);
         } else {
-          // TODO: Navigate to Agent Profile Screen
+          pr('header pressed');
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => AgentProfileScreen(agentId: widget.post.userId),
+            ),
+          );
         }
       },
       child: Row(
@@ -204,7 +225,9 @@ class _PostCardState extends State<PostCard> {
             backgroundImage: widget.post.userProfileImageUrl.isNotEmpty
                 ? NetworkImage(widget.post.userProfileImageUrl)
                 : null,
-            child: widget.post.userProfileImageUrl.isEmpty ? const Icon(Icons.person) : null,
+            child: widget.post.userProfileImageUrl.isEmpty
+                ? const Icon(Icons.person)
+                : null,
           ),
           const SizedBox(width: 8),
           Column(
@@ -225,16 +248,22 @@ class _PostCardState extends State<PostCard> {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, DiscoverViewModel viewModel) {
+  // FIXED: Changed parameter type from DiscoverViewModel to PostActionsViewModel
+   Widget _buildActionButtons(BuildContext context) {
     return Row(
       children: [
+        IconButton(
+          icon: const Icon(Icons.share_outlined),
+          onPressed: _sharePost,
+        ),
         GestureDetector(
           onTap: () {
             if (FirebaseAuth.instance.currentUser == null) {
               showSignInModal(context);
               return;
             }
-            viewModel.toggleLike(widget.post.id);
+            // Use the callback from the widget's properties
+            widget.onToggleLike(widget.post.id);
           },
           child: SizedBox(
             width: 30,
@@ -272,7 +301,8 @@ class _PostCardState extends State<PostCard> {
             if (FirebaseAuth.instance.currentUser == null) {
               showSignInModal(context);
             } else {
-              viewModel.savePost(widget.post.id);
+              // Use the callback from the widget's properties
+              widget.onToggleSave(widget.post.id);
             }
           },
         ),

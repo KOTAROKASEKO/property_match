@@ -1,17 +1,22 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/1_agent_feature/2_profile/model/post_model.dart';
 import 'package:re_conver/1_agent_feature/2_profile/repo/profile_repository.dart';
 import 'package:re_conver/1_agent_feature/2_profile/view/create_post_screen.dart';
 import 'package:re_conver/1_agent_feature/2_profile/view/edit_agent_profile_view.dart';
 import 'package:re_conver/1_agent_feature/2_profile/viewmodel/profile_viewmodel.dart';
+import 'package:re_conver/Common_model/PostModel.dart';
+import 'package:re_conver/authentication/auth_service.dart';
+import 'package:re_conver/authentication/login_placeholder.dart';
+
+import 'post_details_card.dart';
 
 class MyProfilePage extends StatelessWidget {
   // 本来は認証情報から取得するユーザーID
-  final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "VRcmznTkWNTTrxxOvRBFA6jVCPvn2"; // Fallback for testing
+  final String currentUserId = FirebaseAuth.instance.currentUser?.uid ??
+      "VRcmznTkWNTTrxxOvRBFA6jVCPvn2"; // Fallback for testing
 
-  MyProfilePage({Key? key}) : super(key: key);
+  MyProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -20,9 +25,40 @@ class MyProfilePage extends StatelessWidget {
       create: (_) => ProfileViewModel(FirestoreProfileRepository())
         ..fetchAgentData(currentUserId), // ViewModel作成時にデータを取得
       child: Scaffold(
+        drawer: Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                child: const Text(
+                  'Menu',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: const Text('Log out'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await showSignOutModal(context);
+                  Navigator.of(context).pushReplacement(MaterialPageRoute(
+                    builder: (_) => const LoginPlaceholderScreen(),
+                  ));
+                },
+              ),
+            ],
+          ),
+        ),
         backgroundColor: Colors.grey[100],
         appBar: AppBar(
-          title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('My Profile',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
@@ -32,7 +68,8 @@ class MyProfilePage extends StatelessWidget {
             if (viewModel.isLoading && viewModel.agentProfile == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (viewModel.errorMessage != null && viewModel.agentProfile == null) {
+            if (viewModel.errorMessage != null &&
+                viewModel.agentProfile == null) {
               return Center(child: Text(viewModel.errorMessage!));
             }
             if (viewModel.agentProfile == null) {
@@ -49,11 +86,12 @@ class MyProfilePage extends StatelessWidget {
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
                         'My Listings (${viewModel.posts.length})',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
-                  _PostGridView(posts: viewModel.posts),
+                  _PostList(posts: viewModel.posts),
                 ],
               ),
             );
@@ -204,10 +242,9 @@ class _ActionButtons extends StatelessWidget {
   }
 }
 
-// _PostGridViewは変更なしのため省略
-class _PostGridView extends StatelessWidget {
-  final List<Post> posts;
-  const _PostGridView({required this.posts});
+class _PostList extends StatelessWidget {
+  final List<PostModel> posts;
+  const _PostList({required this.posts});
 
   @override
   Widget build(BuildContext context) {
@@ -224,64 +261,26 @@ class _PostGridView extends StatelessWidget {
         ),
       );
     }
-    return SliverPadding(
-      padding: const EdgeInsets.all(16.0),
-      sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.8,
-        ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final post = posts[index];
-            return Card(
-              elevation: 2,
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: post.imageUrls.isNotEmpty
-                          ? Image.network(
-                              post.imageUrls.first,
-                              fit: BoxFit.cover,
-                              // Loading and error builders for better UX
-                              loadingBuilder: (context, child, progress) {
-                                return progress == null
-                                    ? child
-                                    : const Center(
-                                        child: CircularProgressIndicator());
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Icon(Icons.house_rounded,
-                                    color: Colors.grey, size: 50);
-                              },
-                            )
-                          : const Icon(Icons.house_rounded,
-                              color: Colors.grey, size: 50),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      '',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-          childCount: posts.length,
-        ),
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final post = posts[index];
+          return PostDetailsCard(
+            post: post,
+            onDelete: () {
+              context.read<ProfileViewModel>().deletePost(post.id);
+            },
+            onEdit: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CreatePostScreen(post: post),
+                ),
+              );
+            },
+          );
+        },
+        childCount: posts.length,
       ),
     );
   }

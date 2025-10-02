@@ -2,12 +2,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/1_agent_feature/2_profile/viewmodel/create_post_viewmodel.dart';
+import 'package:re_conver/Common_model/PostModel.dart';
 import 'package:re_conver/authentication/auth_service.dart';
 
 class CreatePostScreen extends StatelessWidget {
-  const CreatePostScreen({super.key});
+  final PostModel? post;
+  const CreatePostScreen({super.key, this.post});
 
-  Future<bool> _onWillPop(BuildContext context, CreatePostViewModel viewModel) async {
+  Future<bool> _onWillPop(
+      BuildContext context, CreatePostViewModel viewModel) async {
     if (!viewModel.hasUnsavedChanges || viewModel.isPosting) {
       return true;
     }
@@ -38,7 +41,7 @@ class CreatePostScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => CreatePostViewModel(),
+      create: (_) => CreatePostViewModel(post),
       child: Consumer<CreatePostViewModel>(
         builder: (context, viewModel, child) {
           return WillPopScope(
@@ -46,7 +49,7 @@ class CreatePostScreen extends StatelessWidget {
             child: Scaffold(
               backgroundColor: Colors.grey[100],
               appBar: AppBar(
-                title: const Text('Create New Listing'),
+                title: Text(viewModel.isEditing ? 'Edit Listing' : 'Create New Listing'),
                 leading: IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () async {
@@ -70,7 +73,8 @@ class CreatePostScreen extends StatelessWidget {
                                 } else if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                        content: Text('Failed to create listing. Please try again.')),
+                                        content: Text(
+                                            'Failed to save listing. Please try again.')),
                                   );
                                 }
                               }
@@ -87,9 +91,10 @@ class CreatePostScreen extends StatelessWidget {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
                             )
-                          : const Text('Post'),
+                          : Text(viewModel.isEditing ? 'Save' : 'Post'),
                     ),
                   )
                 ],
@@ -105,17 +110,26 @@ class CreatePostScreen extends StatelessWidget {
                         title: 'Property Details',
                         children: [
                           TextFormField(
-                            decoration: const InputDecoration(labelText: 'Condominium Name'),
-                            onChanged: (value) => viewModel.condominiumName = value,
-                            validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
+                            initialValue: viewModel.condominiumName,
+                            decoration: const InputDecoration(
+                                labelText: 'Condominium Name'),
+                            onChanged: (value) =>
+                                viewModel.condominiumName = value,
+                            validator: (value) =>
+                                value!.isEmpty ? 'Please enter a name' : null,
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
-                            decoration: const InputDecoration(labelText: 'Monthly Rent (RM)'),
+                            initialValue: viewModel.rent > 0 ? viewModel.rent.toString() : '',
+                            decoration: const InputDecoration(
+                                labelText: 'Monthly Rent (RM)'),
                             keyboardType: TextInputType.number,
-                            onChanged: (value) => viewModel.rent = double.tryParse(value) ?? 0,
+                            onChanged: (value) =>
+                                viewModel.rent = double.tryParse(value) ?? 0,
                             validator: (value) {
-                              if (value == null || value.isEmpty || (double.tryParse(value) ?? 0) <= 0) {
+                              if (value == null ||
+                                  value.isEmpty ||
+                                  (double.tryParse(value) ?? 0) <= 0) {
                                 return 'Please enter a valid rent amount';
                               }
                               return null;
@@ -127,19 +141,25 @@ class CreatePostScreen extends StatelessWidget {
                         title: 'Room & Tenant Details',
                         children: [
                           DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(labelText: 'Room Type'),
+                            decoration:
+                                const InputDecoration(labelText: 'Room Type'),
                             value: viewModel.roomType,
-                            items: ['Master', 'Middle', 'Single'].map((String value) {
-                              return DropdownMenuItem<String>(value: value, child: Text(value));
+                            items:
+                                ['Master', 'Middle', 'Single'].map((String value) {
+                              return DropdownMenuItem<String>(
+                                  value: value, child: Text(value));
                             }).toList(),
                             onChanged: (value) => viewModel.roomType = value!,
                           ),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(labelText: 'Preferred Gender'),
+                            decoration: const InputDecoration(
+                                labelText: 'Preferred Gender'),
                             value: viewModel.gender,
-                            items: ['Male', 'Female', 'Mix'].map((String value) {
-                              return DropdownMenuItem<String>(value: value, child: Text(value));
+                            items:
+                                ['Male', 'Female', 'Mix'].map((String value) {
+                              return DropdownMenuItem<String>(
+                                  value: value, child: Text(value));
                             }).toList(),
                             onChanged: (value) => viewModel.gender = value!,
                           ),
@@ -149,13 +169,17 @@ class CreatePostScreen extends StatelessWidget {
                         title: 'Description',
                         children: [
                           TextFormField(
+                            initialValue: viewModel.description,
                             decoration: const InputDecoration(
-                              hintText: 'Add a detailed description of the property, rules, and available amenities...',
+                              hintText:
+                                  'Add a detailed description of the property, rules, and available amenities...',
                               border: InputBorder.none,
                             ),
                             onChanged: (value) => viewModel.description = value,
                             maxLines: 5,
-                            validator: (value) => value!.isEmpty ? 'Please enter a description' : null,
+                            validator: (value) => value!.isEmpty
+                                ? 'Please enter a description'
+                                : null,
                           ),
                         ],
                       ),
@@ -176,7 +200,8 @@ class CreatePostScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionCard({required String title, required List<Widget> children}) {
+  Widget _buildSectionCard(
+      {required String title, required List<Widget> children}) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -186,7 +211,9 @@ class CreatePostScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(title,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ...children,
           ],
@@ -213,9 +240,11 @@ class CreatePostScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid),
+                border: Border.all(
+                    color: Colors.grey.shade400, style: BorderStyle.solid),
               ),
-              child: const Icon(Icons.add_a_photo_outlined, size: 40, color: Colors.grey),
+              child:
+                  const Icon(Icons.add_a_photo_outlined, size: 40, color: Colors.grey),
             ),
           );
         }
@@ -224,10 +253,15 @@ class CreatePostScreen extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                viewModel.selectedImages[index],
-                fit: BoxFit.cover,
-              ),
+              child: viewModel.selectedImages[index] is String
+                  ? Image.network(
+                      viewModel.selectedImages[index],
+                      fit: BoxFit.cover,
+                    )
+                  : Image.file(
+                      viewModel.selectedImages[index],
+                      fit: BoxFit.cover,
+                    ),
             ),
             Positioned(
               top: 4,

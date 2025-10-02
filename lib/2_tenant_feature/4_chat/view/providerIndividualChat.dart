@@ -6,6 +6,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
+import 'package:re_conver/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/message_input_widget.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/message_list_widget.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/view/reply_widget.dart';
@@ -13,9 +15,9 @@ import 'package:re_conver/2_tenant_feature/4_chat/view/template_carousel_vwidget
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageList.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageTemplate_viewmodel.dart';
+import 'package:re_conver/authentication/userdata.dart' show userData, Roles;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// --- Main Widget & Provider Setup ---
 
 class IndividualChatScreenWithProvider extends StatelessWidget {
   final String chatThreadId;
@@ -42,8 +44,10 @@ class IndividualChatScreenWithProvider extends StatelessWidget {
               otherUserUid: otherUserUid,
             ),
           ),
+          ChangeNotifierProvider(create: (_) => AgentTemplateViewModel()),
           ChangeNotifierProvider(
-            create: (_) => MessagetemplateViewmodel()..loadTemplates(),
+            // ViewModel生成時に現在のユーザーの役割を渡す
+            create: (_) => MessagetemplateViewmodel(userRole: userData.role)..loadTemplates(),
           ),
         ],
         child: _IndividualChatScreenView(
@@ -60,7 +64,7 @@ class _IndividualChatScreenView extends StatefulWidget {
   final String otherUserName;
   final String otherUserUid;
   final String? otherUserPhotoUrl; // Added photo url
-  
+
   const _IndividualChatScreenView({
     required this.otherUserName,
     required this.otherUserUid,
@@ -188,7 +192,25 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
           if (provider.isLoading && provider.displayItems.isEmpty)
             const Expanded(child: Center(child: CircularProgressIndicator()))
           else if (!provider.isLoading && provider.displayItems.isEmpty)
-            const Expanded(child: _ChatTemplatesCarousel())
+            Expanded(
+              child: userData.role == Roles.agent
+                  ? PropertyTemplateCarouselWidget(
+                      onTemplateSelected: (template) {
+                        final messageText = '''
+【Property Information】
+Name: ${template.name}
+Rent: RM ${template.rent.toStringAsFixed(0)}
+Location: ${template.location}
+Description:
+${template.description}
+Images:
+${template.photoUrls.join('\n')}
+                    ''';
+                        _messageListProvider.sendMessage(text: messageText);
+                      },
+                    )
+                  : const _ChatTemplatesCarousel(),
+            )
           else
             Expanded(
               child: MessageListView(
@@ -237,7 +259,7 @@ class _ChatTemplatesCarousel extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              
+
               const SizedBox(height: 20),
               const Expanded(
             child: Center(
@@ -245,7 +267,7 @@ class _ChatTemplatesCarousel extends StatelessWidget {
             ),
           ),
               const SizedBox(height: 16),
-              
+
             ],
           ),
         );

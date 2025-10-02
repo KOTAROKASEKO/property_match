@@ -1,12 +1,14 @@
 // lib/features/4_chat/viewmodel/messageList.dart
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:re_conver/1_agent_feature/chat_template/property_template.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/message_model.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/repo/isar_helper.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/chat_service.dart';
@@ -258,10 +260,12 @@ class MessageListProvider extends ChangeNotifier {
     String? text,
     XFile? imageFile,
     File? audioFile,
+    PropertyTemplate? propertyTemplate, // 新しくパラメータを追加
   }) async {
     if ((text == null || text.isEmpty) &&
         imageFile == null &&
-        audioFile == null) return;
+        audioFile == null &&
+        propertyTemplate == null) return; // 条件を追加
     if (isSending) return;
 
     setSending(true);
@@ -272,7 +276,8 @@ class MessageListProvider extends ChangeNotifier {
     final now = DateTime.now();
     String messageType = 'text';
     String? localPath;
-    String? lastMessageText = text;
+    String? messageContent = text;
+    String lastMessageText = text ?? '';
 
     if (imageFile != null) {
       messageType = 'image';
@@ -282,7 +287,23 @@ class MessageListProvider extends ChangeNotifier {
       messageType = 'audio';
       localPath = audioFile.path;
       lastMessageText = '[Voice Message]';
+    } else if (propertyTemplate != null) {
+      // --- ここからが新しいロジック ---
+      messageType = 'property_template';
+      final templateMap = {
+        'name': propertyTemplate.name,
+        'rent': propertyTemplate.rent,
+        'location': propertyTemplate.location,
+        'description': propertyTemplate.description,
+        'photoUrls': propertyTemplate.photoUrls,
+        'gender': propertyTemplate.gender,
+        'roomType': propertyTemplate.roomType,
+        'nationality': propertyTemplate.nationality,
+      };
+      messageContent = jsonEncode(templateMap);
+      lastMessageText = '物件情報：${propertyTemplate.name}';
     }
+
 
     MessageModel optimisticMessage = MessageModel()
       ..messageId = tempMessageId
@@ -290,7 +311,7 @@ class MessageListProvider extends ChangeNotifier {
       ..whoSent = userData.userId
       ..whoReceived = otherUserUid
       ..isOutgoing = true
-      ..messageText = text
+      ..messageText = messageContent // 変更
       ..messageType = messageType
       ..status = 'sending'
       ..timestamp = now
@@ -322,7 +343,7 @@ class MessageListProvider extends ChangeNotifier {
         'messageType': messageType,
         'timestamp': Timestamp.fromDate(now),
         'status': 'sent',
-        'text': text,
+        'text': messageContent, // テキストの代わりにmessageContentを保存
         'remoteUrl': remoteUrl,
         'repliedToMessageId': replyingTo?.messageId,
         'repliedToMessageText': _getRepliedText(replyingTo),
@@ -359,7 +380,7 @@ class MessageListProvider extends ChangeNotifier {
       setSending(false);
     }
   }
-
+  
   Future<void> saveEditedMessage(String editedText) async {
     if (_editingMessage == null || editedText.isEmpty) {
       setEditingMessage(null);
@@ -489,22 +510,60 @@ class MessageListProvider extends ChangeNotifier {
   }
 
   Future<void> deleteMessageForEveryone(MessageModel message) async {
-    // Optimistically update the UI
     final originalText = message.messageText;
+    final originalStatus = message.status;
+
+    // Optimistically update the UI
     message.messageText = 'This message was deleted';
     message.status = 'deleted_for_everyone';
     _addOrUpdateMessage(message);
 
     try {
-      // Update Firestore
-      await _firestore
-          .collection('chats')
-          .doc(chatThreadId)
-          .collection('messages')
-          .doc(message.messageId)
-          .update({
-        'text': 'This message was deleted',
-        'status': 'deleted_for_everyone',
+      final chatThreadRef = _firestore.collection('chats').doc(chatThreadId);
+      final messageRef = chatThreadRef.collection('messages').doc(message.messageId);
+
+      await _firestore.runTransaction((transaction) async {
+        final chatThreadDoc = await transaction.get(chatThreadRef);
+        if (!chatThreadDoc.exists) return;
+
+        // Update the message document
+        transaction.update(messageRef, {
+          'text': 'This message was deleted',
+          'status': 'deleted_for_everyone',
+        });
+
+        // If the deleted message was the last message, update the chat thread
+        if (chatThreadDoc.data()!['lastMessageId'] == message.messageId) {
+          // Get the new last message (the one before the deleted one)
+          final newLastMessageQuery = await chatThreadRef
+              .collection('messages')
+              .orderBy('timestamp', descending: true)
+              .limit(2) // Get the last 2 messages
+              .get();
+
+          if (newLastMessageQuery.docs.length > 1) {
+            // The second document is the new last message
+            final newLastMessageDoc = newLastMessageQuery.docs[1];
+            final newLastMessageData = newLastMessageDoc.data();
+            transaction.update(chatThreadRef, {
+              'lastMessage': newLastMessageData['messageType'] == 'text'
+                  ? newLastMessageData['text']
+                  : (newLastMessageData['messageType'] == 'image' ? '[Image]' : '[Voice Message]'),
+              'timeStamp': newLastMessageData['timestamp'],
+              'whoSent': newLastMessageData['whoSentId'],
+              'whoReceived': newLastMessageData['whoReceivedId'],
+              'messageType': newLastMessageData['messageType'],
+              'lastMessageId': newLastMessageDoc.id,
+            });
+          } else {
+            // No other messages left, clear the last message fields
+            transaction.update(chatThreadRef, {
+              'lastMessage': 'No messages yet.',
+              'lastMessageId': null,
+              'messageType': 'text',
+            });
+          }
+        }
       });
 
       // Update Isar
@@ -512,12 +571,13 @@ class MessageListProvider extends ChangeNotifier {
     } catch (e) {
       // Rollback UI on failure
       message.messageText = originalText;
-      message.status = 'sent';
+      message.status = originalStatus; // Use original status
       _addOrUpdateMessage(message);
       print("Error deleting message: $e");
       // Optionally, show a snackbar to the user
     }
   }
+
   Future<void> reportUser(String reason) async {
     try {
       await ChatService().reportUser(

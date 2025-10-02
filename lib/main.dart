@@ -7,16 +7,20 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/1_agent_feature/2_profile/repo/profile_repository.dart';
 import 'package:re_conver/1_agent_feature/2_profile/viewmodel/profile_viewmodel.dart';
-import 'package:re_conver/1_agent_feature/tenant_list/viewodel/tenant_list_viewmodel.dart';
+import 'package:re_conver/1_agent_feature/3_tenant_list/viewodel/tenant_list_viewmodel.dart';
+import 'package:re_conver/1_agent_feature/chat_template/property_template.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/template_model.dart';
+import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageTemplate_viewmodel.dart';
 import 'package:re_conver/authentication/login_placeholder.dart';
 import 'package:re_conver/authentication/role_selection_screen.dart';
 import 'package:re_conver/authentication/userdata.dart';
-import 'package:re_conver/MainScaffold.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/model/timestamp_adopter.dart';
 import 'package:re_conver/firebase_options.dart';
+import 'package:re_conver/responsive/responsive_layout.dart';
+import 'package:re_conver/service/local_notification.dart';
 import 'package:rive/rive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:re_conver/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,20 +28,22 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await NotificationService().init();
   await RiveFile.initialize();
   await Hive.initFlutter();
   Hive.registerAdapter(TimestampAdapter());
   Hive.registerAdapter(TemplateModelAdapter());
-  await Hive.openBox<TemplateModel>('templateBox'); // Open the template box
-
+  Hive.registerAdapter(PropertyTemplateAdapter());
   userData.setUser(FirebaseAuth.instance.currentUser);
+  await Hive.openBox<TemplateModel>('tenantMessageTemplates');
+  await Hive.openBox<TemplateModel>('agentMessageTemplates');
+  await Hive.openBox<PropertyTemplate>('propertyTemplateBox'); 
 
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TenantListViewModel()),
-        
+       ChangeNotifierProvider(create: (_) => TenantListViewModel()),
         ChangeNotifierProvider(create: (_) => ProfileViewModel(FirestoreProfileRepository())),
       ],
       child: const MyApp(),
@@ -94,7 +100,7 @@ class AuthWrapper extends StatelessWidget {
               if (prefsSnapshot.hasData && prefsSnapshot.data != null) {
                 final role = prefsSnapshot.data!;
                 userData.setRole(role == 'agent' ? Roles.agent : Roles.tenant);
-                return const MainScaffold();
+                return const ResponsiveLayout();
               } else {
                 return FutureBuilder<DocumentSnapshot>(
                   future: FirebaseFirestore.instance.collection('users_prof').doc(snapshot.data!.uid).get(),
@@ -107,9 +113,9 @@ class AuthWrapper extends StatelessWidget {
                       final data = userDocSnapshot.data!.data() as Map<String, dynamic>;
                       if (data.containsKey('role')) {
                         final role = data['role'] as String;
-                        _saveRoleToPrefs(role); // Firestoreから取得したロールを保存
+                        _saveRoleToPrefs(role);
                         userData.setRole(role == 'agent' ? Roles.agent : Roles.tenant);
-                        return const MainScaffold();
+                        return const ResponsiveLayout();
                       }
                     }
                     

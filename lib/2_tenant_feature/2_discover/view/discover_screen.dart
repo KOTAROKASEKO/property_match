@@ -1,27 +1,23 @@
 import 'dart:async';
-
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
 import 'package:provider/provider.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/view/post_card.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/view/profile_screen.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/viewmodel/discover_viewmodel.dart';
 import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/unread_messages_viewmodel.dart';
-import 'package:re_conver/authentication/auth_service.dart';
 import 'package:shimmer/shimmer.dart';
+
 
 class DiscoverScreen extends StatelessWidget {
   const DiscoverScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => DiscoverViewModel(),
-      child: ChangeNotifierProvider(
-        create: (_) => UnreadMessagesViewModel(),
-        child: const _DiscoverView(),
-      ),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => DiscoverViewModel()),
+        ChangeNotifierProvider(create: (_) => UnreadMessagesViewModel()),
+      ],
+      child: const _DiscoverView(),
     );
   }
 }
@@ -142,7 +138,11 @@ class _DiscoverViewState extends State<_DiscoverView>
                       );
                     }
                     final post = viewModel.posts[index];
-                    return PostCard(post: post);
+                     return PostCard(
+                      post: post,
+                      onToggleLike: viewModel.toggleLike,
+                      onToggleSave: viewModel.savePost,
+                    );
                   },
                 ),
               ),

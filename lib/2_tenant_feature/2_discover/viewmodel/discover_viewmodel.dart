@@ -1,23 +1,23 @@
 // lib/features/3_discover/viewmodel/discover_viewmodel.dart
 
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:re_conver/2_tenant_feature/2_discover/model/post_model.dart';
 import 'package:re_conver/2_tenant_feature/2_discover/viewmodel/post_service.dart';
+import 'package:re_conver/Common_model/PostModel.dart';
 import 'package:re_conver/authentication/userdata.dart';
+import 'package:re_conver/Common_model/post_actions_viewmodel.dart';
 
-class DiscoverViewModel extends ChangeNotifier {
+class DiscoverViewModel extends PostActionsViewModel  {
   final PostService _postService = PostService();
 
-  List<Post> _allFetchedPosts = [];
-  List<Post> _posts = [];
+  List<PostModel> _allFetchedPosts = [];
+  List<PostModel> _posts = [];
   SortOrder _sortOrder = SortOrder.byDate;
   DocumentSnapshot? _lastDocument;
   bool _isLoading = false;
   bool _isLoadingMore = false;
   bool _hasMorePosts = true;
 
-  List<Post> get posts => _posts;
+  List<PostModel> get posts => _posts;
   SortOrder get sortOrder => _sortOrder;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
@@ -34,10 +34,10 @@ class DiscoverViewModel extends ChangeNotifier {
     } else {
       final query = _searchQuery.toLowerCase();
       _posts = _allFetchedPosts.where((post) {
-        final captionMatch = post.caption.toLowerCase().contains(query);
+        final descriptionMatch = post.description.toLowerCase().contains(query);
         // Use the new allTags getter to search in both manual and auto tags
         final tagMatch = post.allTags.any((tag) => tag.toLowerCase().contains(query));
-        return captionMatch || tagMatch;
+        return descriptionMatch || tagMatch;
       }).toList();
     }
     notifyListeners();
@@ -125,7 +125,8 @@ class DiscoverViewModel extends ChangeNotifier {
       print("Error reporting post: $e");
     }
   }
-
+  
+  @override
   Future<void> savePost(String postId) async {
     // 1. UI上の投稿リストから、対象の投稿を探す
     final postIndex = _posts.indexWhere((p) => p.id == postId);
@@ -156,6 +157,7 @@ class DiscoverViewModel extends ChangeNotifier {
     }
   }
 
+  @override
   void toggleLike(String postId) {
     final postIndex = _posts.indexWhere((p) => p.id == postId);
     if (postIndex == -1) return;

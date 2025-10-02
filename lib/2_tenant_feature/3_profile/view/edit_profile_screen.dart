@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:re_conver/2_tenant_feature/3_profile/models/profile_model.dart';
 import 'package:re_conver/2_tenant_feature/3_profile/services/user_service.dart';
 
@@ -31,6 +32,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late String _propertyType;
   late String _nationality; // Added
   late String _selfIntroduction; // Added
+  late DateTime? _moveInDate;
   bool _isLoading = false;
 
   @override
@@ -48,6 +50,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _propertyType = widget.userProfile.propertyType;
     _nationality = widget.userProfile.nationality; // Added
     _selfIntroduction = widget.userProfile.selfIntroduction; // Added
+    _moveInDate = widget.userProfile.moveinDate; 
   }
 
   Future<void> _pickImage() async {
@@ -92,9 +95,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         budget: _budget,
         roomType: _roomType,
         propertyType: _propertyType,
-        nationality: _nationality, // Added
-        selfIntroduction: _selfIntroduction, // Added
+        nationality: _nationality,
+        selfIntroduction: _selfIntroduction,
+        moveinDate: _moveInDate, // ★★★ 追加 ★★★
       );
+
 
       try {
         await _userService.updateUserProfile(updatedProfile);
@@ -109,6 +114,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       } finally {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+    Future<void> _selectMoveInDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _moveInDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != _moveInDate) {
+      setState(() {
+        _moveInDate = picked;
+      });
     }
   }
 
@@ -193,6 +212,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     const InputDecoration(labelText: 'Self Introduction'),
                 onSaved: (value) => _selfIntroduction = value!,
                 maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.calendar_today_outlined),
+                title: const Text('Move-in Date'),
+                subtitle: Text(
+                  _moveInDate == null
+                      ? 'Not set'
+                      : DateFormat.yMMMd().format(_moveInDate!),
+                ),
+                onTap: () => _selectMoveInDate(context),
               ),
               const SizedBox(height: 16),
               TextFormField(

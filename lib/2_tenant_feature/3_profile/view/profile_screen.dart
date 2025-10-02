@@ -1,6 +1,5 @@
-// lib/2_tenant_feature/3_profile/view/profilescreen.dart
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:re_conver/2_tenant_feature/3_profile/models/profile_model.dart';
 import 'package:re_conver/2_tenant_feature/3_profile/services/user_service.dart';
 import 'package:re_conver/authentication/auth_service.dart';
@@ -49,21 +48,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-              ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: const Text('Profile'),
-                onTap: () {
-                  if(FirebaseAuth.instance.currentUser==null){
-                    showSignInModal(context);
-                  }else{
-                    Navigator.pop(context);
-                    Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => const ProfileScreen(),
-                    ));
-                  }
-                },
-              ),
-              
               ListTile(
                 leading: const Icon(Icons.person_outline),
                 title: const Text('Log out'),
@@ -186,13 +170,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               value: '${userProfile.age} years old',
             ),
             _ProfileDetailRow(
+              icon: Icons.calendar_today_outlined,
+              title: 'Move-in Date',
+              value: userProfile.moveinDate == null
+                  ? 'Not specified'
+                  : DateFormat.yMMMd().format(userProfile.moveinDate!),
+            ),
+            _ProfileDetailRow(
               icon: Icons.work_outline,
               title: 'Occupation',
               value: userProfile.occupation,
             ),
             _ProfileDetailRow(
               icon: Icons.location_on_outlined,
-              title: 'Work/Study Location',
+              title: 'Preferred Location',
               value: userProfile.location,
             ),
             _ProfileDetailRow(
