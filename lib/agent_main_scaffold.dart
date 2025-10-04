@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:re_conver/1_agent_feature/2_profile/view/DashBoard.dart';
-import 'package:re_conver/1_agent_feature/3_tenant_list/view/tenant_list_view.dart';
-import 'package:re_conver/2_tenant_feature/4_chat/view/chatThreadScreen.dart';
-import 'package:re_conver/authentication/login_placeholder.dart';
+import 'package:re_conver/features/1_agent_feature/1_profile/view/agent_profile_view.dart';
+import 'package:re_conver/features/1_agent_feature/2_tenant_list/view/tenant_list_view.dart';
+import 'package:re_conver/common_feature/chat/view/chatThreadScreen.dart';
+import 'package:re_conver/features/authentication/login_placeholder.dart';
 
 class AgentMainScaffold extends StatefulWidget {
   const AgentMainScaffold({super.key});

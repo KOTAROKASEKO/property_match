@@ -5,22 +5,20 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/1_agent_feature/2_profile/repo/profile_repository.dart';
-import 'package:re_conver/1_agent_feature/2_profile/viewmodel/profile_viewmodel.dart';
-import 'package:re_conver/1_agent_feature/3_tenant_list/viewodel/tenant_list_viewmodel.dart';
-import 'package:re_conver/1_agent_feature/chat_template/property_template.dart';
-import 'package:re_conver/2_tenant_feature/4_chat/model/template_model.dart';
-import 'package:re_conver/2_tenant_feature/4_chat/viewmodel/messageTemplate_viewmodel.dart';
-import 'package:re_conver/authentication/login_placeholder.dart';
-import 'package:re_conver/authentication/role_selection_screen.dart';
 import 'package:re_conver/authentication/userdata.dart';
-import 'package:re_conver/2_tenant_feature/4_chat/model/timestamp_adopter.dart';
+import 'package:re_conver/features/1_agent_feature/1_profile/repo/profile_repository.dart';
+import 'package:re_conver/features/1_agent_feature/1_profile/viewmodel/agent_profile_viewmodel.dart';
+import 'package:re_conver/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart';
+import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart';
+import 'package:re_conver/common_feature/chat/model/template_model.dart';
+import 'package:re_conver/features/authentication/login_placeholder.dart';
+import 'package:re_conver/features/authentication/role_selection_screen.dart';
+import 'package:re_conver/common_feature/chat/model/timestamp_adopter.dart';
 import 'package:re_conver/firebase_options.dart';
-import 'package:re_conver/responsive/responsive_layout.dart';
-import 'package:re_conver/service/local_notification.dart';
+import 'package:re_conver/core/responsive/responsive_layout.dart';
 import 'package:rive/rive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:re_conver/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
+import 'package:re_conver/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,7 +26,6 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await NotificationService().init();
   await RiveFile.initialize();
   await Hive.initFlutter();
   Hive.registerAdapter(TimestampAdapter());
@@ -42,12 +39,15 @@ void main() async {
 
   runApp(
     MultiProvider(
-      providers: [
-       ChangeNotifierProvider(create: (_) => TenantListViewModel()),
-        ChangeNotifierProvider(create: (_) => ProfileViewModel(FirestoreProfileRepository())),
-      ],
-      child: const MyApp(),
-    ),
+        providers: [
+        ChangeNotifierProvider(create: (_) => TenantListViewModel()),
+          ChangeNotifierProvider(create: (_) => ProfileViewModel(FirestoreProfileRepository())),
+          ChangeNotifierProvider(create: (_) => AgentTemplateViewModel()),
+        ],
+        child: const SafeArea(
+          child: MyApp(),
+          ),
+      ),
   );
 }
 
@@ -57,7 +57,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Re:Conver',
+      title: 'Property_match',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
