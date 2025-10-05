@@ -3,11 +3,13 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Index;
 import 'package:isar/isar.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 part 'chat_thread.g.dart';
 
 @Collection()
 class ChatThread {
+  
   late String id;
 
   Id get isarId => fastHash(id);
@@ -59,6 +61,11 @@ class ChatThread {
   }
 
   static ChatThread fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    String generalNotePath = userData.role == Roles.agent ? 'agentGeneralNote':'tenantGeneralNote';
+    String viewingNotePath = userData.role == Roles.agent ? 'agentViewingNote':'tenantViewingNote';
+    String photoImagePath = userData.role == Roles.agent ? 'agentphotoPath':'tenantPhotoPath';
+    String generalphotoImagePath = userData.role == Roles.agent ? 'agentGeneralPhotoPath':'tenantGeneralPhotoPath';
+
     final data = doc.data();
 
     if (data == null) {
@@ -86,12 +93,12 @@ class ChatThread {
         .map((t) => (t as Timestamp).toDate())
         .toList();
         
-    final List<dynamic> notesData = data['viewingNotes'] as List<dynamic>? ?? [];
+    final List<dynamic> notesData = data[viewingNotePath] as List<dynamic>? ?? [];
     final List<String> parsedViewingNotes =
         notesData.map((n) => n.toString()).toList();
         
       final List<dynamic> imageUrlsData =
-      data['viewingImageUrls'] as List<dynamic>? ?? [];
+      data[photoImagePath] as List<dynamic>? ?? [];
       final List<String> parsedImageUrls = imageUrlsData.map((e) {
         if (e is List) {
           return jsonEncode(e);
@@ -99,7 +106,7 @@ class ChatThread {
         return e.toString();
       }).toList();
 
-    final List<dynamic> generalImageUrlsData = data['generalImageUrls'] as List<dynamic>? ?? [];
+    final List<dynamic> generalImageUrlsData = data[generalphotoImagePath] as List<dynamic>? ?? [];
     final List<String> parsedGeneralImageUrls = generalImageUrlsData.map((url) => url.toString()).toList();
 
     return ChatThread()
@@ -113,7 +120,7 @@ class ChatThread {
       ..messageType = data['messageType'] as String?
       ..lastMessageId = data['lastMessageId'] as String?
       ..unreadCountMap = parsedUnreadCountMap
-      ..generalNote = data['generalNote'] as String?
+      ..generalNote = data[generalNotePath] as String?
       ..generalImageUrls = parsedGeneralImageUrls
       ..viewingTimes = parsedViewingTimes
       ..viewingNotes = parsedViewingNotes

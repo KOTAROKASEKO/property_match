@@ -92,6 +92,7 @@ class _EditAgentProfileScreenState extends State<EditAgentProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        foregroundColor: Colors.white,
         backgroundColor: Colors.deepPurple,
         title: const Text('Edit Profile'),
         actions: [

@@ -28,14 +28,18 @@ class PropertyTemplate extends HiveObject {
   @HiveField(7)
   String roomType;
 
+  @HiveField(8)
+  String postId;
+
   PropertyTemplate({
     required this.rent,
     required this.name,
     required this.photoUrls,
     required this.location,
     required this.description,
-    this.gender='Mix',
-    this.nationality='Any',
+    this.gender = 'Mix',
+    this.nationality = 'Any',
     required this.roomType,
+    required this.postId,
   });
 }

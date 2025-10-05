@@ -2,11 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
-import 'package:re_conver/2_tenant_feature/1_discover/model/comment_model.dart';
-import 'package:re_conver/2_tenant_feature/1_discover/model/filter_options.dart';
-import 'package:re_conver/2_tenant_feature/1_discover/model/paginated_post.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/core/model/PostModel.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/model/comment_model.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/model/filter_options.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/model/paginated_post.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 enum SortOrder { byDate, byPopularity }
 
@@ -132,6 +132,7 @@ class PostService {
       throw Exception("Post does not exist.");
     }
     await postRef.delete();
+    
   }
 
   Future<void> reportPost(String postId) async {

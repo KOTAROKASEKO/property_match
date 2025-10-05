@@ -1,11 +1,12 @@
 // lib/features/3_discover/viewmodel/discover_viewmodel.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:re_conver/2_tenant_feature/1_discover/model/filter_options.dart';
-import 'package:re_conver/authentication/userdata.dart';
+import 'package:hive_flutter/adapters.dart';
 import 'package:re_conver/common_feature/post_actions_viewmodel.dart';
 import 'package:re_conver/core/model/PostModel.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/model/filter_options.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/viewmodel/post_service.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class DiscoverViewModel extends PostActionsViewModel  {
   final PostService _postService = PostService();
@@ -110,9 +111,10 @@ class DiscoverViewModel extends PostActionsViewModel  {
 
   Future<void> deletePost(String postId) async {
     try {
-      await _postService.deletePost(postId);
-      // UIから投稿を即座に削除
       _posts.removeWhere((post) => post.id == postId);
+      await _postService.deletePost(postId);
+
+      
       notifyListeners();
     } catch (e) {
       print("Error deleting post: $e");

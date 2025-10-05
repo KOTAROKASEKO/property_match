@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/view/agent_profile_view.dart';
-import 'package:re_conver/2_tenant_feature/1_discover/view/discover_screen.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/view/profile_screen.dart';
 import 'package:re_conver/common_feature/chat/model/chat_thread.dart';
 import 'package:re_conver/common_feature/chat/view/chatThreadScreen.dart';
 import 'package:re_conver/common_feature/chat/view/providerIndividualChat.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/view/discover_screen.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/view/profile_screen.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
 
 class TabletScaffold extends StatefulWidget {

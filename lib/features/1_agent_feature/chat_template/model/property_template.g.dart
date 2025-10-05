@@ -25,13 +25,16 @@ class PropertyTemplateAdapter extends TypeAdapter<PropertyTemplate> {
       gender: fields[5] as String,
       nationality: fields[6] as String,
       roomType: fields[7] as String,
+      // ★★★ ここを修正 ★★★
+      // fields[8] が null の場合は空文字列 '' を使うように変更
+      postId: fields[8] as String? ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, PropertyTemplate obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.rent)
       ..writeByte(1)
@@ -47,7 +50,9 @@ class PropertyTemplateAdapter extends TypeAdapter<PropertyTemplate> {
       ..writeByte(6)
       ..write(obj.nationality)
       ..writeByte(7)
-      ..write(obj.roomType);
+      ..write(obj.roomType)
+      ..writeByte(8)
+      ..write(obj.postId);
   }
 
   @override

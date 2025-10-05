@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/2_tenant_feature/1_discover/model/filter_options.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/unread_messages_viewmodel.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/model/filter_options.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/filter_bottom_sheet.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/post_card.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/viewmodel/discover_viewmodel.dart';

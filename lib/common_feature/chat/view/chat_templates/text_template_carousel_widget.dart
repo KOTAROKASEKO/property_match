@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/common_feature/chat/view/chat_templates/manage_text_template_screen.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageTemplate_viewmodel.dart';
 
 class TextTemplateCarouselWidget extends StatelessWidget {
@@ -27,6 +28,15 @@ class TextTemplateCarouselWidget extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () {
+                   Navigator.of(context).push(
+                    MaterialPageRoute(
+                      // We can pass the existing ViewModel to the new screen
+                      builder: (_) => ChangeNotifierProvider.value(
+                        value: viewModel,
+                        child: const ManageTenantTemplatesScreen(),
+                      ),
+                    ),
+                  );
                 },
                 child: const Text('Manage'),
               )

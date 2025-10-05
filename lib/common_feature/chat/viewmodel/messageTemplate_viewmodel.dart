@@ -1,8 +1,9 @@
 // lib/2_tenant_feature/4_chat/viewmodel/messageTemplate_viewmodel.dart
 import 'package:flutter/material.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/common_feature/chat/repo/TemplateRepo.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
+//Used by tenant and agent
 class MessagetemplateViewmodel extends ChangeNotifier {
   late TemplateRepo _templateRepo;
   List<String> _templates = [];

@@ -2,11 +2,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/common_feature/chat/model/chat_thread.dart';
 import 'package:re_conver/common_feature/chat/view/chatThreadScreen.dart';
 import 'package:re_conver/common_feature/chat/view/providerIndividualChat.dart';
 import 'package:re_conver/common_feature/chat/view/viewing_details_bottomsheet.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class ViewingAppointmentList extends StatelessWidget {
   final List<ViewingAppointment> appointments;

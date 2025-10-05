@@ -10,6 +10,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:re_conver/core/model/PostModel.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/repo/profile_repository.dart';
+import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
+
 
 class CreatePostViewModel extends ChangeNotifier {
   final formKey = GlobalKey<FormState>();
@@ -40,8 +42,7 @@ class CreatePostViewModel extends ChangeNotifier {
     }
   }
 
-  // ... (getters and setters remain the same)
-    List<dynamic> get selectedImages => _selectedImages;
+  List<dynamic> get selectedImages => _selectedImages;
   String get description => _description;
   String get condominiumName => _condominiumName;
   double get rent => _rent;
@@ -85,32 +86,42 @@ class CreatePostViewModel extends ChangeNotifier {
     _updateUnsavedChangesFlag();
   }
 
-
   void _updateUnsavedChangesFlag() {
     _hasUnsavedChanges = true;
     notifyListeners();
   }
 
-
   Future<bool> submitPost() async {
     if (!formKey.currentState!.validate()) {
       return false;
     }
-
     _isPosting = true;
     notifyListeners();
 
     try {
       await _geocodeLocation();
-      List<String> imageUrls = [];
-      if (_selectedImages.isNotEmpty) {
-        imageUrls = await uploadFiles(_selectedImages);
-      }
+      final imageUrls = await uploadFiles(_selectedImages);
+
+      final postData = {
+        'description': _description,
+        'imageUrls': imageUrls,
+        'condominiumName': _condominiumName,
+        'rent': _rent,
+        'roomType': _roomType,
+        'gender': _gender,
+        'location': _location,
+        'position': _position != null ? GeoFirePoint(_position!).data : null,
+      };
 
       if (isEditing) {
-        // TODO: Implement update logic
+        await _postService.updatePost(
+          postId: _editingPost!.id,
+          data: postData,
+        );
+        await _updatePropertyTemplate(imageUrls);
       } else {
-        await _postService.createPost(
+        // ★★★ 1. createPostから新しいPostIDを受け取る ★★★
+        final newPostId = await _postService.createPost(
           description: _description,
           imageUrls: imageUrls,
           condominiumName: _condominiumName,
@@ -121,7 +132,8 @@ class CreatePostViewModel extends ChangeNotifier {
           location: _location,
           position: _position,
         );
-        await _saveAsPropertyTemplate(imageUrls);
+        // ★★★ 2. 受け取ったIDをテンプレート保存メソッドに渡す ★★★
+        await _saveAsPropertyTemplate(newPostId, imageUrls);
       }
 
       _hasUnsavedChanges = false;
@@ -135,9 +147,12 @@ class CreatePostViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> _saveAsPropertyTemplate(List<String> imageUrls) async {
+  // ★★★ 3. メソッドの引数に postId を追加 ★★★
+  Future<void> _saveAsPropertyTemplate(String postId, List<String> imageUrls) async {
     try {
       final template = PropertyTemplate(
+        // ★★★ 4. 受け取った postId を使う ★★★
+        postId: postId,
         name: _condominiumName,
         rent: _rent,
         location: _location,
@@ -154,7 +169,35 @@ class CreatePostViewModel extends ChangeNotifier {
       print("Failed to save property template: $e");
     }
   }
-  
+
+  Future<void> _updatePropertyTemplate(List<String> imageUrls) async {
+    try {
+      final box = Hive.box<PropertyTemplate>('propertyTemplateBox');
+      final templateKey = box.keys.firstWhere(
+          (key) => box.get(key)?.postId == _editingPost!.id,
+          orElse: () => null);
+
+      if (templateKey != null) {
+        final template = box.get(templateKey);
+        if (template != null) {
+          template.name = _condominiumName;
+          template.rent = _rent;
+          template.location = _location;
+          template.description = _description;
+          template.roomType = _roomType;
+          template.gender = _gender;
+          template.photoUrls = imageUrls;
+          await template.save();
+          print("Successfully updated property template.");
+        }
+      } else {
+        await _saveAsPropertyTemplate(_editingPost!.id, imageUrls);
+      }
+    } catch (e) {
+      print("Failed to update property template: $e");
+    }
+  }
+
   Future<void> _geocodeLocation() async {
     if (_location.isEmpty) {
       _position = null;

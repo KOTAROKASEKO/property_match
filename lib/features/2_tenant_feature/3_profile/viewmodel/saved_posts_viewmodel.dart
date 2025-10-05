@@ -1,6 +1,6 @@
-import 'package:re_conver/2_tenant_feature/1_discover/viewmodel/post_service.dart';
-import 'package:re_conver/common_feature/PostModel.dart';
 import 'package:re_conver/common_feature/post_actions_viewmodel.dart';
+import 'package:re_conver/core/model/PostModel.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/viewmodel/post_service.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
 
 class SavedPostsViewModel extends PostActionsViewModel {

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:re_conver/app/debug_print.dart';
 import 'package:re_conver/app/localDB_Manager.dart';
-import 'package:re_conver/authentication/userdata.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class SignOutModal extends StatefulWidget {
   const SignOutModal({super.key});

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/models/profile_model.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/services/user_service.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/models/profile_model.dart' show UserProfile;
+import 'package:re_conver/features/2_tenant_feature/3_profile/services/user_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserProfile userProfile;
@@ -136,6 +136,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: Colors.deepPurple,
           title: const Text('Edit Profile'),
           actions: [
             Padding(

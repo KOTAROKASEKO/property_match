@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/models/profile_model.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/models/profile_model.dart';
 
 class TenantListViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

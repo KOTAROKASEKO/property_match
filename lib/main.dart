@@ -5,7 +5,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/repo/profile_repository.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/viewmodel/agent_profile_viewmodel.dart';
 import 'package:re_conver/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart';
@@ -14,6 +13,7 @@ import 'package:re_conver/common_feature/chat/model/template_model.dart';
 import 'package:re_conver/features/authentication/login_placeholder.dart';
 import 'package:re_conver/features/authentication/role_selection_screen.dart';
 import 'package:re_conver/common_feature/chat/model/timestamp_adopter.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 import 'package:re_conver/firebase_options.dart';
 import 'package:re_conver/core/responsive/responsive_layout.dart';
 import 'package:rive/rive.dart';
@@ -57,6 +57,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Property_match',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),

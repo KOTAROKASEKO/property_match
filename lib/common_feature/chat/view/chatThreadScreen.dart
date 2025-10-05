@@ -5,16 +5,16 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/common_feature/chat/model/chat_thread.dart';
 import 'package:re_conver/common_feature/chat/repo/isar_helper.dart';
 import 'package:re_conver/common_feature/chat/view/add_edit_general_note_screen.dart';
 import 'package:re_conver/common_feature/chat/view/add_edit_viewing_note_screen.dart';
-import 'package:re_conver/common_feature/chat/view/chat_rooms/all_property.dart';
-import 'package:re_conver/common_feature/chat/view/chat_rooms/viewing_property.dart';
+import 'package:re_conver/common_feature/chat/view/all_property.dart';
+import 'package:re_conver/common_feature/chat/view/viewing_property.dart';
 import 'package:re_conver/common_feature/chat/view/date_time_picker_modal.dart';
 import 'package:re_conver/common_feature/chat/view/report_user_dialogue.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/chat_service.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 
 class ViewingAppointment {

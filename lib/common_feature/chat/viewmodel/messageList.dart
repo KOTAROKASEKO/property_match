@@ -8,11 +8,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart';
 import 'package:re_conver/common_feature/chat/model/message_model.dart';
 import 'package:re_conver/common_feature/chat/repo/isar_helper.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/chat_service.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class MessageListProvider extends ChangeNotifier {
   final String chatThreadId;

@@ -1,6 +1,6 @@
 // lib/2_tenant_feature/2_discover/view/filter_bottom_sheet.dart
 import 'package:flutter/material.dart';
-import 'package:re_conver/2_tenant_feature/1_discover/model/filter_options.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/model/filter_options.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   final FilterOptions initialFilters;

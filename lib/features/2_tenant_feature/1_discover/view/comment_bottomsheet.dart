@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/2_tenant_feature/1_discover/model/comment_model.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/model/comment_model.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/comment_tile.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/viewmodel/post_service.dart';
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageList.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class ReplyPreviewWidget extends StatelessWidget {
     final String otherUserName;

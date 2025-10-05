@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/model/agent_profile_model.dart';
 import 'package:re_conver/common_feature/chat/view/providerIndividualChat.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/post_card.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/viewmodel/public_agent_profile_viewmodel.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class AgentProfileScreen extends StatelessWidget {
   final String agentId;

@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/authentication/userdata.dart';
+import 'package:re_conver/common_feature/chat/view/chat_templates/text_template_carousel_widget.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 import 'package:re_conver/common_feature/chat/model/message_model.dart';
-import 'package:re_conver/common_feature/chat/view/text_template_carousel_widget.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageList.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageTemplate_viewmodel.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -191,7 +191,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     _messageController.clear();
   }
 
-  void _showTextTemplatesBottomSheet(BuildContext context) {
+  void _showTenantTextTemplatesBottomSheet(BuildContext context) {
   final templateViewModel = context.read<MessagetemplateViewmodel>();
   showModalBottomSheet(
     context: context,
@@ -253,7 +253,8 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                     widget.onPickImage();
                   },
                 ),
-                // ★★★ 役割に応じてテンプレートの挙動を分岐 ★★★
+
+                //Depends on the role, adjust the behaviour
                 if (userData.role == Roles.agent)
                   ListTile(
                     leading: const Icon(Icons.note_alt_outlined,
@@ -271,7 +272,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                     title: const Text('Message Templates'),
                     onTap: () {
                       Navigator.of(ctx).pop();
-                      _showTextTemplatesBottomSheet(context);
+                      _showTenantTextTemplatesBottomSheet(context);
                     },
                   ),
               ],
@@ -347,7 +348,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                     title: const Text('Message Template'),
                     onTap: () {
                       Navigator.of(ctx).pop();
-                      _showTextTemplatesBottomSheet(context);
+                      _showTenantTextTemplatesBottomSheet(context);
                     },
                   ),
                 ],

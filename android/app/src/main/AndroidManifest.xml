@@ -17,7 +17,7 @@
         </intent>
     </queries>
     <application
-        android:label="re_conver"
+        android:label="Bilik match"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

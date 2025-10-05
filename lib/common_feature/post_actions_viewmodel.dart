@@ -4,4 +4,4 @@ import 'package:flutter/material.dart';
 abstract class PostActionsViewModel extends ChangeNotifier {
   void toggleLike(String postId);
   Future<void> savePost(String postId);
-} 
+}

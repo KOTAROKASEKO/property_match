@@ -4,8 +4,8 @@ import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:re_conver/authentication/userdata.dart' show userData;
 import 'package:re_conver/features/authentication/role_selection_screen.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 import 'package:re_conver/service/FirebaseApi.dart';
 
 class RegisterScreen extends StatefulWidget {

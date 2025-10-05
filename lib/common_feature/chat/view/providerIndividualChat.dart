@@ -6,16 +6,16 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/authentication/userdata.dart';
+import 'package:re_conver/common_feature/chat/view/chat_templates/text_template_carousel_widget.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 import 'package:re_conver/common_feature/chat/view/message_input_widget.dart';
 import 'package:re_conver/common_feature/chat/view/message_list_widget.dart';
 import 'package:re_conver/common_feature/chat/view/reply_widget.dart';
-import 'package:re_conver/common_feature/chat/view/text_template_carousel_widget.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageList.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageTemplate_viewmodel.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
@@ -79,7 +79,7 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
   final ImagePicker _picker = ImagePicker();
   late MessageListProvider _messageListProvider;
 
-  @override
+    @override
   void initState() {
     super.initState();
     _messageListProvider = Provider.of<MessageListProvider>(
@@ -89,6 +89,9 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        // ★★★ 画面を開いたときに一度だけ許可を求める ★★★
+        _checkAndRequestNotificationPermission();
+
         _messageListProvider.clearMessages();
         _messageListProvider.loadInitialMessages().then((_) {
           if (mounted) {
@@ -100,17 +103,17 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
     });
   }
 
+  // ★★★ 通知許可を求めるダイアログのロジック ★★★
   Future<void> _checkAndRequestNotificationPermission() async {
     final prefs = await SharedPreferences.getInstance();
-    final permissionStatus = prefs.getString('notification_permission_status');
-
-    if (permissionStatus == null || permissionStatus == 'notAsked') {
+    // 'notAsked' またはまだ何も保存されていない場合のみダイアログを表示
+    if (prefs.getString('notification_permission_status') == null || prefs.getString('notification_permission_status') == 'notAsked') {
       final result = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Enable Notifications?'),
-          content: const Text(
-              'Get notified about new messages and important updates.'),
+          content:
+              const Text('Get notified about new messages and important updates.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -126,31 +129,24 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
 
       if (result == true) {
         final status = await Permission.notification.request();
-        if (status.isGranted) {
-          await prefs.setString('notification_permission_status', 'granted');
-        } else {
-          await prefs.setString('notification_permission_status', 'denied');
-        }
+        await prefs.setString(
+            'notification_permission_status', status.isGranted ? 'granted' : 'denied');
       } else {
-        await prefs.setString('notification_permission_status', 'notAsked');
+        // 「今はしない」を選択した場合も、'dismissed'として保存し、再表示しない
+        await prefs.setString('notification_permission_status', 'dismissed');
       }
     }
   }
 
-  Future<void> _sendMessageWithPermissionCheck(
-      {String? text, XFile? imageFile, File? audioFile}) async {
-    await _checkAndRequestNotificationPermission();
-    _messageListProvider.sendMessage(
-        text: text, imageFile: imageFile, audioFile: audioFile);
-  }
-
-  Future<void> _pickImage() async {
+  
+    Future<void> _pickImage() async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
       );
       if (pickedFile != null && mounted) {
-        _sendMessageWithPermissionCheck(imageFile: pickedFile);
+        // ★★★ 直接sendMessageを呼び出すように変更 ★★★
+        _messageListProvider.sendMessage(imageFile: pickedFile);
       }
     } catch (e) {
       print("Image picker error: $e");
@@ -223,7 +219,7 @@ ${template.photoUrls.join('\n')}
             isSending: provider.isSending,
             onSendMessage: (
                 {File? audioFile, String? text, XFile? imageFile}) {
-              _sendMessageWithPermissionCheck(
+              _messageListProvider.sendMessage(
                   audioFile: audioFile, text: text, imageFile: imageFile);
             },
             onSaveEditedMessage: provider.saveEditedMessage,
@@ -239,7 +235,6 @@ ${template.photoUrls.join('\n')}
 
 class _ChatTemplatesCarousel extends StatelessWidget {
   const _ChatTemplatesCarousel();
-
 
   @override
   Widget build(BuildContext context) {

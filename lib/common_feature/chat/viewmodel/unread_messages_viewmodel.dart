@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/common_feature/chat/repo/isar_helper.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 class UnreadMessagesViewModel extends ChangeNotifier {
   final IsarService _isarService = IsarService();
   int _totalUnreadCount = 0;

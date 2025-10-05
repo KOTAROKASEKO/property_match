@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/models/profile_model.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/services/user_service.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/view/saved_posts_scen.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/models/profile_model.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/services/user_service.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/view/saved_posts_scen.dart';
 import 'package:re_conver/features/authentication/auth_service.dart';
 import 'package:re_conver/features/authentication/login_placeholder.dart';
 import 'edit_profile_screen.dart'; // We will create this next
@@ -66,7 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         
       appBar: AppBar(
-        title: const Text('My Profile'),
+        title: const Text('My Profile', style: TextStyle(color: Colors.white),),
         backgroundColor: Colors.deepPurple,
         elevation: 0,
         foregroundColor: const Color.fromARGB(255, 255, 255, 255),

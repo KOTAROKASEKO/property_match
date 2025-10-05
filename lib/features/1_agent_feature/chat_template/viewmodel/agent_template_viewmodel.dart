@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:re_conver/features/1_agent_feature/1_profile/repo/profile_repository.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class AgentTemplateViewModel extends ChangeNotifier {
   final Box<PropertyTemplate> _propertyTemplateBox =
       Hive.box<PropertyTemplate>('propertyTemplateBox');
+  final ProfileRepository _profileRepository = FirestoreProfileRepository();
 
   List<PropertyTemplate> _templates = [];
   bool _isLoading = false;
@@ -19,8 +22,43 @@ class AgentTemplateViewModel extends ChangeNotifier {
   }
 
   // loadTemplatesをプライベートメソッドに変更
-  void _loadTemplates() {
+  void _loadTemplates() async {
+    // まずHiveから読み込む
     _templates = _propertyTemplateBox.values.toList().cast<PropertyTemplate>();
+    
+    // もしHiveが空だったら、Firestoreから復元を試みる
+    if (_templates.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
+      try {
+        final posts = await _profileRepository.fetchAgentPosts(userData.userId);
+        
+        final newTemplates = posts.map((post) => PropertyTemplate(
+              postId: post.id,
+              name: post.condominiumName,
+              rent: post.rent,
+              location: post.location,
+              description: post.description,
+              roomType: post.roomType,
+              gender: post.gender,
+              photoUrls: post.imageUrls,
+              nationality: 'Any',
+            )).toList();
+
+        for (var template in newTemplates) {
+          if (!_templates.any((t) => t.postId == template.postId)) {
+            await _propertyTemplateBox.add(template);
+          }
+        }
+        
+        _templates = _propertyTemplateBox.values.toList().cast<PropertyTemplate>();
+
+      } catch (e) {
+        print("Error fetching posts to restore templates: $e");
+      } finally {
+        _isLoading = false;
+      }
+    }
     notifyListeners();
   }
 

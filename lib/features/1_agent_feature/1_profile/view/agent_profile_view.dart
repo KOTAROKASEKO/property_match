@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/core/model/PostModel.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/repo/profile_repository.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/view/agent_create_post_screen.dart';
@@ -9,6 +8,7 @@ import 'package:re_conver/features/1_agent_feature/1_profile/view/edit_agent_pro
 import 'package:re_conver/features/1_agent_feature/1_profile/viewmodel/agent_profile_viewmodel.dart';
 import 'package:re_conver/features/authentication/auth_service.dart';
 import 'package:re_conver/features/authentication/login_placeholder.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 import 'post_details_card.dart';
 
@@ -55,10 +55,11 @@ class MyProfilePage extends StatelessWidget {
         backgroundColor: Colors.grey[100],
         appBar: AppBar(
           title: const Text('My Profile',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          backgroundColor: Colors.white,
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          backgroundColor: Colors.deepPurple,
           elevation: 0,
           centerTitle: true,
+          foregroundColor: Colors.white,
         ),
         body: Consumer<ProfileViewModel>(
           builder: (context, viewModel, child) {

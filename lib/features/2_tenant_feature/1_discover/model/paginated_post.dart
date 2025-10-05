@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:re_conver/common_feature/PostModel.dart';
+import 'package:re_conver/core/model/PostModel.dart';
 
 class PaginatedPosts {
   final List<PostModel> posts;

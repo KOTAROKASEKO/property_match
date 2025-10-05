@@ -1,7 +1,8 @@
 // lib/models/post_model.dart
 
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:re_conver/authentication/userdata.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class PostModel {
   final String id;

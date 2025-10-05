@@ -24,7 +24,12 @@ abstract class ProfileRepository {
     required String location,
     required GeoPoint? position,
   });
+
   Future<void> deletePost(String postId);
+   Future<void> updatePost({ // ★★★更新メソッドの定義を追加★★★
+    required String postId,
+    required Map<String, dynamic> data,
+  });
 }
 
 // Firestoreに対する具体的な実装クラス
@@ -106,7 +111,7 @@ class FirestoreProfileRepository implements ProfileRepository {
   }
 
   @override
-  Future<void> createPost({
+  Future<String> createPost({
     required String description,
     required List<String> imageUrls,
     required String condominiumName,
@@ -149,7 +154,8 @@ class FirestoreProfileRepository implements ProfileRepository {
         postData['position'] = point.data;
       }
 
-      await _firestore.collection('posts').add(postData);
+      final docRef = await _firestore.collection('posts').add(postData);
+      return docRef.id;
     } catch (e) {
       print("Error creating post: $e");
       rethrow;
@@ -162,6 +168,19 @@ class FirestoreProfileRepository implements ProfileRepository {
       await _firestore.collection('posts').doc(postId).delete();
     } catch (e) {
       print("Error deleting post: $e");
+      rethrow;
+    }
+  }
+
+    @override
+  Future<void> updatePost({
+    required String postId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      await _firestore.collection('posts').doc(postId).update(data);
+    } catch (e) {
+      print("Error updating post: $e");
       rethrow;
     }
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/2_tenant_feature/1_discover/view/post_card.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/viewmodel/saved_posts_viewmodel.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/view/post_card.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/viewmodel/saved_posts_viewmodel.dart';
 
 class SavedPostsScreen extends StatelessWidget {
   const SavedPostsScreen({super.key});

@@ -6,12 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/common_feature/chat/model/message_model.dart';
 import 'package:re_conver/common_feature/chat/view/audio_player_widget.dart';
 import 'package:re_conver/common_feature/chat/view/full_screen_image_view.dart';
 import 'package:re_conver/common_feature/chat/view/property_message_bubble.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageList.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class MessageListView extends StatefulWidget {
   final String otherUserName;

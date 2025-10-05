@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:re_conver/authentication/userdata.dart';
+
 import 'package:re_conver/core/model/PostModel.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/model/agent_profile_model.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/repo/profile_repository.dart';
 import 'package:re_conver/common_feature/post_actions_viewmodel.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/viewmodel/post_service.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class PublicAgentProfileViewModel extends PostActionsViewModel {
   final ProfileRepository _profileRepository = FirestoreProfileRepository();

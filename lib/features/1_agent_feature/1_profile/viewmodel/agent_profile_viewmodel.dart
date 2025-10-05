@@ -7,7 +7,6 @@ import 'package:re_conver/features/1_agent_feature/chat_template/model/property_
 import 'package:flutter/material.dart';
 import 'package:re_conver/app/debug_print.dart';
 
-// PostActionsViewModelの継承をやめて、いいね・保存ロジックを削除
 class ProfileViewModel extends ChangeNotifier {
   final ProfileRepository _repository;
 

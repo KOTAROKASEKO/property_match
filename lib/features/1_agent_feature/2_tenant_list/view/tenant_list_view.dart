@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/authentication/userdata.dart';
 import 'package:re_conver/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart';
-import 'package:re_conver/2_tenant_feature/3_profile/models/profile_model.dart';
 import 'package:re_conver/common_feature/chat/view/providerIndividualChat.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/models/profile_model.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class TenantListView extends StatelessWidget {
   const TenantListView({super.key});
