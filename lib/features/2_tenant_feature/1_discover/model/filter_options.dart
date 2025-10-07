@@ -2,7 +2,7 @@
 
 class FilterOptions {
   final String? gender;
-  final String? roomType;
+  final List<String>? roomType; // Changed from String?
   final String? condoName;
   final double? minRent;
   final double? maxRent;
@@ -15,10 +15,10 @@ class FilterOptions {
     this.maxRent,
   });
 
-  // フィルターが適用されているかどうかを判定する
+  // Check if any filters are applied
   bool get isClear =>
       gender == null &&
-      roomType == null &&
+      (roomType == null || roomType!.isEmpty) && // Updated for List
       (condoName == null || condoName!.isEmpty) &&
       minRent == null &&
       maxRent == null;

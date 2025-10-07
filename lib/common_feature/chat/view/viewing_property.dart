@@ -10,7 +10,7 @@ import 'package:re_conver/features/authentication/userdata.dart';
 
 class ViewingAppointmentList extends StatelessWidget {
   final List<ViewingAppointment> appointments;
-  final String Function(ChatThread, String) getOtherParticipantId;
+  final String Function(ChatThread) getOtherParticipantId;
   final Function(ViewingAppointment) onLongPress;
 
   const ViewingAppointmentList({
@@ -31,7 +31,7 @@ class ViewingAppointmentList extends StatelessWidget {
         final appointment = appointments[index];
         final thread = appointment.thread;
         final otherParticipantId =
-            getOtherParticipantId(thread, userData.userId);
+            getOtherParticipantId(thread);
 
         if (thread.hisName == null) {
           return const SizedBox.shrink(); // Or a shimmer

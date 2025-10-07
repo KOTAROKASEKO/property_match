@@ -3,9 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 import 'package:re_conver/common_feature/chat/model/template_model.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
+import 'package:re_conver/main.dart';
 
-String agent_template_message_box_name = 'agentMessageTemplates';
-String tenant_template_message_box_name = 'tenantMessageTemplates';
+
 
 class TemplateRepo {
   final Roles userRole;
@@ -13,7 +13,7 @@ class TemplateRepo {
   final FirebaseFirestore _instance = FirebaseFirestore.instance;
 
   TemplateRepo({required this.userRole}) {
-    final boxName = userRole == Roles.agent ? agent_template_message_box_name : tenant_template_message_box_name;
+    final boxName = userRole == Roles.agent ? agentTemplateMessageBoxName : tenanTemplateMessageBoxName;
     _templateBox = Hive.box<TemplateModel>(boxName);
   }
 
@@ -22,7 +22,7 @@ class TemplateRepo {
     if (userId.isEmpty) {
       throw Exception("User not logged in, cannot access templates.");
     }
-    final collectionName = userRole == Roles.agent ? agent_template_message_box_name : tenant_template_message_box_name;
+    final collectionName = userRole == Roles.agent ? agentTemplateMessageBoxName : tenanTemplateMessageBoxName;
     return _instance.collection(collectionName).doc(userId);
   }
 

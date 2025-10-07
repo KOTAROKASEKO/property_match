@@ -5,6 +5,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/common_feature/chat/model/blocked_model.dart';
+import 'package:re_conver/common_feature/chat/repo/TemplateRepo.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/repo/profile_repository.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/viewmodel/agent_profile_viewmodel.dart';
 import 'package:re_conver/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart';
@@ -20,6 +22,13 @@ import 'package:rive/rive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 
+
+//box names
+String agentTemplateMessageBoxName = 'agentMessageTemplates';
+String tenanTemplateMessageBoxName = 'tenantMessageTemplates';
+String propertyTemplateBox = 'propertyTemplateBox';
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -28,14 +37,16 @@ void main() async {
   );
   await RiveFile.initialize();
   await Hive.initFlutter();
+
   Hive.registerAdapter(TimestampAdapter());
   Hive.registerAdapter(TemplateModelAdapter());
   Hive.registerAdapter(PropertyTemplateAdapter());
-  userData.setUser(FirebaseAuth.instance.currentUser);
-  await Hive.openBox<TemplateModel>('tenantMessageTemplates');
-  await Hive.openBox<TemplateModel>('agentMessageTemplates');
-  await Hive.openBox<PropertyTemplate>('propertyTemplateBox'); 
+  
+  await Hive.openBox<TemplateModel>(tenanTemplateMessageBoxName);
+  await Hive.openBox<TemplateModel>(agentTemplateMessageBoxName);
+  await Hive.openBox<PropertyTemplate>(propertyTemplateBox);
 
+  userData.setUser(FirebaseAuth.instance.currentUser);
 
   runApp(
     MultiProvider(
@@ -119,7 +130,6 @@ class AuthWrapper extends StatelessWidget {
                         return const ResponsiveLayout();
                       }
                     }
-                    
                     return const RoleSelectionScreen();
                   },
                 );

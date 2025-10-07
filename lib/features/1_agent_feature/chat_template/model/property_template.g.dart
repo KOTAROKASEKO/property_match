@@ -25,9 +25,7 @@ class PropertyTemplateAdapter extends TypeAdapter<PropertyTemplate> {
       gender: fields[5] as String,
       nationality: fields[6] as String,
       roomType: fields[7] as String,
-      // ★★★ ここを修正 ★★★
-      // fields[8] が null の場合は空文字列 '' を使うように変更
-      postId: fields[8] as String? ?? '',
+      postId: fields[8] as String,
     );
   }
 

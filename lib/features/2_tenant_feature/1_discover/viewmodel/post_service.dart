@@ -77,11 +77,11 @@ class PostService {
     }
 
     if (filters != null) {
-      if (filters.gender != null) {
+      if (filters.gender != 'Any') {
         query = query.where('gender', isEqualTo: filters.gender);
       }
-      if (filters.roomType != null) {
-        query = query.where('roomType', isEqualTo: filters.roomType);
+      if (filters.roomType != null && filters.roomType!.isNotEmpty) {
+        query = query.where('roomType', whereIn: filters.roomType);
       }
       if (filters.condoName != null && filters.condoName!.isNotEmpty) {
         query = query.where('condominiumName', isEqualTo: filters.condoName);

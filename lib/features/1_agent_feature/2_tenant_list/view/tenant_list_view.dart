@@ -1,6 +1,10 @@
+// lib/features/1_agent_feature/2_tenant_list/view/tenant_list_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/features/1_agent_feature/2_tenant_list/model/tenant_filter_options.dart';
+import 'package:re_conver/features/1_agent_feature/2_tenant_list/view/tenant_filter_bottom_sheet.dart';
 import 'package:re_conver/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart';
 import 'package:re_conver/common_feature/chat/view/providerIndividualChat.dart';
 import 'package:re_conver/features/2_tenant_feature/3_profile/models/profile_model.dart';
@@ -53,6 +57,20 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
     super.dispose();
   }
 
+  void _showFilterSheet() async {
+    final viewModel = context.read<TenantListViewModel>();
+    final newFilters = await showModalBottomSheet<TenantFilterOptions>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) =>
+          TenantFilterBottomSheet(initialFilters: viewModel.filterOptions),
+    );
+
+    if (newFilters != null) {
+      viewModel.applyFilters(newFilters);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<TenantListViewModel>();
@@ -69,36 +87,64 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by name, occupation, location...',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30.0),
-                  borderSide: BorderSide.none,
+            child: Row(
+              children: [
+                // Wrap the TextField with an Expanded widget
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, occupation, location...',
+                      prefixIcon:
+                          const Icon(Icons.search, color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8), // Add spacing
+                Material(
+                  color: viewModel.filterOptions.isClear
+                      ? Colors.white
+                      : Colors.deepPurple[100],
+                  borderRadius: BorderRadius.circular(25),
+                  child: InkWell(
+                    onTap: _showFilterSheet,
+                    borderRadius: BorderRadius.circular(25),
+                    child: const SizedBox(
+                      height: 48,
+                      width: 48,
+                      child: Icon(Icons.filter_list,
+                          color: Colors.black54),
+                    ),
+                  ),
+                )
+              ],
             ),
           ),
           Expanded(
             child: viewModel.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : RefreshIndicator(
-                    onRefresh: () => viewModel.fetchTenants(isInitial: true),
+                    onRefresh: () =>
+                        viewModel.fetchTenants(isInitial: true),
                     child: ListView.builder(
                       controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16.0),
                       itemCount: viewModel.filteredTenants.length +
                           (viewModel.isLoadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index == viewModel.filteredTenants.length) {
                           return const Padding(
                             padding: EdgeInsets.all(16.0),
-                            child: Center(child: CircularProgressIndicator()),
+                            child:Center(child: CircularProgressIndicator()),
                           );
                         }
                         final tenant = viewModel.filteredTenants[index];
@@ -154,11 +200,11 @@ class TenantCard extends StatelessWidget {
             child: Column(
               children: [
                 _buildDetailRow(
-                    Icons.calendar_today_outlined,
-                    'Move-in Date',
-                    tenant.moveinDate == null
-                        ? 'Not specified'
-                        : DateFormat.yMMMd().format(tenant.moveinDate!),
+                  Icons.calendar_today_outlined,
+                  'Move-in Date',
+                  tenant.moveinDate == null
+                      ? 'Not specified'
+                      : DateFormat.yMMMd().format(tenant.moveinDate!),
                 ),
                 _buildDetailRow(
                     Icons.person_outline, 'About', tenant.selfIntroduction),

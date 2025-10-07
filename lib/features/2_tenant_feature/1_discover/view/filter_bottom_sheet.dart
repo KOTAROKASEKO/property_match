@@ -13,7 +13,7 @@ class FilterBottomSheet extends StatefulWidget {
 
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
   late String? _gender;
-  late String? _roomType;
+  late List<String> _selectedRoomTypes; // Changed from String?
   late TextEditingController _condoNameController;
   RangeValues _rentRange = const RangeValues(0, 5000);
 
@@ -21,7 +21,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   void initState() {
     super.initState();
     _gender = widget.initialFilters.gender;
-    _roomType = widget.initialFilters.roomType;
+    _selectedRoomTypes = widget.initialFilters.roomType ?? []; // Initialize as a list
     _condoNameController =
         TextEditingController(text: widget.initialFilters.condoName);
     _rentRange = RangeValues(
@@ -47,7 +47,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 onPressed: () {
                   setState(() {
                     _gender = null;
-                    _roomType = null;
+                    _selectedRoomTypes = []; // Clear the list
                     _condoNameController.clear();
                     _rentRange = const RangeValues(0, 5000);
                   });
@@ -57,11 +57,26 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             ],
           ),
           const SizedBox(height: 24),
-          _buildDropdown('Gender', ['Male', 'Female', 'Mix'], _gender,
+          _buildDropdown('Gender', ['Male', 'Female', 'Mix','Any'], _gender,
               (val) => setState(() => _gender = val)),
           const SizedBox(height: 16),
-          _buildDropdown('Room Type', ['Single', 'Middle', 'Master'], _roomType,
-              (val) => setState(() => _roomType = val)),
+          // Room Type multi-select
+          const Text('Room Type', style: TextStyle(fontWeight: FontWeight.bold)),
+          ...['Single', 'Middle', 'Master'].map((roomType) {
+            return CheckboxListTile(
+              title: Text(roomType),
+              value: _selectedRoomTypes.contains(roomType),
+              onChanged: (bool? value) {
+                setState(() {
+                  if (value == true) {
+                    _selectedRoomTypes.add(roomType);
+                  } else {
+                    _selectedRoomTypes.remove(roomType);
+                  }
+                });
+              },
+            );
+          }).toList(),
           const SizedBox(height: 16),
           TextFormField(
             controller: _condoNameController,
@@ -92,7 +107,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             onPressed: () {
               final filters = FilterOptions(
                 gender: _gender,
-                roomType: _roomType,
+                roomType: _selectedRoomTypes, // Pass the list
                 condoName: _condoNameController.text,
                 minRent: _rentRange.start,
                 maxRent: _rentRange.end,

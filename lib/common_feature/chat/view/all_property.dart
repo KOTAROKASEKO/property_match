@@ -11,7 +11,7 @@ import 'package:re_conver/features/authentication/userdata.dart';
 
 class ChatThreadList extends StatelessWidget {
   final List<ChatThread> threads;
-  final String Function(ChatThread, String) getOtherParticipantId;
+  final String Function(ChatThread) getOtherParticipantId;
   final Function(ChatThread) onLongPress;
   final ValueChanged<ChatThread>? onThreadSelected;
 
@@ -34,7 +34,7 @@ class ChatThreadList extends StatelessWidget {
       itemBuilder: (context, index) {
         final thread = threads[index];
         final otherParticipantId =
-            getOtherParticipantId(thread, userData.userId);
+            getOtherParticipantId(thread);
 
 
         final displayName = thread.hisName ?? 'Chat User';

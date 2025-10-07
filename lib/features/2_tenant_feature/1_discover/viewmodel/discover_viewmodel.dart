@@ -1,7 +1,5 @@
-// lib/features/3_discover/viewmodel/discover_viewmodel.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hive_flutter/adapters.dart';
 import 'package:re_conver/common_feature/post_actions_viewmodel.dart';
 import 'package:re_conver/core/model/PostModel.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/model/filter_options.dart';
@@ -27,9 +25,28 @@ class DiscoverViewModel extends PostActionsViewModel  {
   bool get isLoadingMore => _isLoadingMore;
 
   String _searchQuery = '';
+  List<String> _blockedUserIds = [];
   
   DiscoverViewModel() {
+    _fetchBlockedUsersAndThenPosts();
+  }
+
+  Future<void> _fetchBlockedUsersAndThenPosts() async {
+    await _fetchBlockedUsers();
     fetchInitialPosts();
+  }
+
+  Future<void> _fetchBlockedUsers() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users_prof')
+          .doc(userData.userId)
+          .collection('blockedUsers')
+          .get();
+      _blockedUserIds = snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print("Error fetching blocked users: $e");
+    }
   }
 
   void _applyFilter() {
@@ -58,7 +75,7 @@ class DiscoverViewModel extends PostActionsViewModel  {
         filters: _filterOptions,
         searchQuery: _searchQuery,
       );
-      _posts = result.posts;
+      _posts = result.posts.where((post) => !_blockedUserIds.contains(post.userId)).toList(); // Filter here
       _lastDocument = result.lastDocument;
       if (result.posts.length < 10) {
         _hasMorePosts = false;
@@ -99,15 +116,13 @@ class DiscoverViewModel extends PostActionsViewModel  {
 
   Future<void> applySearchQuery(String query) async {
     _searchQuery = query;
-    await fetchInitialPosts();
+    _applyFilter();
   }
 
   Future<void> applyFilters(FilterOptions filters) async {
     _filterOptions = filters;
     await fetchInitialPosts();
   }
-
-
 
   Future<void> deletePost(String postId) async {
     try {

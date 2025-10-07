@@ -22,7 +22,7 @@ class MessageListProvider extends ChangeNotifier {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  final IsarService _isarService = IsarService();
+  final ChatDatabase _isarService = ChatDatabase();
   StreamSubscription? _firebaseMessagesSubscription;
 
   List<MessageModel> _messages = [];

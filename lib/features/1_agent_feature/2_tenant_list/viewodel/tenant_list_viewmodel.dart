@@ -1,33 +1,60 @@
+// lib/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:re_conver/features/1_agent_feature/2_tenant_list/model/tenant_filter_options.dart';
 import 'package:re_conver/features/2_tenant_feature/3_profile/models/profile_model.dart';
+import 'package:re_conver/features/authentication/userdata.dart';
 
 class TenantListViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final int _limit = 10; // 1回に取得するドキュメント数
+  final int _limit = 10; // Number of documents to fetch at a time
 
   List<UserProfile> _allTenants = [];
   List<UserProfile> _filteredTenants = [];
   bool _isLoading = false;
   bool _isLoadingMore = false;
-  DocumentSnapshot? _lastDocument;
   String _searchQuery = '';
+  DocumentSnapshot? _lastDocument;
+  bool _hasMoreTenants = true;
 
   List<UserProfile> get filteredTenants => _filteredTenants;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
+  List<String> _blockedUserIds = [];
+  TenantFilterOptions _filterOptions =
+      TenantFilterOptions(minBudget: 0, maxBudget: 5000);
+  TenantFilterOptions get filterOptions => _filterOptions;
 
   TenantListViewModel() {
+    _fetchBlockedUsersAndThenTenants();
+  }
+
+  Future<void> _fetchBlockedUsers() async {
+    try {
+      final snapshot = await _firestore
+          .collection('users_prof')
+          .doc(userData.userId)
+          .collection('blockedUsers')
+          .get();
+      _blockedUserIds = snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print("Error fetching blocked users: $e");
+    }
+  }
+
+  Future<void> _fetchBlockedUsersAndThenTenants() async {
+    await _fetchBlockedUsers();
     fetchTenants(isInitial: true);
   }
 
   Future<void> fetchTenants({bool isInitial = false}) async {
-    if (_isLoadingMore) return;
+    if (_isLoadingMore || (!isInitial && !_hasMoreTenants)) return;
 
     if (isInitial) {
       _isLoading = true;
-      _allTenants = [];
       _lastDocument = null;
+      _allTenants = [];
+      _hasMoreTenants = true;
     } else {
       _isLoadingMore = true;
     }
@@ -36,24 +63,49 @@ class TenantListViewModel extends ChangeNotifier {
     try {
       Query query = _firestore
           .collection('users_prof')
-          .where('role', isEqualTo: 'tenant')
-          .orderBy('displayName')
-          .limit(_limit);
+          .where('role', isEqualTo: 'tenant');
 
-      if (!isInitial && _lastDocument != null) {
+      // Apply filters to the query
+      if (_filterOptions.minBudget != null && _filterOptions.minBudget! > 0) {
+        query =
+            query.where('budget', isGreaterThanOrEqualTo: _filterOptions.minBudget);
+      }
+      if (_filterOptions.maxBudget != null && _filterOptions.maxBudget! < 5000) {
+        query =
+            query.where('budget', isLessThanOrEqualTo: _filterOptions.maxBudget);
+      }
+      if (_filterOptions.roomType != null) {
+        query = query.where('roomType', isEqualTo: _filterOptions.roomType);
+      }
+      if (_filterOptions.pax != null) {
+        query = query.where('pax', isEqualTo: _filterOptions.pax);
+      }
+
+      // Order by a field for consistent pagination.
+      // Note: If you use range filters on one field, you must order by that field first.
+      // For this case, let's order by displayName. If complex queries are needed,
+      // you might need to create composite indexes in Firestore.
+      query = query.orderBy('displayName');
+
+      if (_lastDocument != null && !isInitial) {
         query = query.startAfterDocument(_lastDocument!);
       }
 
+      query = query.limit(_limit);
+
       final snapshot = await query.get();
 
-      
-
-      if (snapshot.docs.isNotEmpty) {
+      if (snapshot.docs.isEmpty) {
+        _hasMoreTenants = false;
+      } else {
         _lastDocument = snapshot.docs.last;
-        _allTenants.addAll(
-            snapshot.docs.map((doc) => UserProfile.fromFirestore(doc)));
+        final newTenants = snapshot.docs
+            .map((doc) => UserProfile.fromFirestore(doc))
+            .where((tenant) => !_blockedUserIds.contains(tenant.uid)); // Filter blocked users locally
+        _allTenants.addAll(newTenants);
       }
-      _applyFilter();
+
+      _applyLocalSearchFilter(); // Apply search query locally
     } catch (e) {
       print("Error fetching tenants: $e");
     } finally {
@@ -68,18 +120,25 @@ class TenantListViewModel extends ChangeNotifier {
 
   void applySearchQuery(String query) {
     _searchQuery = query;
-    _applyFilter();
+    _applyLocalSearchFilter();
   }
 
-  void _applyFilter() {
+  void applyFilters(TenantFilterOptions newFilters) {
+    _filterOptions = newFilters;
+    fetchTenants(isInitial: true); // Refetch from Firestore with new filters
+  }
+
+  // Local search is applied after fetching from Firestore.
+  // For a more robust search, a dedicated search service like Algolia or Elasticsearch would be better.
+  void _applyLocalSearchFilter() {
     if (_searchQuery.isEmpty) {
-      _filteredTenants = _allTenants;
+      _filteredTenants = List.from(_allTenants);
     } else {
       final query = _searchQuery.toLowerCase();
-      // 検索時はローカルでフィルタリング（Firestoreへのクエリを減らすため）
       _filteredTenants = _allTenants.where((tenant) {
         final nameMatch = tenant.displayName.toLowerCase().contains(query);
-        final occupationMatch = tenant.occupation.toLowerCase().contains(query);
+        final occupationMatch =
+            tenant.occupation.toLowerCase().contains(query);
         final locationMatch = tenant.location.toLowerCase().contains(query);
         return nameMatch || occupationMatch || locationMatch;
       }).toList();

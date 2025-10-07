@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:re_conver/common_feature/chat/repo/isar_helper.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
 class UnreadMessagesViewModel extends ChangeNotifier {
-  final IsarService _isarService = IsarService();
+  final ChatDatabase _isarService = ChatDatabase();
   int _totalUnreadCount = 0;
   StreamSubscription? _threadsSubscription;
 

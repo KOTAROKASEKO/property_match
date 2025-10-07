@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:re_conver/app/debug_print.dart';
 import 'package:re_conver/common_feature/chat/model/chat_thread.dart';
 import 'package:re_conver/common_feature/chat/repo/isar_helper.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
@@ -13,7 +14,7 @@ class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  final IsarService _isarService = IsarService();
+  final ChatDatabase _isarService = ChatDatabase();
 
   Future<void> updateViewingDetails({
   required String threadId,
@@ -70,6 +71,41 @@ class ChatService {
     });
   });
 }
+
+
+
+  Future<void> blockUser(String blockedUserId) async {
+
+    try{
+      await _isarService.addToBlockedUsers(blockedUserId);
+    }catch(e){
+      pr('Error blocking a user :${e}');
+    }
+  }
+
+    Future<void> unblockUser(String blockedUserId) async {
+    
+      final docRef = _firestore.collection('blockedList').doc(userData.userId);
+
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) {
+        return;
+      }
+
+      // *** THE FIX IS HERE ***
+      // 1. Get the list from Firestore.
+      final List<dynamic> currentBlocked = snapshot.data()?['blockedUsers'] ?? [];
+      
+      // 2. Create a new, explicitly growable list from the original.
+      final updatedBlocked = List.from(currentBlocked)
+        ..remove(blockedUserId); // Now .remove() will work safely.
+
+      // 3. Update Firestore with the new list.
+      transaction.update(docRef, {'blockedUsers': updatedBlocked});
+      pr('The user was updated on firestore successfully');
+    });
+  }
 
   Future<void> updateGeneralNoteAndImages({
     required ChatThread thread,

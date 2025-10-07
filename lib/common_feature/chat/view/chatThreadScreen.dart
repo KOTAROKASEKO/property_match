@@ -5,11 +5,13 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:re_conver/app/debug_print.dart';
 import 'package:re_conver/common_feature/chat/model/chat_thread.dart';
 import 'package:re_conver/common_feature/chat/repo/isar_helper.dart';
 import 'package:re_conver/common_feature/chat/view/add_edit_general_note_screen.dart';
 import 'package:re_conver/common_feature/chat/view/add_edit_viewing_note_screen.dart';
 import 'package:re_conver/common_feature/chat/view/all_property.dart';
+import 'package:re_conver/common_feature/chat/view/setting_screen.dart';
 import 'package:re_conver/common_feature/chat/view/viewing_property.dart';
 import 'package:re_conver/common_feature/chat/view/date_time_picker_modal.dart';
 import 'package:re_conver/common_feature/chat/view/report_user_dialogue.dart';
@@ -44,7 +46,7 @@ class ChatThreadsScreen extends StatefulWidget {
 class _ChatThreadsScreenState extends State<ChatThreadsScreen>
     with TickerProviderStateMixin {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final IsarService _isarService = IsarService();
+  final ChatDatabase _isarService = ChatDatabase();
   final ChatService _chatService = ChatService();
   
   late final TabController _tabController;
@@ -128,7 +130,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
           change.doc,
         );
 
-        final otherUserId = _getOtherParticipantId(thread, userData.userId);
+        final otherUserId = _getOtherParticipantId(thread);
         final userDoc = await _firestore.collection('users_prof').doc(otherUserId).get();
         if (userDoc.exists && userDoc.data() != null) {
           thread.hisName = userDoc.data()!['displayName'];
@@ -141,8 +143,8 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
     });
   }
   
-  String _getOtherParticipantId(ChatThread thread, String currentUserId) {
-    return thread.whoReceived != currentUserId
+  String _getOtherParticipantId(ChatThread thread) {
+    return thread.whoReceived != userData.userId
         ? thread.whoReceived
         : thread.whoSent;
   }
@@ -229,7 +231,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
   }
 
   List<Widget> _buildAllOptions(BuildContext ctx, ChatThread thread) {
-    final otherUserId = _getOtherParticipantId(thread, userData.userId);
+    final otherUserId = _getOtherParticipantId(thread);
     return [
       ListTile(
         leading: const Icon(Icons.note_add_outlined),
@@ -272,13 +274,23 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
       ListTile(
         leading: const Icon(Icons.block),
         title: const Text('Block User'),
-        onTap: () {
-          Navigator.of(ctx).pop();
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            const SnackBar(
-                content: Text('Block user functionality not implemented yet.')),
-          );
-        },
+        onTap: () async {
+              Navigator.of(ctx).pop();
+              try {
+                pr('blocking user : ${ _getOtherParticipantId(thread)}');
+                await _chatService.blockUser(
+                  _getOtherParticipantId(thread),
+                );
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('User blocked.')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to block user: $e')),
+                );
+              }
+            },
       ),
       ListTile(
         leading: Icon(Icons.delete_forever_outlined, color: Colors.red[700]),
@@ -294,7 +306,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
   List<Widget> _buildViewingOptions(
       BuildContext ctx, ViewingAppointment appointment) {
     final otherUserId =
-        _getOtherParticipantId(appointment.thread, userData.userId);
+        _getOtherParticipantId(appointment.thread);
     return [
       ListTile(
         leading: const Icon(Icons.note_add_outlined),
@@ -442,13 +454,23 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
   Widget build(BuildContext context) {
     if (userData.userId.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('My Chats')),
+        
         body: const Center(child: Text("Please log in to see your chats.")),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
+        actions: [ // Add this actions property
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
         title: const Text('My Chats', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
