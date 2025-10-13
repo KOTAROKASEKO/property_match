@@ -1,11 +1,16 @@
+// lib/features/2_tenant_feature/1_discover/view/discover_screen.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/common_feature/chat/view/providerIndividualChat.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/unread_messages_viewmodel.dart';
+import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart'; // ★ Import PropertyTemplate
 import 'package:re_conver/features/2_tenant_feature/1_discover/model/filter_options.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/filter_bottom_sheet.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/post_card.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/viewmodel/discover_viewmodel.dart';
+import 'package:re_conver/features/authentication/userdata.dart'; // ★ Import userData
 
 
 class DiscoverScreen extends StatelessWidget {
@@ -71,6 +76,13 @@ class _DiscoverViewState extends State<_DiscoverView>
     super.dispose();
   }
 
+  // ★ Helper method from step 1
+  String _generateChatThreadId(String uid1, String uid2) {
+    List<String> uids = [uid1, uid2];
+    uids.sort();
+    return uids.join('_');
+  }
+
   void _showFilterSheet() async {
     final viewModel = context.read<DiscoverViewModel>();
     final newFilters = await showModalBottomSheet<FilterOptions>(
@@ -103,8 +115,14 @@ class _DiscoverViewState extends State<_DiscoverView>
                 snap: true,
                 pinned: true,
                 elevation: 1.0,
-                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                title: const Text('Discover'),
+                backgroundColor: Colors.deepPurple,
+                title: Row(children:[
+                  Icon(Icons.home_filled,
+                  color: Colors.white,
+                  ),
+                  SizedBox(width: 10,),
+                Text('Discover', style:TextStyle(color: Colors.white)),
+                ]),
                 flexibleSpace: FlexibleSpaceBar(
                   background: Align(
                     alignment: Alignment.bottomCenter,
@@ -191,6 +209,31 @@ class _DiscoverViewState extends State<_DiscoverView>
                         post: post,
                         onToggleLike: viewModel.toggleLike,
                         onToggleSave: viewModel.savePost,
+                        onStartChat: (post) {
+                          final chatThreadId = _generateChatThreadId(userData.userId, post.userId);
+                          final propertyTemplate = PropertyTemplate(
+                            postId: post.id,
+                            name: post.condominiumName,
+                            rent: post.rent,
+                            location: post.location,
+                            description: post.description,
+                            roomType: post.roomType,
+                            gender: post.gender,
+                            photoUrls: post.imageUrls,
+                            nationality: 'Any',
+                          );
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => IndividualChatScreenWithProvider(
+                                chatThreadId: chatThreadId,
+                                otherUserUid: post.userId,
+                                otherUserName: post.username,
+                                otherUserPhotoUrl: post.userProfileImageUrl,
+                                initialPropertyTemplate: propertyTemplate,
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                     childCount: viewModel.posts.length +

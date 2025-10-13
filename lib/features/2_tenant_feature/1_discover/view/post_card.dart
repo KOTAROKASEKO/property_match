@@ -1,7 +1,9 @@
+// lib/features/2_tenant_feature/1_discover/view/post_card.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:re_conver/app/debug_print.dart';
 import 'package:re_conver/core/model/PostModel.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/agent_profile_screen.dart';
@@ -17,12 +19,14 @@ class PostCard extends StatefulWidget {
   // Define function parameters for the actions
   final Function(String) onToggleLike;
   final Function(String) onToggleSave;
+  final Function(PostModel)? onStartChat; // ★ 追加
 
   const PostCard({
-    super.key, 
+    super.key,
     required this.post,
     required this.onToggleLike,
     required this.onToggleSave,
+    this.onStartChat, // ★ 追加
   });
 
   @override
@@ -166,11 +170,17 @@ class _PostCardState extends State<PostCard> {
                 color: Colors.black, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
             children: [
               _buildInfoChip(Icons.meeting_room_outlined, widget.post.roomType),
-              const SizedBox(width: 8),
               _buildInfoChip(Icons.person_outline, '${widget.post.gender} Unit'),
+              if (widget.post.durationStart != null && widget.post.durationEnd != null)
+                _buildInfoChip(
+                  Icons.date_range_outlined,
+                  '${DateFormat.yMd().format(widget.post.durationStart!)} - ${DateFormat.yMd().format(widget.post.durationEnd!)}',
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -188,6 +198,28 @@ class _PostCardState extends State<PostCard> {
               _buildActionButtons(context),
             ],
           ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: const Text('Inquire'),
+              onPressed: () {
+                if (FirebaseAuth.instance.currentUser == null) {
+                  showSignInModal(context);
+                } else {
+                  widget.onStartChat!(widget.post);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          )
         ],
       ),
     );
@@ -196,7 +228,7 @@ class _PostCardState extends State<PostCard> {
   Widget _buildInfoChip(IconData icon, String label) {
     return Chip(
       avatar: Icon(icon, size: 16, color: Colors.deepPurple),
-      label: Text(label),
+      label: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: const Color.fromARGB(255, 102, 102, 102)),),
       backgroundColor: Colors.deepPurple.withOpacity(0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),

@@ -10,7 +10,7 @@ class AgentProfile {
   AgentProfile({
     required this.uid,
     required this.email,
-    this.displayName = 'New Agent',
+    this.displayName = 'New user',
     this.profileImageUrl = '',
     this.bio = '',
   });
@@ -20,7 +20,7 @@ class AgentProfile {
     return AgentProfile(
       uid: doc.id,
       email: data?['email'] as String? ?? '',
-      displayName: data?['displayName'] as String? ?? 'New Agent',
+      displayName: data?['displayName'] as String? ?? 'New user',
       profileImageUrl: data?['profileImageUrl'] as String? ?? '',
       bio: data?['bio'] as String? ?? '',
     );

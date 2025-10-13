@@ -1,10 +1,11 @@
-// lib/models/post_model.dart
+// lib/core/model/PostModel.dart
 
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
 
 class PostModel {
+  final String condominiumName_searchKey;
   final String id;
   final String userId;
   final String username;
@@ -24,6 +25,8 @@ class PostModel {
   bool isSaved;
   final GeoPoint? position; // ★★★ 追加 ★★★
   final String location;
+  final DateTime? durationStart;
+  final DateTime? durationEnd;
 
   PostModel({
     required this.id,
@@ -45,6 +48,9 @@ class PostModel {
     this.condominiumName = '',
     this.position,
     this.location = '',
+    this.condominiumName_searchKey = '',
+    this.durationStart,
+    this.durationEnd,
   });
 
   bool get isLikedByCurrentUser {
@@ -84,10 +90,13 @@ class PostModel {
       reportedBy: List<String>.from(data['reportedBy'] ?? []),
       gender: data['gender'] ?? 'Mix',
       roomType: data['roomType'] ?? 'Middle',
+      condominiumName_searchKey: data['condominiumName_searchKey'] ?? '',
       rent: (data['rent'] as num?)?.toDouble() ?? 0.0,
       condominiumName: data['condominiumName'] ?? '',
       position: postPosition,
       location: data['location'] as String? ?? '',
+      durationStart: (data['durationStart'] as Timestamp?)?.toDate(),
+      durationEnd: (data['durationEnd'] as Timestamp?)?.toDate(),
     );
   }
 }

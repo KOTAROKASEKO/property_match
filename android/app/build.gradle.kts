@@ -26,8 +26,8 @@ android {
         applicationId = "com.property.match"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = 9
-        versionName = "1.0.0.9"
+        versionCode = 11
+        versionName = "1.0.0.11"
     }
 
     val keyPropertiesFile = rootProject.file("key.properties")

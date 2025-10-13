@@ -1,9 +1,10 @@
-// lib/2_tenant_feature/4_chat/repo/TemplateRepo.dart
+// lib/common_feature/chat/repo/TemplateRepo.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
+import 'package:re_conver/app/database_path.dart';
+import 'package:re_conver/app/debug_print.dart';
 import 'package:re_conver/common_feature/chat/model/template_model.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
-import 'package:re_conver/main.dart';
 
 
 
@@ -27,7 +28,10 @@ class TemplateRepo {
   }
 
   Future<List<String>> getTemplates() async {
+    //if the template box is not empty or
+    
     if (_templateBox.isNotEmpty) {
+      pr('templateRepo.dart/ template box is not empty');
       return _templateBox.values.map((e) => e.templateMessage).toList();
     }
 

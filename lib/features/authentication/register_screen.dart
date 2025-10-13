@@ -1,4 +1,6 @@
+// lib/features/authentication/register_screen.dart
 
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:re_conver/features/authentication/role_selection_screen.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
 import 'package:re_conver/service/FirebaseApi.dart';
+
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -26,22 +29,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isRegistering = true);
       try {
-        UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        UserCredential userCredential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
 
         if (userCredential.user != null) {
           // Note: We are not setting the role here.
-          await _createUserProfile(userCredential.user!, _displayNameController.text.trim());
+          await _createUserProfile(
+              userCredential.user!, _displayNameController.text.trim());
           userData.setUser(userCredential.user);
           await saveTokenToDatabase();
           if (mounted) {
-            // Navigate to RoleSelectionScreen after registration
+            // Create a new UserProfile object for the new tenant
+            
+            // Navigate to EditProfileScreen after registration
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
-              (route) => false
-            );
+                MaterialPageRoute(
+                    builder: (context) =>
+                        RoleSelectionScreen(
+                          displayName : _displayNameController.text
+                        )),
+                (route) => false);
           }
         }
       } on FirebaseAuthException catch (e) {
@@ -56,32 +66,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  String _generateRandomString(int length) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final random = Random();
+    return String.fromCharCodes(Iterable.generate(
+        length, (_) => chars.codeUnitAt(random.nextInt(chars.length))));
+  }
+
   Future<void> _createUserProfile(User user, String displayName) async {
-    final userRef = FirebaseFirestore.instance.collection('users_prof').doc(user.uid);
+    final userRef =
+        FirebaseFirestore.instance.collection('users_prof').doc(user.uid);
     // Role is NOT set here. It will be set in RoleSelectionScreen.
     await userRef.set({
       'displayName': displayName,
       'email': user.email,
       'profileImageUrl': user.photoURL ?? '',
       'bio': '',
-      'username': displayName.replaceAll(' ', '').toLowerCase(),
+      'username':
+          '${displayName.replaceAll(' ', '').toLowerCase()}${_generateRandomString(4)}',
     });
   }
 
   InputDecoration _buildInputDecoration(String label) {
-  return InputDecoration(
-    labelText: label,
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
-    ),
-    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-  );
-}
-
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,18 +117,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 40),
                 Text(
                   "Create Account",
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   "Start your journey with us today!",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 40),
                 TextFormField(
                   controller: _displayNameController,
                   decoration: _buildInputDecoration('Display Name'),
-                  validator: (value) => (value == null || value.isEmpty) ? 'Please enter a display name' : null,
+                  validator: (value) => (value == null || value.isEmpty)
+                      ? 'Please enter a display name'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -117,7 +144,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: _buildInputDecoration('Email'),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty || !value.contains('@')) {
+                    if (value == null ||
+                        value.isEmpty ||
+                        !value.contains('@')) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -142,9 +171,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         onPressed: _registerWithEmailAndPassword,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text('Register', style: TextStyle(fontSize: 16)),
+                        child: const Text('Register',
+                            style: TextStyle(fontSize: 16)),
                       ),
               ],
             ),

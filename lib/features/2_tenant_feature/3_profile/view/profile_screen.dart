@@ -66,7 +66,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         
       appBar: AppBar(
-        title: const Text('My Profile', style: TextStyle(color: Colors.white),),
+        title: const Row(
+          children: [
+            Icon(Icons.person),
+            SizedBox(width: 10,),
+            Text('My Profile', style: TextStyle(color: Colors.white),),
+            ]),
         backgroundColor: Colors.deepPurple,
         elevation: 0,
         foregroundColor: const Color.fromARGB(255, 255, 255, 255),
@@ -185,6 +190,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: Icons.cake_outlined,
               title: 'Age',
               value: '${userProfile.age} years old',
+            ),
+            _ProfileDetailRow(
+              icon: Icons.person_outline,
+              title: 'Gender',
+              value: userProfile.gender,
             ),
             _ProfileDetailRow(
               icon: Icons.calendar_today_outlined,

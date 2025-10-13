@@ -9,6 +9,8 @@ import 'package:re_conver/features/1_agent_feature/1_profile/viewmodel/agent_pro
 import 'package:re_conver/features/authentication/auth_service.dart';
 import 'package:re_conver/features/authentication/login_placeholder.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
+import 'package:re_conver/features/notifications/view/notification_screen.dart';
+import 'package:re_conver/features/notifications/viewmodel/notification_viewmodel.dart';
 
 import 'post_details_card.dart';
 
@@ -54,11 +56,31 @@ class MyProfilePage extends StatelessWidget {
         ),
         backgroundColor: Colors.grey[100],
         appBar: AppBar(
+           actions: [ // ★ actions プロパティを追加
+            Consumer<NotificationViewModel>(
+              builder: (context, viewModel, child) {
+                return IconButton(
+                  icon: Badge(
+                    label: Text(viewModel.unreadCount.toString()),
+                    isLabelVisible: viewModel.unreadCount > 0,
+                    child: const Icon(Icons.notifications_outlined),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => ChangeNotifierProvider.value(
+                        value: viewModel,
+                        child: const NotificationsScreen(),
+                      ),
+                    ));
+                  },
+                );
+              },
+            ),
+          ],
           title: const Text('My Profile',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              style: TextStyle(color: Colors.white)),
           backgroundColor: Colors.deepPurple,
           elevation: 0,
-          centerTitle: true,
           foregroundColor: Colors.white,
         ),
         body: Consumer<ProfileViewModel>(
@@ -177,7 +199,6 @@ class _StatItem extends StatelessWidget {
 class _ActionButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // listen: true にして、プロフィール更新後にUIが再描画されるようにする
     final viewModel = context.watch<ProfileViewModel>();
     return Container(
       color: Colors.white,
@@ -220,7 +241,7 @@ class _ActionButtons extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => const CreatePostScreen()),
                 );
               },
-              label: const Text('New Post'),
+              label: const Text('Add Listing'),
               style: ElevatedButton.styleFrom(
                 elevation: 0,
                 backgroundColor: Theme.of(context).primaryColor,

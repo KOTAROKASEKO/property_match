@@ -1,5 +1,7 @@
+// lib/features/1_agent_feature/1_profile/viewmodel/agent_profile_viewmodel.dart
 import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:re_conver/app/database_path.dart';
 import 'package:re_conver/core/model/PostModel.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/model/agent_profile_model.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/repo/profile_repository.dart';
@@ -75,15 +77,23 @@ class ProfileViewModel extends ChangeNotifier {
 
   Future<void> deletePost(String postId) async {
     try {
+      pr('Deleting listing with postId: $postId');
+      // First, delete the post from Firestore
       await _repository.deletePost(postId);
+      // Then, remove the post from the local list
       _posts.removeWhere((post) => post.id == postId);
-      
-      final box = Hive.box<PropertyTemplate>('propertyTemplateBox');
-      box.delete(postId);
-      // Note: Hive key might not be postId. This needs careful implementation.
-      // Assuming a relationship exists to find the right key.
-      // For now, we remove the post from the UI list.
-      
+
+      // Now, find and delete the corresponding template from Hive
+      final box = Hive.box<PropertyTemplate>(propertyTemplateBox);
+      // Find the key of the template that has the matching postId
+      final templateKey = box.keys.firstWhere(
+          (key) => box.get(key)?.postId == postId,
+          orElse: () => null);
+
+      if (templateKey != null) {
+        await box.delete(templateKey);
+        pr('✅ Property template with postId $postId deleted from Hive.');
+      }
       notifyListeners();
     } catch (e) {
       _errorMessage = "Failed to delete post: ${e.toString()}";

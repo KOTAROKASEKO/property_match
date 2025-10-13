@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:re_conver/common_feature/chat/view/chatThreadScreen.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/discover_screen.dart';
 import 'package:re_conver/features/2_tenant_feature/3_profile/view/profile_screen.dart';
+import 'package:re_conver/features/notifications/view/notification_screen.dart';
 
 class TenantMainScaffold extends StatefulWidget {
   const TenantMainScaffold({super.key});
@@ -12,6 +14,16 @@ class TenantMainScaffold extends StatefulWidget {
 
 class _TenantMainScaffoldState extends State<TenantMainScaffold> {
   int _selectedIndex = 0;
+  
+  @override
+  void initState() {
+    super.initState();
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user != null) {
+        checkAndRequestNotificationPermission(context);
+      }
+    });
+  }
 
   static const List<Widget> _pages = <Widget>[
     ChatThreadsScreen(),

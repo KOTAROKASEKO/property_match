@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:re_conver/core/model/PostModel.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/model/agent_profile_model.dart';
@@ -13,17 +12,7 @@ abstract class ProfileRepository {
   Future<List<PostModel>> fetchAgentPosts(String userId);
   Future<void> updateUserProfile(AgentProfile updatedProfile);
   Future<String> uploadProfileImage(String userId, XFile imageFile);
-  Future<void> createPost({
-    required String description,
-    required List<String> imageUrls,
-    required String condominiumName,
-    required double rent,
-    required String roomType,
-    required String gender,
-    required List<String> manualTags,
-    required String location,
-    required GeoPoint? position,
-  });
+  Future<String> createPost({required Map<String, dynamic> postData});
 
   Future<void> deletePost(String postId);
    Future<void> updatePost({ // ★★★更新メソッドの定義を追加★★★
@@ -37,6 +26,68 @@ class FirestoreProfileRepository implements ProfileRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<List<String>> getCondoNameSuggestions(String query) async {
+  if (query.isEmpty) {
+    return [];
+  }
+
+  try {
+    // ★★★ 検索キーでクエリするように変更 ★★★
+    final searchQuery = query.replaceAll(' ', '').toLowerCase();
+    final querySnapshot = await _firestore
+        .collection('posts')
+        .where('condominiumName_searchKey', isGreaterThanOrEqualTo: searchQuery)
+        .where('condominiumName_searchKey', isLessThanOrEqualTo: '$searchQuery\uf8ff')
+        .limit(10)
+        .get();
+
+    if (querySnapshot.docs.isEmpty) {
+      return [];
+    }
+
+    final suggestions = <String>{};
+    for (var doc in querySnapshot.docs) {
+      final post = PostModel.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>);
+      suggestions.add(post.condominiumName); // 表示するのは元の名前
+    }
+
+    return suggestions.toList();
+  } catch (e) {
+    print("Error fetching condo name suggestions: $e");
+    return [];
+  }
+}
+
+  @override
+  Future<String> createPost({required Map<String, dynamic> postData}) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception("User not logged in");
+      final userDoc =
+          await _firestore.collection('users_prof').doc(user.uid).get();
+      final username = userDoc.data()?['displayName'] ?? 'Anonymous';
+      final userProfileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
+
+      postData.addAll({
+        'userId': user.uid,
+        'username': username,
+        'userProfileImageUrl': userProfileImageUrl,
+        'likeCount': 0,
+        'timestamp': FieldValue.serverTimestamp(),
+        'likedBy': [],
+        'manualTags': [],
+        'status': 'open',
+        'reportedBy': [],
+      });
+
+      final docRef = await _firestore.collection('posts').add(postData);
+      return docRef.id;
+    } catch (e) {
+      print("Error creating post: $e");
+      rethrow;
+    }
+  }
 
   @override
   Future<AgentProfile?> fetchAgentProfile(String userId) async {
@@ -107,58 +158,6 @@ class FirestoreProfileRepository implements ProfileRepository {
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
       throw Exception('Failed to upload profile image: $e');
-    }
-  }
-
-  @override
-  Future<String> createPost({
-    required String description,
-    required List<String> imageUrls,
-    required String condominiumName,
-    required double rent,
-    required String roomType,
-    required String gender,
-    required List<String> manualTags,
-    required String location,
-    required GeoPoint? position,
-  }) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception("User not logged in");
-      final userDoc =
-          await _firestore.collection('users_prof').doc(user.uid).get();
-      final username = userDoc.data()?['displayName'] ?? 'Anonymous';
-      final userProfileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
-
-      final postData = <String, dynamic>{
-        'description': description,
-        'imageUrls': imageUrls,
-        'condominiumName': condominiumName,
-        'rent': rent,
-        'roomType': roomType,
-        'gender': gender,
-        'userId': user.uid,
-        'username': username,
-        'userProfileImageUrl': userProfileImageUrl,
-        'likeCount': 0,
-        'timestamp': FieldValue.serverTimestamp(),
-        'likedBy': [],
-        'manualTags': manualTags,
-        'status': 'open',
-        'reportedBy': [],
-        'location': location,
-      };
-
-      if (position != null) {
-        final point = GeoFirePoint(position);
-        postData['position'] = point.data;
-      }
-
-      final docRef = await _firestore.collection('posts').add(postData);
-      return docRef.id;
-    } catch (e) {
-      print("Error creating post: $e");
-      rethrow;
     }
   }
 

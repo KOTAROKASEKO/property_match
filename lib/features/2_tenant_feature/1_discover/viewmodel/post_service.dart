@@ -1,3 +1,4 @@
+// lib/features/2_tenant_feature/1_discover/viewmodel/post_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geocoding/geocoding.dart';
@@ -77,7 +78,7 @@ class PostService {
     }
 
     if (filters != null) {
-      if (filters.gender != 'Any') {
+      if (filters.gender != 'Any' && filters.gender != null) {
         query = query.where('gender', isEqualTo: filters.gender);
       }
       if (filters.roomType != null && filters.roomType!.isNotEmpty) {
@@ -92,13 +93,26 @@ class PostService {
       if (filters.maxRent != null && filters.maxRent! < 5000) {
         query = query.where('rent', isLessThanOrEqualTo: filters.maxRent);
       }
+      // Duration filter
+      if (filters.durationStart != null) {
+        query = query.where('durationStart', isGreaterThanOrEqualTo: Timestamp.fromDate(filters.durationStart!));
+      }
+      if (filters.durationEnd != null) {
+        query = query.where('durationStart', isLessThanOrEqualTo: Timestamp.fromDate(filters.durationEnd!));
+      }
     }
 
-    if (sortOrder == SortOrder.byPopularity) {
+    // Apply sorting
+    bool hasDurationFilter = filters?.durationStart != null || filters?.durationEnd != null;
+    if (hasDurationFilter) {
+      // If filtering by duration, the first orderBy must be on the same field.
+      query = query.orderBy('durationStart');
+    } else if (sortOrder == SortOrder.byPopularity) {
       query = query.orderBy('likeCount', descending: true);
     } else if (geoQueriedIds == null) {
       query = query.orderBy('timestamp', descending: true);
     }
+
 
     if (lastDocument != null) {
       query = query.startAfterDocument(lastDocument);

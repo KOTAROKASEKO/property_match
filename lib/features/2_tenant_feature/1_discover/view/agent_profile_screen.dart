@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/model/agent_profile_model.dart';
 import 'package:re_conver/common_feature/chat/view/providerIndividualChat.dart';
+import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/post_card.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/viewmodel/public_agent_profile_viewmodel.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
@@ -16,6 +17,8 @@ class AgentProfileScreen extends StatelessWidget {
     uids.sort();
     return uids.join('_');
   }
+
+
 
     @override
     Widget build(BuildContext context) {
@@ -65,6 +68,31 @@ class AgentProfileScreen extends StatelessWidget {
                         post: post,
                         onToggleLike: viewModel.toggleLike,
                         onToggleSave: viewModel.savePost,
+                        onStartChat: (post) {
+                          final chatThreadId = _generateChatThreadId(userData.userId, post.userId);
+                          final propertyTemplate = PropertyTemplate(
+                            postId: post.id,
+                            name: post.condominiumName,
+                            rent: post.rent,
+                            location: post.location,
+                            description: post.description,
+                            roomType: post.roomType,
+                            gender: post.gender,
+                            photoUrls: post.imageUrls,
+                            nationality: 'Any',
+                          );
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => IndividualChatScreenWithProvider(
+                                chatThreadId: chatThreadId,
+                                otherUserUid: post.userId,
+                                otherUserName: post.username,
+                                otherUserPhotoUrl: post.userProfileImageUrl,
+                                initialPropertyTemplate: propertyTemplate,
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                     childCount: viewModel.posts.length,

@@ -17,6 +17,7 @@ import 'package:re_conver/common_feature/chat/view/date_time_picker_modal.dart';
 import 'package:re_conver/common_feature/chat/view/report_user_dialogue.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/chat_service.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
+import 'package:rive/rive.dart';
 
 
 class ViewingAppointment {
@@ -48,6 +49,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final ChatDatabase _isarService = ChatDatabase();
   final ChatService _chatService = ChatService();
+  late RiveAnimationController _controller;
   
   late final TabController _tabController;
   StreamSubscription? _threadsSubscription; 
@@ -57,60 +59,59 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _initializeAndListenToThreads(); 
+     _controller = SimpleAnimation('Timeline 1', autoplay: true, mix: 1);
   }
 
   @override
   void dispose() {
+    _controller.dispose();
     _threadsSubscription?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
-   Future<void> _confirmDeleteChat(BuildContext context, ChatThread thread) async {
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Chat?'),
-        content: const Text(
-            'This will permanently delete all messages in this conversation. This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+  Future<void> _confirmDeleteChat(BuildContext context, ChatThread thread) async {
+  final bool? confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Delete Chat?'),
+      content: const Text(
+          'This will permanently delete all messages in this conversation. This action cannot be undone.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[600],
+            foregroundColor: Colors.white,
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[600],
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
 
-    if (confirm == true && mounted) {
-      try {
-        await _chatService.deleteChat(thread.id);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Chat deleted successfully.')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete chat: $e')),
-          );
-        }
+  if (confirm == true && mounted) {
+    try {
+      await _chatService.deleteChat(thread.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chat deleted successfully.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete chat: $e')),
+        );
       }
     }
   }
-
-
-
+}
 
   void _initializeAndListenToThreads() {
     _threadsSubscription = _firestore
@@ -148,6 +149,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
         ? thread.whoReceived
         : thread.whoSent;
   }
+  
   void _showReportUserDialog(String reportedUserId) async {
     final reason = await showDialog<String>(
       context: context,
@@ -471,7 +473,15 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
             },
           ),
         ],
-        title: const Text('My Chats', style: TextStyle(color: Colors.white)),
+        title:  Row(children:[
+                  Icon(Icons.chat,
+                  color: Colors.white,
+                  ),
+                  SizedBox(width: 10,),
+                  Text('My Chats', style: TextStyle(
+                    color: Colors.white,
+                    )),
+        ]),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -496,7 +506,48 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
             return Center(child: Text("Error: ${snapshot.error}"));
           }
           if (snapshot.data!.isEmpty) {
-            return const Center(child: Text("No chats yet."));
+                return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Rive Animation
+            SizedBox(
+              width: 250,
+              height: 250,
+              child: RiveAnimation.asset(
+                'assets/chat.riv',
+                controllers: [_controller],
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Headling
+            Text(
+              "No chat yet",
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+
+            // Body Text
+            Text(
+              "Let's talk to someone to find the best room!",
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
           }
 
           final allThreads = snapshot.data!;

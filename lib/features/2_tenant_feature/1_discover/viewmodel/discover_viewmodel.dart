@@ -1,3 +1,4 @@
+// lib/features/2_tenant_feature/1_discover/viewmodel/discover_viewmodel.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:re_conver/common_feature/post_actions_viewmodel.dart';
@@ -9,7 +10,9 @@ import 'package:re_conver/features/authentication/userdata.dart';
 class DiscoverViewModel extends PostActionsViewModel  {
   final PostService _postService = PostService();
 
-  List<PostModel> _allFetchedPosts = [];
+  // --- (1) REMOVED: _allFetchedPosts is no longer needed. ---
+  // List<PostModel> _allFetchedPosts = []; 
+  
   List<PostModel> _posts = [];
   SortOrder _sortOrder = SortOrder.byDate;
   FilterOptions _filterOptions = FilterOptions();
@@ -49,6 +52,8 @@ class DiscoverViewModel extends PostActionsViewModel  {
     }
   }
 
+  // --- (2) REMOVED: _applyFilter method is no longer needed. ---
+  /*
   void _applyFilter() {
     if (_searchQuery.isEmpty) {
       _posts = _allFetchedPosts;
@@ -62,6 +67,7 @@ class DiscoverViewModel extends PostActionsViewModel  {
     }
     notifyListeners();
   }
+  */
 
   Future<void> fetchInitialPosts() async {
     _isLoading = true;
@@ -73,9 +79,9 @@ class DiscoverViewModel extends PostActionsViewModel  {
       final result = await _postService.getPosts(
         sortOrder: _sortOrder,
         filters: _filterOptions,
-        searchQuery: _searchQuery,
+        searchQuery: _searchQuery, // The searchQuery is correctly passed here
       );
-      _posts = result.posts.where((post) => !_blockedUserIds.contains(post.userId)).toList(); // Filter here
+      _posts = result.posts.where((post) => !_blockedUserIds.contains(post.userId)).toList();
       _lastDocument = result.lastDocument;
       if (result.posts.length < 10) {
         _hasMorePosts = false;
@@ -101,7 +107,10 @@ class DiscoverViewModel extends PostActionsViewModel  {
         searchQuery: _searchQuery,
         lastDocument: _lastDocument,
       );
-      _posts.addAll(result.posts);
+      // Filter blocked users from the newly fetched posts before adding them
+      final newPosts = result.posts.where((post) => !_blockedUserIds.contains(post.userId));
+      _posts.addAll(newPosts);
+      
       _lastDocument = result.lastDocument;
       if (result.posts.length < 10) {
         _hasMorePosts = false;
@@ -114,9 +123,12 @@ class DiscoverViewModel extends PostActionsViewModel  {
     }
   }
 
+  // --- (3) FIXED: This is the core of the fix. ---
+  // Instead of calling the local _applyFilter, we now call fetchInitialPosts
+  // to trigger a new query to Firestore with the search term.
   Future<void> applySearchQuery(String query) async {
     _searchQuery = query;
-    _applyFilter();
+    await fetchInitialPosts();
   }
 
   Future<void> applyFilters(FilterOptions filters) async {
@@ -128,12 +140,9 @@ class DiscoverViewModel extends PostActionsViewModel  {
     try {
       _posts.removeWhere((post) => post.id == postId);
       await _postService.deletePost(postId);
-
-      
       notifyListeners();
     } catch (e) {
       print("Error deleting post: $e");
-      // TODO: ユーザーにエラーを通知
     }
   }
 
@@ -163,7 +172,6 @@ class DiscoverViewModel extends PostActionsViewModel  {
       await _postService.toggleSavePost(postId);
     } catch (e) {
       print("Error saving post: $e");
-
       post.isSaved = originalSaveState;
       notifyListeners();
     }

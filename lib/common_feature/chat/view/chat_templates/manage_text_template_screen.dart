@@ -113,7 +113,7 @@ class ManageTenantTemplatesScreen extends StatelessWidget {
 
     if (newTemplateText != null) {
       if (isEditing) {
-        viewModel.updateTemplate(index!, newTemplateText);
+        viewModel.updateTemplate(index, newTemplateText);
       } else {
         viewModel.addTemplate(newTemplateText);
       }
@@ -149,4 +149,5 @@ class ManageTenantTemplatesScreen extends StatelessWidget {
       viewModel.deleteTemplate(index);
     }
   }
+
 }

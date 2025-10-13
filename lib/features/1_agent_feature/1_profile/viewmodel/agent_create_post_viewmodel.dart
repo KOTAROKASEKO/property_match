@@ -1,3 +1,4 @@
+// lib/features/1_agent_feature/1_profile/viewmodel/agent_create_post_viewmodel.dart
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,8 @@ class CreatePostViewModel extends ChangeNotifier {
   String _gender = 'Mix';
   String _location = '';
   GeoPoint? _position;
+  DateTime? _durationStart;
+  DateTime? _durationEnd;
   bool _isPosting = false;
   bool _hasUnsavedChanges = false;
 
@@ -39,7 +42,15 @@ class CreatePostViewModel extends ChangeNotifier {
       _gender = _editingPost.gender;
       _selectedImages = List.from(_editingPost.imageUrls);
       _location = _editingPost.location;
+      _durationStart = _editingPost.durationStart;
+      _durationEnd = _editingPost.durationEnd;
     }
+  }
+    Future<Iterable<String>> getCondoSuggestions(String query) async {
+    if (query.length < 2) { // Don't search for less than 2 characters
+      return const Iterable<String>.empty();
+    }
+    return await _postService.getCondoNameSuggestions(query);
   }
 
   List<dynamic> get selectedImages => _selectedImages;
@@ -49,6 +60,8 @@ class CreatePostViewModel extends ChangeNotifier {
   String get roomType => _roomType;
   String get gender => _gender;
   String get location => _location;
+  DateTime? get durationStart => _durationStart;
+  DateTime? get durationEnd => _durationEnd;
   bool get isPosting => _isPosting;
   bool get hasUnsavedChanges => _hasUnsavedChanges;
   bool get isEditing => _editingPost != null;
@@ -86,6 +99,16 @@ class CreatePostViewModel extends ChangeNotifier {
     _updateUnsavedChangesFlag();
   }
 
+  set durationStart(DateTime? value) {
+    _durationStart = value;
+    _updateUnsavedChangesFlag();
+  }
+
+  set durationEnd(DateTime? value) {
+    _durationEnd = value;
+    _updateUnsavedChangesFlag();
+  }
+
   void _updateUnsavedChangesFlag() {
     _hasUnsavedChanges = true;
     notifyListeners();
@@ -99,40 +122,40 @@ class CreatePostViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // 1. Geocode the location to get coordinates
       await _geocodeLocation();
+      
+      // 2. Upload images and get their URLs
       final imageUrls = await uploadFiles(_selectedImages);
 
+      // 3. Create the search key
+      final searchKey = _condominiumName.replaceAll(' ', '').toLowerCase();
+
+      // 4. Create a single, consistent data map for both create and update
       final postData = {
         'description': _description,
         'imageUrls': imageUrls,
         'condominiumName': _condominiumName,
+        'condominiumName_searchKey': searchKey,
         'rent': _rent,
         'roomType': _roomType,
         'gender': _gender,
         'location': _location,
         'position': _position != null ? GeoFirePoint(_position!).data : null,
+        'durationStart': _durationStart,
+        'durationEnd': _durationEnd,
       };
 
+      // 5. Decide whether to create or update
       if (isEditing) {
         await _postService.updatePost(
           postId: _editingPost!.id,
           data: postData,
         );
-        await _updatePropertyTemplate(imageUrls);
+        await _updatePropertyTemplate(_editingPost, imageUrls);
       } else {
-        // ★★★ 1. createPostから新しいPostIDを受け取る ★★★
-        final newPostId = await _postService.createPost(
-          description: _description,
-          imageUrls: imageUrls,
-          condominiumName: _condominiumName,
-          rent: _rent,
-          roomType: _roomType,
-          gender: _gender,
-          manualTags: [],
-          location: _location,
-          position: _position,
-        );
-        // ★★★ 2. 受け取ったIDをテンプレート保存メソッドに渡す ★★★
+        // createPost now correctly receives the full postData map
+        final newPostId = await _postService.createPost(postData: postData);
         await _saveAsPropertyTemplate(newPostId, imageUrls);
       }
 
@@ -146,8 +169,7 @@ class CreatePostViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-  // ★★★ 3. メソッドの引数に postId を追加 ★★★
+  
   Future<void> _saveAsPropertyTemplate(String postId, List<String> imageUrls) async {
     try {
       final template = PropertyTemplate(
@@ -170,7 +192,7 @@ class CreatePostViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> _updatePropertyTemplate(List<String> imageUrls) async {
+  Future<void> _updatePropertyTemplate(PostModel editedModel, List<String> imageUrls) async {
     try {
       final box = Hive.box<PropertyTemplate>('propertyTemplateBox');
       final templateKey = box.keys.firstWhere(
@@ -272,6 +294,8 @@ class CreatePostViewModel extends ChangeNotifier {
     _condominiumName = '';
     _rent = 0;
     _location = '';
+    _durationStart = null;
+    _durationEnd = null;
     _hasUnsavedChanges = false;
     notifyListeners();
   }

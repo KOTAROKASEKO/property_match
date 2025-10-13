@@ -1,6 +1,7 @@
 // lib/features/1_agent_feature/2_tenant_list/view/tenant_list_view.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/features/1_agent_feature/2_tenant_list/model/tenant_filter_options.dart';
@@ -32,6 +33,9 @@ class _TenantListViewBody extends StatefulWidget {
 class _TenantListViewBodyState extends State<_TenantListViewBody> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  
+
+  bool _isSearchUIVisible = true; // ★ UIの表示状態を管理するフラグ
 
   @override
   void initState() {
@@ -43,9 +47,22 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
     });
 
     _scrollController.addListener(() {
+      // スクロール位置の監視
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 200) {
         viewModel.fetchTenants();
+      }
+
+      // ★ スクロール方向を監視してUIの表示/非表示を切り替え
+      final direction = _scrollController.position.userScrollDirection;
+      if (direction == ScrollDirection.reverse && _isSearchUIVisible) {
+        setState(() {
+          _isSearchUIVisible = false;
+        });
+      } else if (direction == ScrollDirection.forward && !_isSearchUIVisible) {
+        setState(() {
+          _isSearchUIVisible = true;
+        });
       }
     });
   }
@@ -70,64 +87,32 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
       viewModel.applyFilters(newFilters);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<TenantListViewModel>();
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showFilterSheet,
+        backgroundColor: viewModel.filterOptions.isClear
+            ? const Color.fromARGB(255, 168, 168, 168)
+            : Colors.deepPurple[100],
+        child: const Icon(Icons.filter_list, color: Colors.black54),
+      ),
       appBar: AppBar(
-        title: const Text('Find Tenants'),
+        title: const Row(children: [
+          Icon(Icons.people,color: Colors.white,),
+          SizedBox(width: 10,),
+          Text('Find Tenants', style:TextStyle(color:Colors.white)),
+          ]),
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.black,
       ),
       backgroundColor: Colors.grey[100],
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                // Wrap the TextField with an Expanded widget
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search by name, occupation, location...',
-                      prefixIcon:
-                          const Icon(Icons.search, color: Colors.grey),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding:
-                          const EdgeInsets.symmetric(vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30.0),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8), // Add spacing
-                Material(
-                  color: viewModel.filterOptions.isClear
-                      ? Colors.white
-                      : Colors.deepPurple[100],
-                  borderRadius: BorderRadius.circular(25),
-                  child: InkWell(
-                    onTap: _showFilterSheet,
-                    borderRadius: BorderRadius.circular(25),
-                    child: const SizedBox(
-                      height: 48,
-                      width: 48,
-                      child: Icon(Icons.filter_list,
-                          color: Colors.black54),
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
+          
           Expanded(
             child: viewModel.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -211,6 +196,8 @@ class TenantCard extends StatelessWidget {
                 _buildDetailRow(
                     Icons.flag_outlined, 'Nationality', tenant.nationality),
                 _buildDetailRow(Icons.cake_outlined, 'Age', '${tenant.age}'),
+                _buildDetailRow(
+                    Icons.flag_outlined, 'Gender', tenant.gender),
                 _buildDetailRow(Icons.location_on_outlined,
                     'Work/Study Location', tenant.location),
                 _buildDetailRow(Icons.group_outlined, 'Pax', '${tenant.pax}'),

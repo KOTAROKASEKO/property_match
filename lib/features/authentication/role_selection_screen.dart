@@ -2,26 +2,33 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:re_conver/MainScaffold.dart';
+import 'package:re_conver/app/database_path.dart';
+import 'package:re_conver/app/debug_print.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/models/profile_model.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/view/edit_profile_screen.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
-  const RoleSelectionScreen({super.key});
+  final String? displayName;
+  const RoleSelectionScreen({super.key, this.displayName,});
 
   /// Displays a confirmation dialog before setting the user's role.
   Future<void> _confirmAndSelectRole(BuildContext context, Roles role) async {
     final roleString = role == Roles.agent ? 'Agent' : 'Tenant';
-    
+
     final bool? shouldContinue = await showDialog<bool>(
       context: context,
       barrierDismissible: false, // User must tap a button to dismiss
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Confirm Your Role'),
           content: RichText(
             text: TextSpan(
-              style: const TextStyle(fontSize: 16, color: Colors.black87, height: 1.5),
+              style: const TextStyle(
+                  fontSize: 16, color: Colors.black87, height: 1.5),
               children: <TextSpan>[
                 const TextSpan(text: 'Do you really wish to continue as a '),
                 TextSpan(
@@ -30,7 +37,8 @@ class RoleSelectionScreen extends StatelessWidget {
                 const TextSpan(text: '?\n\n'),
                 const TextSpan(
                     text: 'You cannot change this once you register.',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.red)),
               ],
             ),
           ),
@@ -64,6 +72,7 @@ class RoleSelectionScreen extends StatelessWidget {
 
   /// Sets the user role in Firestore and SharedPreferences.
   Future<void> _selectRole(BuildContext context, Roles role) async {
+    pr('role_selection_scren.dart / updating user role');
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return;
@@ -71,13 +80,15 @@ class RoleSelectionScreen extends StatelessWidget {
 
     try {
       final roleString = role == Roles.agent ? 'agent' : 'tenant';
-      
+
       final userProfileData = {
         'role': roleString,
-        'displayName': user.displayName ?? (role == Roles.agent ? 'New Agent' : 'New User'),
+        'displayName': user.displayName ??
+            (role == Roles.agent ? 'New Agent' : 'New User'),
         'profileImageUrl': user.photoURL ?? '',
         'bio': '',
-        'username': user.displayName?.replaceAll(' ', '').toLowerCase() ?? (role == Roles.agent ? 'newagent' : 'newuser'),
+        'username': user.displayName?.replaceAll(' ', '').toLowerCase() ??
+            (role == Roles.agent ? 'newagent' : 'newuser'),
       };
 
       await FirebaseFirestore.instance
@@ -86,15 +97,28 @@ class RoleSelectionScreen extends StatelessWidget {
           .set(userProfileData);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('role', roleString);
+      await prefs.setString(rolePath, roleString);
 
       userData.setRole(role);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const MainScaffold(),
-        ),
-      );
-      
+      if (role == Roles.tenant) {
+        // Create a new UserProfile object for the new tenant
+        final newUserProfile = UserProfile(
+          uid: user.uid,
+          email: user.email ?? '',
+          displayName: user.displayName ?? 'New User',
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => EditProfileScreen(userProfile: newUserProfile),
+          ),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const MainScaffold(),
+          ),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -137,7 +161,7 @@ class RoleSelectionScreen extends StatelessWidget {
               _buildRoleCard(
                 context,
                 icon: Icons.person_outline,
-                label: "I'm a Tenant",
+                label: "I want room",
                 // Updated to call the confirmation dialog
                 onPressed: () => _confirmAndSelectRole(context, Roles.tenant),
               ),
@@ -145,7 +169,7 @@ class RoleSelectionScreen extends StatelessWidget {
               _buildRoleCard(
                 context,
                 icon: Icons.real_estate_agent_outlined,
-                label: "I'm an Agent",
+                label: "I want roommate",
                 // Updated to call the confirmation dialog
                 onPressed: () => _confirmAndSelectRole(context, Roles.agent),
               ),

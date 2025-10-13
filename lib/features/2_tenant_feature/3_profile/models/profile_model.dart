@@ -13,9 +13,10 @@ class UserProfile {
   final double budget;
   final String roomType; // "Single", "Middle", "Master"
   final String propertyType; // "Condo", "Landed", "Apartment"
-  final String nationality; // Added
-  final String selfIntroduction; // Added
-  final DateTime? moveinDate; // Added
+  final String nationality;
+  final String selfIntroduction;
+  final DateTime? moveinDate;
+  final String gender; // ★★★ 追加 ★★★
 
   UserProfile({
     required this.uid,
@@ -30,9 +31,10 @@ class UserProfile {
     this.budget = 1000.0,
     this.roomType = 'Middle',
     this.propertyType = 'Condominium',
-    this.nationality = 'Not specified', // Added
-    this.selfIntroduction = '', // Added
+    this.nationality = 'Not specified',
+    this.selfIntroduction = '',
     this.moveinDate,
+    this.gender = 'Not specified', // ★★★ 追加 (デフォルト値設定) ★★★
   });
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
@@ -50,9 +52,10 @@ class UserProfile {
       budget: (data?['budget'] as num?)?.toDouble() ?? 1000.0,
       roomType: data?['roomType'] as String? ?? 'Middle',
       propertyType: data?['propertyType'] as String? ?? 'Condominium',
-      nationality: data?['nationality'] as String? ?? 'Not specified', // Added
-      selfIntroduction: data?['selfIntroduction'] as String? ?? '', // Added
+      nationality: data?['nationality'] as String? ?? 'Not specified',
+      selfIntroduction: data?['selfIntroduction'] as String? ?? '',
       moveinDate: (data?['moveinDate'] as Timestamp?)?.toDate(),
+      gender: data?['gender'] as String? ?? 'Not specified', // ★★★ 追加 ★★★
     );
   }
 
@@ -69,9 +72,10 @@ class UserProfile {
       'budget': budget,
       'roomType': roomType,
       'propertyType': propertyType,
-      'nationality': nationality, // Added
-      'selfIntroduction': selfIntroduction, // Added
+      'nationality': nationality,
+      'selfIntroduction': selfIntroduction,
       'moveinDate': moveinDate != null ? Timestamp.fromDate(moveinDate!) : null,
+      'gender': gender, // ★★★ 追加 ★★★
     };
   }
 }

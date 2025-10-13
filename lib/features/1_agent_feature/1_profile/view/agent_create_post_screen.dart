@@ -1,5 +1,7 @@
+// lib/features/1_agent_feature/1_profile/view/agent_create_post_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/core/model/PostModel.dart';
 import 'package:re_conver/features/1_agent_feature/1_profile/viewmodel/agent_create_post_viewmodel.dart';
@@ -111,14 +113,56 @@ class CreatePostScreen extends StatelessWidget {
                       _buildSectionCard(
                         title: 'Property Details',
                         children: [
-                          TextFormField(
-                            initialValue: viewModel.condominiumName,
-                            decoration: const InputDecoration(
-                                labelText: 'Condominium Name'),
-                            onChanged: (value) =>
-                                viewModel.condominiumName = value,
-                            validator: (value) =>
-                                value!.isEmpty ? 'Please enter a name' : null,
+                          Autocomplete<String>(
+                            optionsBuilder: (TextEditingValue textEditingValue) {
+                              return viewModel.getCondoSuggestions(textEditingValue.text);
+                            },
+                            onSelected: (String selection) {
+                              viewModel.condominiumName = selection;
+                            },
+                            fieldViewBuilder: (BuildContext context,
+                                TextEditingController fieldTextEditingController,
+                                FocusNode fieldFocusNode,
+                                VoidCallback onFieldSubmitted) {
+                              if (viewModel.condominiumName.isNotEmpty && fieldTextEditingController.text.isEmpty) {
+                                  fieldTextEditingController.text = viewModel.condominiumName;
+                              }
+                              return TextFormField(
+                                controller: fieldTextEditingController,
+                                focusNode: fieldFocusNode,
+                                decoration: const InputDecoration(
+                                    labelText: 'Condominium Name'),
+                                onChanged: (value) => viewModel.condominiumName = value,
+                                validator: (value) =>
+                                    value!.isEmpty ? 'Please enter a name' : null,
+                              );
+                            },
+                            optionsViewBuilder: (context, onSelected, options) {
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 4.0,
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(maxHeight: 200),
+                                    child: ListView.builder(
+                                      padding: EdgeInsets.zero,
+                                      itemCount: options.length,
+                                      itemBuilder: (BuildContext context, int index) {
+                                        final String option = options.elementAt(index);
+                                        return InkWell(
+                                          onTap: () {
+                                            onSelected(option);
+                                          },
+                                          child: ListTile(
+                                            title: Text(option),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(height: 16),
                               TextFormField(
@@ -145,6 +189,8 @@ class CreatePostScreen extends StatelessWidget {
                               return null;
                             },
                           ),
+                          const SizedBox(height: 16),
+                          _buildDateRangePicker(context, viewModel),
                         ],
                       ),
                       _buildSectionCard(
@@ -207,6 +253,66 @@ class CreatePostScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildDateRangePicker(BuildContext context, CreatePostViewModel viewModel) {
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: () async {
+              final pickedDate = await showDatePicker(
+                context: context,
+                initialDate: viewModel.durationStart ?? DateTime.now(),
+                firstDate: DateTime.now(),
+                lastDate: DateTime(2101),
+              );
+              if (pickedDate != null) {
+                viewModel.durationStart = pickedDate;
+              }
+            },
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'From',
+                border: OutlineInputBorder(),
+              ),
+              child: Text(
+                viewModel.durationStart != null
+                    ? DateFormat.yMMMd().format(viewModel.durationStart!)
+                    : 'Select Date',
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: InkWell(
+            onTap: () async {
+              final pickedDate = await showDatePicker(
+                context: context,
+                initialDate: viewModel.durationEnd ?? viewModel.durationStart ?? DateTime.now(),
+                firstDate: viewModel.durationStart ?? DateTime.now(),
+                lastDate: DateTime(2101),
+              );
+              if (pickedDate != null) {
+                viewModel.durationEnd = pickedDate;
+              }
+            },
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'To',
+                border: OutlineInputBorder(),
+              ),
+              child: Text(
+                viewModel.durationEnd != null
+                    ? DateFormat.yMMMd().format(viewModel.durationEnd!)
+                    : 'Select Date',
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

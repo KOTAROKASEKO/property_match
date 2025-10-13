@@ -1,4 +1,4 @@
-// lib/2_tenant_feature/4_chat/view/providerIndividualChat.dart
+// lib/common_feature/chat/view/providerIndividualChat.dart
 
 import 'dart:io';
 
@@ -6,31 +6,31 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/common_feature/chat/view/chat_templates/text_template_carousel_widget.dart';
+import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 import 'package:re_conver/common_feature/chat/view/message_input_widget.dart';
 import 'package:re_conver/common_feature/chat/view/message_list_widget.dart';
 import 'package:re_conver/common_feature/chat/view/reply_widget.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageList.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageTemplate_viewmodel.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 
 class IndividualChatScreenWithProvider extends StatelessWidget {
   final String chatThreadId;
   final String otherUserUid;
   final String otherUserName;
-  final String? otherUserPhotoUrl; // Added photo url
+  final String? otherUserPhotoUrl;
+  final PropertyTemplate? initialPropertyTemplate;
 
   const IndividualChatScreenWithProvider({
     super.key,
     required this.chatThreadId,
     required this.otherUserUid,
     required this.otherUserName,
-    this.otherUserPhotoUrl, // Added photo url
+    this.otherUserPhotoUrl,
+    this.initialPropertyTemplate,
   });
 
   @override
@@ -52,7 +52,8 @@ class IndividualChatScreenWithProvider extends StatelessWidget {
         child: _IndividualChatScreenView(
           otherUserName: otherUserName,
           otherUserUid: otherUserUid,
-          otherUserPhotoUrl: otherUserPhotoUrl, // Pass photo url
+          otherUserPhotoUrl: otherUserPhotoUrl,
+          initialPropertyTemplate: initialPropertyTemplate,
         ),
       ),
     );
@@ -62,12 +63,14 @@ class IndividualChatScreenWithProvider extends StatelessWidget {
 class _IndividualChatScreenView extends StatefulWidget {
   final String otherUserName;
   final String otherUserUid;
-  final String? otherUserPhotoUrl; // Added photo url
+  final String? otherUserPhotoUrl;
+  final PropertyTemplate? initialPropertyTemplate;
 
   const _IndividualChatScreenView({
     required this.otherUserName,
     required this.otherUserUid,
-    this.otherUserPhotoUrl, // Added photo url
+    this.otherUserPhotoUrl,
+    this.initialPropertyTemplate,
   });
 
   @override
@@ -78,10 +81,14 @@ class _IndividualChatScreenView extends StatefulWidget {
 class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
   final ImagePicker _picker = ImagePicker();
   late MessageListProvider _messageListProvider;
+  PropertyTemplate? _templateToPreview; // ★ プレビュー用のStateを追加
 
     @override
   void initState() {
     super.initState();
+    // ★ プレビュー用のテンプレートをStateにセット
+    _templateToPreview = widget.initialPropertyTemplate;
+    
     _messageListProvider = Provider.of<MessageListProvider>(
       context,
       listen: false,
@@ -89,53 +96,17 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // ★★★ 画面を開いたときに一度だけ許可を求める ★★★
-        _checkAndRequestNotificationPermission();
 
         _messageListProvider.clearMessages();
         _messageListProvider.loadInitialMessages().then((_) {
           if (mounted) {
+            // ★ 自動送信ロジックは削除
             _messageListProvider.listenToFirebaseMessages();
             _messageListProvider.markMessagesAsRead();
           }
         });
       }
     });
-  }
-
-  // ★★★ 通知許可を求めるダイアログのロジック ★★★
-  Future<void> _checkAndRequestNotificationPermission() async {
-    final prefs = await SharedPreferences.getInstance();
-    // 'notAsked' またはまだ何も保存されていない場合のみダイアログを表示
-    if (prefs.getString('notification_permission_status') == null || prefs.getString('notification_permission_status') == 'notAsked') {
-      final result = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Enable Notifications?'),
-          content:
-              const Text('Get notified about new messages and important updates.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Not Now'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Enable'),
-            ),
-          ],
-        ),
-      );
-
-      if (result == true) {
-        final status = await Permission.notification.request();
-        await prefs.setString(
-            'notification_permission_status', status.isGranted ? 'granted' : 'denied');
-      } else {
-        // 「今はしない」を選択した場合も、'dismissed'として保存し、再表示しない
-        await prefs.setString('notification_permission_status', 'dismissed');
-      }
-    }
   }
 
   
@@ -145,7 +116,6 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
         source: ImageSource.gallery,
       );
       if (pickedFile != null && mounted) {
-        // ★★★ 直接sendMessageを呼び出すように変更 ★★★
         _messageListProvider.sendMessage(imageFile: pickedFile);
       }
     } catch (e) {
@@ -186,22 +156,14 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
         children: [
           if (provider.isLoading && provider.displayItems.isEmpty)
             const Expanded(child: Center(child: CircularProgressIndicator()))
-          else if (!provider.isLoading && provider.displayItems.isEmpty)
+          else if (!provider.isLoading && provider.displayItems.isEmpty && _templateToPreview == null)
             Expanded(
               child: userData.role == Roles.agent
                   ? PropertyTemplateCarouselWidget(
                       onTemplateSelected: (template) {
-                        final messageText = '''
-【Property Information】
-Name: ${template.name}
-Rent: RM ${template.rent.toStringAsFixed(0)}
-Location: ${template.location}
-Description:
-${template.description}
-Images:
-${template.photoUrls.join('\n')}
-                    ''';
-                        _messageListProvider.sendMessage(text: messageText, propertyTemplate: template);
+                        setState(() {
+                          _templateToPreview = template;
+                        });
                       },
                     )
                   : const _TenantTextTemplatesView(),
@@ -217,10 +179,22 @@ ${template.photoUrls.join('\n')}
           MessageInputWidget(
             editingMessage: provider.editingMessage,
             isSending: provider.isSending,
+            previewTemplate: _templateToPreview, // ★ プレビュー情報を渡す
+            onCancelPreview: () { // ★ プレビューキャンセル時の処理
+              setState(() {
+                _templateToPreview = null;
+              });
+            },
             onSendMessage: (
-                {File? audioFile, String? text, XFile? imageFile}) {
+                {File? audioFile, String? text, XFile? imageFile, PropertyTemplate? propertyTemplate}) { // ★ シグネチャ変更
               _messageListProvider.sendMessage(
-                  audioFile: audioFile, text: text, imageFile: imageFile);
+                  audioFile: audioFile, text: text, imageFile: imageFile, propertyTemplate: propertyTemplate);
+              // ★ テンプレートを送信したらプレビューをクリア
+              if (propertyTemplate != null) {
+                setState(() {
+                  _templateToPreview = null;
+                });
+              }
             },
             onSaveEditedMessage: provider.saveEditedMessage,
             onCancelEditing: provider.cancelEditing,
@@ -230,47 +204,8 @@ ${template.photoUrls.join('\n')}
       ),
     );
   }
-  
 }
 
-class _ChatTemplatesCarousel extends StatelessWidget {
-  const _ChatTemplatesCarousel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<MessagetemplateViewmodel>(
-      builder: (context, viewModel, child) {
-        if (viewModel.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (viewModel.templates.isEmpty) {
-          return const Center(
-            child: Text("No message templates found."),
-          );
-        }
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 20),
-              Expanded(
-            child: Center(
-              child: TextTemplateCarouselWidget(
-                onTemplateSelected: (template) {
-                  context.read<MessageListProvider>().sendMessage(text: template);
-                },
-              ),
-            ),
-          ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
 
 class _TenantTextTemplatesView extends StatelessWidget {
   const _TenantTextTemplatesView();

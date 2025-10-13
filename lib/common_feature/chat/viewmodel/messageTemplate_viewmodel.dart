@@ -17,6 +17,7 @@ class MessagetemplateViewmodel extends ChangeNotifier {
   }
 
   Future<void> loadTemplates() async {
+    //add logic to hanle when the box is not opened
     _isLoading = true;
     notifyListeners();
     _templates = await _templateRepo.getTemplates();

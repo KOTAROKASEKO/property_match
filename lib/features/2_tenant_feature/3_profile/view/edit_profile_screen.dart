@@ -1,10 +1,14 @@
+// lib/features/2_tenant_feature/3_profile/view/edit_profile_screen.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:re_conver/features/2_tenant_feature/3_profile/models/profile_model.dart' show UserProfile;
+import 'package:re_conver/features/2_tenant_feature/3_profile/models/profile_model.dart'
+    show UserProfile;
 import 'package:re_conver/features/2_tenant_feature/3_profile/services/user_service.dart';
+import 'package:re_conver/tenant_main_scaffold.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserProfile userProfile;
@@ -30,6 +34,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late double _budget;
   late String _roomType;
   late String _propertyType;
+  late String _gender;
   late String _nationality; // Added
   late String _selfIntroduction; // Added
   late DateTime? _moveInDate;
@@ -50,7 +55,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _propertyType = widget.userProfile.propertyType;
     _nationality = widget.userProfile.nationality; // Added
     _selfIntroduction = widget.userProfile.selfIntroduction; // Added
-    _moveInDate = widget.userProfile.moveinDate; 
+    _moveInDate = widget.userProfile.moveinDate;
+    _gender = widget.userProfile.gender;
   }
 
   Future<void> _pickImage() async {
@@ -98,15 +104,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         nationality: _nationality,
         selfIntroduction: _selfIntroduction,
         moveinDate: _moveInDate, // ★★★ 追加 ★★★
+        gender: _gender,
       );
-
 
       try {
         await _userService.updateUserProfile(updatedProfile);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );
-        Navigator.pop(context, true);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const TenantMainScaffold()),
+          (Route<dynamic> route) => false,
+        );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to update profile: $e')),
@@ -117,7 +126,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-    Future<void> _selectMoveInDate(BuildContext context) async {
+  Future<void> _selectMoveInDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _moveInDate ?? DateTime.now(),
@@ -169,8 +178,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       backgroundImage: _imageFile != null
                           ? FileImage(File(_imageFile!.path))
                           : (_profileImageUrl.isNotEmpty
-                              ? NetworkImage(_profileImageUrl)
-                              : const AssetImage('assets/default_avatar.png'))
+                                  ? NetworkImage(_profileImageUrl)
+                                  : const AssetImage(
+                                      'assets/default_avatar.png'))
                               as ImageProvider,
                     ),
                     Positioned(

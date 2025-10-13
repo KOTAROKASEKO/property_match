@@ -65,7 +65,6 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const Divider(),
-              // The list of comments
               Expanded(
                 child: StreamProvider<List<Comment>>.value(
                   value: _postService.getComments(widget.postId),

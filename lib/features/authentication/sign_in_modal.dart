@@ -51,6 +51,9 @@ class _SignInModalState extends State<SignInModal> {
       return userCredential;
     } catch (error) {
       print("Error during Google Sign-In: $error");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error : $error')),
+      );
       return null;
     }
   }

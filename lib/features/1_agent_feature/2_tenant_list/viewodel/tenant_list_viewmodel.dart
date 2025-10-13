@@ -65,14 +65,11 @@ class TenantListViewModel extends ChangeNotifier {
           .collection('users_prof')
           .where('role', isEqualTo: 'tenant');
 
-      // Apply filters to the query
-      if (_filterOptions.minBudget != null && _filterOptions.minBudget! > 0) {
-        query =
-            query.where('budget', isGreaterThanOrEqualTo: _filterOptions.minBudget);
+       if (_filterOptions.minBudget != null && _filterOptions.minBudget! > 0) {
+        query = query.where('budget', isGreaterThanOrEqualTo: _filterOptions.minBudget);
       }
       if (_filterOptions.maxBudget != null && _filterOptions.maxBudget! < 5000) {
-        query =
-            query.where('budget', isLessThanOrEqualTo: _filterOptions.maxBudget);
+        query = query.where('budget', isLessThanOrEqualTo: _filterOptions.maxBudget);
       }
       if (_filterOptions.roomType != null) {
         query = query.where('roomType', isEqualTo: _filterOptions.roomType);
@@ -80,11 +77,12 @@ class TenantListViewModel extends ChangeNotifier {
       if (_filterOptions.pax != null) {
         query = query.where('pax', isEqualTo: _filterOptions.pax);
       }
-
-      // Order by a field for consistent pagination.
-      // Note: If you use range filters on one field, you must order by that field first.
-      // For this case, let's order by displayName. If complex queries are needed,
-      // you might need to create composite indexes in Firestore.
+      if (_filterOptions.nationality != null && _filterOptions.nationality!.isNotEmpty) {
+        query = query.where('nationality', isEqualTo: _filterOptions.nationality);
+      }
+      if (_filterOptions.gender != null) {
+        query = query.where('gender', isEqualTo: _filterOptions.gender);
+      }
       query = query.orderBy('displayName');
 
       if (_lastDocument != null && !isInitial) {

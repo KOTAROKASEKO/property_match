@@ -1,4 +1,4 @@
-// lib/2_tenant_feature/4_chat/view/message_input_widget.dart
+// lib/common_feature/chat/view/message_input_widget.dart
 
 import 'dart:async';
 import 'dart:io';
@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/common_feature/chat/view/chat_templates/text_template_carousel_widget.dart';
+import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 import 'package:re_conver/common_feature/chat/model/message_model.dart';
@@ -18,13 +19,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class MessageInputWidget extends StatefulWidget {
-  final Function({File? audioFile, String? text, XFile? imageFile})
-      onSendMessage;
+  final Function({File? audioFile, String? text, XFile? imageFile, PropertyTemplate? propertyTemplate}) onSendMessage; // ★ シグネチャ変更
   final Function(String editedText) onSaveEditedMessage;
   final VoidCallback onCancelEditing;
   final VoidCallback onPickImage;
   final MessageModel? editingMessage;
   final bool isSending;
+  final PropertyTemplate? previewTemplate; // ★ 追加
+  final VoidCallback? onCancelPreview; // ★ 追加
 
   const MessageInputWidget({
     super.key,
@@ -34,6 +36,8 @@ class MessageInputWidget extends StatefulWidget {
     required this.onPickImage,
     this.editingMessage,
     this.isSending = false,
+    this.previewTemplate, // ★ 追加
+    this.onCancelPreview, // ★ 追加
   });
 
   @override
@@ -127,7 +131,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
       if(mounted) {
         setState(() {
           _isRecording = false;
-          _isCancelled = false; // Reset cancellation state
+          _isCancelled = false;
         });
       }
     }
@@ -148,6 +152,10 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     if (widget.isSending != oldWidget.isSending) {
       _onTextChanged();
     }
+    // ★ プレビューテンプレートの変更を検知
+    if (widget.previewTemplate != oldWidget.previewTemplate) {
+      _onTextChanged();
+    }
   }
 
   void _onTextChanged() {
@@ -156,7 +164,8 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
 
   bool _calculateCanPerformAction() {
     if (widget.isSending || _isRecording) return false;
-    return _messageController.text.trim().isNotEmpty;
+    // ★ テンプレートがあるか、テキストが空でない場合にアクション可能
+    return widget.previewTemplate != null || _messageController.text.trim().isNotEmpty;
   }
 
   void _updateTextForEditing({bool isInitial = false}) {
@@ -182,6 +191,13 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
 
   void _handleSendOrSave() {
     if (!_canPerformActionNotifier.value) return;
+
+    // ★ テンプレートがあればテンプレートを送信
+    if (widget.previewTemplate != null) {
+      widget.onSendMessage(propertyTemplate: widget.previewTemplate!);
+      return; // テキストは送信しない
+    }
+    
     final text = _messageController.text.trim();
     if (widget.editingMessage != null) {
       widget.onSaveEditedMessage(text);
@@ -192,43 +208,43 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
   }
 
   void _showTenantTextTemplatesBottomSheet(BuildContext context) {
-  final templateViewModel = context.read<MessagetemplateViewmodel>();
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) {
-      return ChangeNotifierProvider.value(
-        value: templateViewModel,
-        child: DraggableScrollableSheet(
-            initialChildSize: 0.4,
-            minChildSize: 0.3,
-            maxChildSize: 0.6,
-            expand: false,
-            builder: (_, scrollController) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+    final templateViewModel = context.read<MessagetemplateViewmodel>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return ChangeNotifierProvider.value(
+          value: templateViewModel,
+          child: DraggableScrollableSheet(
+              initialChildSize: 0.4,
+              minChildSize: 0.3,
+              maxChildSize: 0.6,
+              expand: false,
+              builder: (_, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
                   ),
-                ),
-                child: TextTemplateCarouselWidget(
-                  onTemplateSelected: (template) {
-                    _messageController.text = template;
-                    _messageController.selection = TextSelection.fromPosition(
-                        TextPosition(offset: _messageController.text.length));
-                    _onTextChanged();
-                    Navigator.of(ctx).pop();
-                  },
-                ),
-              );
-            }),
-      );
-    },
-  );
-}
+                  child: TextTemplateCarouselWidget(
+                    onTemplateSelected: (template) {
+                      _messageController.text = template;
+                      _messageController.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _messageController.text.length));
+                      _onTextChanged();
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                );
+              }),
+        );
+      },
+    );
+  }
 
   void _showOptionsBottomSheet(BuildContext context) {
     showModalBottomSheet(
@@ -254,7 +270,6 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                   },
                 ),
 
-                //Depends on the role, adjust the behaviour
                 if (userData.role == Roles.agent)
                   ListTile(
                     leading: const Icon(Icons.note_alt_outlined,
@@ -265,7 +280,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                       _showAgentTemplateSelectionSheet(context);
                     },
                   )
-                else // Tenant
+                else
                   ListTile(
                     leading: const Icon(Icons.note_alt_outlined,
                         color: Colors.deepPurple),
@@ -364,6 +379,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
       padding: const EdgeInsets.all(8.0),
       color: Theme.of(context).cardColor,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
@@ -399,7 +415,9 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                   child: SlideTransition(position: offsetAnimation, child: child),
                 );
               },
-              child: _isRecording ? _buildSlideToCancel() : _buildTextInput(),
+              child: _isRecording
+                  ? _buildSlideToCancel()
+                  : (widget.previewTemplate != null ? _buildTemplatePreview() : _buildTextInput()),
             ),
           ),
           ValueListenableBuilder<bool>(
@@ -434,7 +452,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                     decoration: BoxDecoration(
                       color: _isRecording
                           ? (_isCancelled ? Colors.red.shade300 : Colors.green.shade400)
-                          : Colors.transparent, // Not recording, so transparent
+                          : Colors.transparent,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -488,6 +506,39 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
           Icon(Icons.arrow_back_ios, color: Colors.grey, size: 14),
           SizedBox(width: 8),
           Text("Slide to cancel", style: TextStyle(color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  // ★ 新しいプレビューウィジェット
+  Widget _buildTemplatePreview() {
+    final template = widget.previewTemplate!;
+    return Container(
+      key: const ValueKey('template_preview'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.apartment, size: 24, color: Colors.deepPurple),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Property to Inquire", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  template.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 20),
+            onPressed: widget.onCancelPreview,
+          )
         ],
       ),
     );

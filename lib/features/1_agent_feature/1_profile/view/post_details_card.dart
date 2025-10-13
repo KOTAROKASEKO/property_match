@@ -34,10 +34,7 @@ class _PostDetailsCardState extends State<PostDetailsCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- 画像カルーセルに変更 ---
           if (widget.post.imageUrls.isNotEmpty) _buildImageCarousel(),
-          
-          // --- 物件情報の詳細表示 ---
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
