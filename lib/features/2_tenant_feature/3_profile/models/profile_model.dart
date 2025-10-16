@@ -1,3 +1,4 @@
+// lib/features/2_tenant_feature/3_profile/models/profile_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserProfile {
@@ -17,6 +18,7 @@ class UserProfile {
   final String selfIntroduction;
   final DateTime? moveinDate;
   final String gender; // ★★★ 追加 ★★★
+  final List<String> hobbies; // Added hobbies
 
   UserProfile({
     required this.uid,
@@ -35,6 +37,7 @@ class UserProfile {
     this.selfIntroduction = '',
     this.moveinDate,
     this.gender = 'Not specified', // ★★★ 追加 (デフォルト値設定) ★★★
+    this.hobbies = const [], // Added hobbies
   });
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
@@ -56,6 +59,7 @@ class UserProfile {
       selfIntroduction: data?['selfIntroduction'] as String? ?? '',
       moveinDate: (data?['moveinDate'] as Timestamp?)?.toDate(),
       gender: data?['gender'] as String? ?? 'Not specified', // ★★★ 追加 ★★★
+      hobbies: List<String>.from(data?['hobbies'] ?? []), // Added hobbies
     );
   }
 
@@ -76,6 +80,7 @@ class UserProfile {
       'selfIntroduction': selfIntroduction,
       'moveinDate': moveinDate != null ? Timestamp.fromDate(moveinDate!) : null,
       'gender': gender, // ★★★ 追加 ★★★
+      'hobbies': hobbies, // Added hobbies
     };
   }
 }

@@ -1,4 +1,6 @@
+// lib/features/1_agent_feature/2_tenant_list/view/tenant_filter_bottom_sheet.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:re_conver/features/1_agent_feature/2_tenant_list/model/tenant_filter_options.dart';
 
 class TenantFilterBottomSheet extends StatefulWidget {
@@ -17,6 +19,9 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
   late int? _pax;
   late TextEditingController _nationalityController; // ★ 追加
   late String? _gender; // ★ 追加
+  DateTime? _moveinDate; // ★ 追加
+  final _hobbyController = TextEditingController(); // Added hobby controller
+  late List<String> _hobbies; // Added hobbies
 
   @override
   void initState() {
@@ -27,8 +32,11 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
     );
     _roomType = widget.initialFilters.roomType;
     _pax = widget.initialFilters.pax;
-    _nationalityController = TextEditingController(text: widget.initialFilters.nationality); // ★ 追加
+    _nationalityController =
+        TextEditingController(text: widget.initialFilters.nationality); // ★ 追加
     _gender = widget.initialFilters.gender; // ★ 追加
+    _moveinDate = widget.initialFilters.moveinDate; // ★ 追加
+    _hobbies = widget.initialFilters.hobbies ?? []; // Added hobbies
   }
 
   @override
@@ -55,6 +63,8 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
                       _pax = null;
                       _nationalityController.clear(); // ★ 追加
                       _gender = null; // ★ 追加
+                      _moveinDate = null; // ★ 追加
+                      _hobbies = []; // Added hobbies
                     });
                   },
                   child: const Text('Clear All'),
@@ -62,6 +72,12 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
               ],
             ),
             const SizedBox(height: 24),
+
+            // ★★★ Move-in Date Picker ★★★
+            _buildMoveInDatePicker(),
+            const SizedBox(height: 16),
+            _buildHobbiesInput(),
+            const SizedBox(height: 16),
 
             // ★★★ 国籍入力フィールドを追加 ★★★
             TextFormField(
@@ -74,10 +90,10 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
             const SizedBox(height: 16),
 
             // ★★★ 性別選択ドロップダウンを追加 ★★★
-            _buildDropdown('Gender', ['Male', 'Female', 'Mix'],
-                _gender, (val) => setState(() => _gender = val)),
+            _buildDropdown('Gender', ['Male', 'Female', 'Mix'], _gender,
+                (val) => setState(() => _gender = val)),
             const SizedBox(height: 16),
-            
+
             Text(
                 'Budget Range (RM): ${_budgetRange.start.round()} - ${_budgetRange.end.round() == 5000 ? "Any" : _budgetRange.end.round()}'),
             RangeSlider(
@@ -123,14 +139,87 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
                   maxBudget: _budgetRange.end,
                   roomType: _roomType,
                   pax: _pax,
-                  nationality: _nationalityController.text, // ★ 追加
-                  gender: _gender, // ★ 追加
+                  nationality: _nationalityController.text,
+                  gender: _gender,
+                  moveinDate: _moveinDate,
+                  hobbies: _hobbies, // Added
                 );
                 Navigator.of(context).pop(filters);
               },
               child: const Text('Apply Filters'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHobbiesInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _hobbyController,
+          decoration: InputDecoration(
+            labelText: 'Hobbies',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                if (_hobbyController.text.isNotEmpty) {
+                  setState(() {
+                    _hobbies.add(_hobbyController.text);
+                    _hobbyController.clear();
+                  });
+                }
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8.0,
+          children: _hobbies
+              .map((hobby) => Chip(
+                    label: Text(hobby),
+                    onDeleted: () {
+                      setState(() {
+                        _hobbies.remove(hobby);
+                      });
+                    },
+                  ))
+              .toList(),
+        ),
+      ],
+    );
+  }
+
+  // ★★★ Function to build the move-in date picker ★★★
+  Widget _buildMoveInDatePicker() {
+    return InkWell(
+      onTap: () async {
+        final pickedDate = await showDatePicker(
+          context: context,
+          initialDate: _moveinDate ?? DateTime.now(),
+          firstDate: DateTime.now(),
+          lastDate: DateTime(2101),
+        );
+        if (pickedDate != null) {
+          setState(() {
+            _moveinDate = pickedDate;
+          });
+        }
+      },
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Move-in Date',
+          border: OutlineInputBorder(),
+          contentPadding:
+              EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        ),
+        child: Text(
+          _moveinDate != null
+              ? DateFormat.yMMMd().format(_moveinDate!)
+              : 'Any',
         ),
       ),
     );

@@ -8,6 +8,7 @@ import 'package:re_conver/app/debug_print.dart';
 import 'package:re_conver/core/model/PostModel.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/agent_profile_screen.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/view/comment_bottomsheet.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/view/full_pic_screen.dart';
 import 'package:re_conver/features/authentication/auth_service.dart';
 import 'package:rive/rive.dart' hide Image;
 import 'package:timeago/timeago.dart' as timeago;
@@ -112,14 +113,29 @@ class _PostCardState extends State<PostCard> {
           items: widget.post.imageUrls.map((item) {
             return Builder(
               builder: (BuildContext context) {
-                return CachedNetworkImage(
-                  imageUrl: item,
-                  fit: BoxFit.cover,
-                  width: MediaQuery.of(context).size.width,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[200],
+                return Hero(
+                  tag: item, // Heroアニメーションのためのタグ
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FullScreenImageView(
+                            imageUrl: item,
+                          ),
+                        ),
+                      );
+                    },
+                    child: CachedNetworkImage(
+                      imageUrl: item,
+                      fit: BoxFit.cover,
+                      width: MediaQuery.of(context).size.width,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[200],
+                      ),
+                      errorWidget: (context, url, error) => const Icon(Icons.error),
+                    ),
                   ),
-                  errorWidget: (context, url, error) => const Icon(Icons.error),
                 );
               },
             );

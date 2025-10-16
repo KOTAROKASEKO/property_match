@@ -207,7 +207,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     _messageController.clear();
   }
 
-  void _showTenantTextTemplatesBottomSheet(BuildContext context) {
+    void _showTenantTextTemplatesBottomSheet(BuildContext context) {
     final templateViewModel = context.read<MessagetemplateViewmodel>();
     showModalBottomSheet(
       context: context,
@@ -232,6 +232,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                   ),
                   child: TextTemplateCarouselWidget(
                     onTemplateSelected: (template) {
+                      _textFieldFocusNode.unfocus(); // Unfocus the text field first
                       _messageController.text = template;
                       _messageController.selection = TextSelection.fromPosition(
                           TextPosition(offset: _messageController.text.length));
@@ -298,7 +299,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     );
   }
 
-  void showPropertyTemplatesBottomSheet(BuildContext context) {
+    void showPropertyTemplatesBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -322,6 +323,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                 ),
                 child: PropertyTemplateCarouselWidget(
                   onTemplateSelected: (template) {
+                    _textFieldFocusNode.unfocus(); // Unfocus the text field
                     _messageListProvider.sendMessage(propertyTemplate: template);
                     Navigator.of(ctx).pop();
                   },

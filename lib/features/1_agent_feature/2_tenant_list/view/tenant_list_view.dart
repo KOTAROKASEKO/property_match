@@ -1,5 +1,6 @@
 // lib/features/1_agent_feature/2_tenant_list/view/tenant_list_view.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
@@ -166,7 +167,7 @@ class TenantCard extends StatelessWidget {
         leading: CircleAvatar(
           radius: 28,
           backgroundImage: tenant.profileImageUrl.isNotEmpty
-              ? NetworkImage(tenant.profileImageUrl)
+              ? CachedNetworkImageProvider(tenant.profileImageUrl)
               : null,
           child: tenant.profileImageUrl.isEmpty
               ? const Icon(Icons.person, size: 28)
@@ -175,8 +176,24 @@ class TenantCard extends StatelessWidget {
         title: Text(tenant.displayName,
             style:
                 const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        subtitle:
-            Text('${tenant.location}', style: const TextStyle(fontSize: 14)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            _buildDetailRow(Icons.location_on_outlined, 'Location', tenant.location, isCompact: true),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 4.0,
+              children: [
+                _buildInfoChip(Icons.person_outline, tenant.gender),
+                _buildInfoChip(Icons.flag_outlined, tenant.nationality),
+                if (tenant.moveinDate != null)
+                  _buildInfoChip(Icons.calendar_today_outlined, DateFormat.yMMMd().format(tenant.moveinDate!)),
+              ],
+            ),
+          ],
+        ),
         children: [
           const Divider(height: 1, indent: 16, endIndent: 16),
           Padding(
@@ -185,21 +202,8 @@ class TenantCard extends StatelessWidget {
             child: Column(
               children: [
                 _buildDetailRow(
-                  Icons.calendar_today_outlined,
-                  'Move-in Date',
-                  tenant.moveinDate == null
-                      ? 'Not specified'
-                      : DateFormat.yMMMd().format(tenant.moveinDate!),
-                ),
-                _buildDetailRow(
                     Icons.person_outline, 'About', tenant.selfIntroduction),
-                _buildDetailRow(
-                    Icons.flag_outlined, 'Nationality', tenant.nationality),
                 _buildDetailRow(Icons.cake_outlined, 'Age', '${tenant.age}'),
-                _buildDetailRow(
-                    Icons.flag_outlined, 'Gender', tenant.gender),
-                _buildDetailRow(Icons.location_on_outlined,
-                    'Work/Study Location', tenant.location),
                 _buildDetailRow(Icons.group_outlined, 'Pax', '${tenant.pax}'),
                 _buildDetailRow(Icons.pets_outlined, 'Pets', tenant.pets),
                 _buildDetailRow(Icons.account_balance_wallet_outlined,
@@ -242,9 +246,23 @@ class TenantCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String title, String value) {
+  Widget _buildInfoChip(IconData icon, String label) {
+    return Chip(
+      avatar: Icon(icon, size: 14, color: Colors.deepPurple),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      backgroundColor: Colors.deepPurple.withOpacity(0.1),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide.none,
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String title, String value, {bool isCompact = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: EdgeInsets.only(bottom: isCompact ? 0 : 12.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -254,12 +272,14 @@ class TenantCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if(!isCompact)
                 Text(title, style: const TextStyle(color: Colors.grey)),
+                if(!isCompact)
                 const SizedBox(height: 2),
                 Text(
                   value.isNotEmpty ? value : 'Not specified',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w500, fontSize: 15),
+                  style: TextStyle(
+                      fontWeight: isCompact ? FontWeight.normal : FontWeight.w500, fontSize: isCompact ? 14 : 15),
                 ),
               ],
             ),

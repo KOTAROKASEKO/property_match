@@ -38,6 +38,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late String _nationality; // Added
   late String _selfIntroduction; // Added
   late DateTime? _moveInDate;
+  late List<String> _hobbies; // Added hobbies
+  final _hobbyController = TextEditingController(); // Added hobby controller
+
   bool _isLoading = false;
 
   @override
@@ -57,6 +60,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _selfIntroduction = widget.userProfile.selfIntroduction; // Added
     _moveInDate = widget.userProfile.moveinDate;
     _gender = widget.userProfile.gender;
+    _hobbies = widget.userProfile.hobbies; // Added hobbies
   }
 
   Future<void> _pickImage() async {
@@ -105,6 +109,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         selfIntroduction: _selfIntroduction,
         moveinDate: _moveInDate, // ★★★ 追加 ★★★
         gender: _gender,
+        hobbies: _hobbies, // Added hobbies
       );
 
       try {
@@ -208,6 +213,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 validator: (value) =>
                     value!.isEmpty ? 'Please enter a display name' : null,
               ),
+              const SizedBox(height: 16),
+              _buildHobbiesInput(),
               const SizedBox(height: 16),
               TextFormField(
                 initialValue: _nationality,
@@ -326,6 +333,45 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHobbiesInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _hobbyController,
+          decoration: InputDecoration(
+            labelText: 'Hobbies (add one by one)',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                if (_hobbyController.text.isNotEmpty) {
+                  setState(() {
+                    _hobbies.add(_hobbyController.text);
+                    _hobbyController.clear();
+                  });
+                }
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8.0,
+          children: _hobbies
+              .map((hobby) => Chip(
+                    label: Text(hobby),
+                    onDeleted: () {
+                      setState(() {
+                        _hobbies.remove(hobby);
+                      });
+                    },
+                  ))
+              .toList(),
+        ),
+      ],
     );
   }
 

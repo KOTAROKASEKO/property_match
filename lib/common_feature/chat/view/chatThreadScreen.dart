@@ -5,17 +5,25 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'package:re_conver/app/debug_print.dart';
 import 'package:re_conver/common_feature/chat/model/chat_thread.dart';
 import 'package:re_conver/common_feature/chat/repo/isar_helper.dart';
 import 'package:re_conver/common_feature/chat/view/add_edit_general_note_screen.dart';
 import 'package:re_conver/common_feature/chat/view/add_edit_viewing_note_screen.dart';
 import 'package:re_conver/common_feature/chat/view/all_property.dart';
+import 'package:re_conver/common_feature/chat/view/providerIndividualChat.dart';
 import 'package:re_conver/common_feature/chat/view/setting_screen.dart';
+import 'package:re_conver/common_feature/chat/view/suggestion/suggested_post_card.dart';
+import 'package:re_conver/common_feature/chat/view/suggestion/suggestion_card.dart';
 import 'package:re_conver/common_feature/chat/view/viewing_property.dart';
 import 'package:re_conver/common_feature/chat/view/date_time_picker_modal.dart';
 import 'package:re_conver/common_feature/chat/view/report_user_dialogue.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/chat_service.dart';
+import 'package:re_conver/common_feature/chat/viewmodel/suggestion_viewmodel.dart';
+import 'package:re_conver/core/model/PostModel.dart';
+import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart';
+import 'package:re_conver/features/2_tenant_feature/3_profile/models/profile_model.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
 import 'package:rive/rive.dart';
 
@@ -68,6 +76,12 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
     _threadsSubscription?.cancel();
     _tabController.dispose();
     super.dispose();
+  }
+
+  String _generateChatThreadId(String uid1, String uid2) {
+    List<String> uids = [uid1, uid2];
+    uids.sort();
+    return uids.join('_');
   }
 
   Future<void> _confirmDeleteChat(BuildContext context, ChatThread thread) async {
@@ -461,146 +475,212 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        actions: [ // Add this actions property
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
-        ],
-        title:  Row(children:[
-                  Icon(Icons.chat,
-                  color: Colors.white,
-                  ),
-                  SizedBox(width: 10,),
-                  Text('My Chats', style: TextStyle(
+    return ChangeNotifierProvider(
+      create: (context) => SuggestionViewModel(),
+      child: Scaffold(
+        appBar: AppBar(
+          actions: [ // Add this actions property
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+            ),
+          ],
+          title:  Row(children:[
+                    Icon(Icons.chat,
                     color: Colors.white,
-                    )),
-        ]),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(text: 'All'),
-            Tab(text: 'Viewing'),
-          ],
-        ),
-      ),
-      body: StreamBuilder<List<ChatThread>>(
-        stream: _isarService.watchChatThreads(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-          if (snapshot.data!.isEmpty) {
-                return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Rive Animation
-            SizedBox(
-              width: 250,
-              height: 250,
-              child: RiveAnimation.asset(
-                'assets/chat.riv',
-                controllers: [_controller],
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Headling
-            Text(
-              "No chat yet",
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-
-            // Body Text
-            Text(
-              "Let's talk to someone to find the best room!",
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-    );
-          }
-
-          final allThreads = snapshot.data!;
-          allThreads.sort((a, b) => b.timeStamp.compareTo(a.timeStamp));
-
-          final viewingAppointments = allThreads.expand<ViewingAppointment>((thread) {
-            return thread.viewingTimes.asMap().entries.map((entry) {
-              int index = entry.key;
-              DateTime time = entry.value;
-              String? note = (index < thread.viewingNotes.length) ? thread.viewingNotes[index] : null;
-              List<String> imageUrls = [];
-              if (index < thread.viewingImageUrls.length && thread.viewingImageUrls[index].isNotEmpty) {
-                try {
-                  var decoded = jsonDecode(thread.viewingImageUrls[index]);
-                  if (decoded is String) {
-                    decoded = jsonDecode(decoded);
-                  }
-                  if (decoded is List) {
-                    imageUrls = List<String>.from(decoded);
-                  }
-                } catch (e) {
-                  print("Error decoding image urls: $e");
-                }
-              }
-              return ViewingAppointment(
-                thread: thread,
-                viewingTime: time,
-                note: note,
-                imageUrls: imageUrls,
-                viewingIndex: index,
-              );
-            });
-          }).toList();
-
-          viewingAppointments.sort((a, b) => a.viewingTime.compareTo(b.viewingTime));
-
-          return TabBarView(
+                    ),
+                    SizedBox(width: 10,),
+                    Text('My Chats', style: TextStyle(
+                      color: Colors.white,
+                      )),
+          ]),
+          backgroundColor: Colors.deepPurple,
+          foregroundColor: Colors.white,
+          iconTheme: const IconThemeData(color: Colors.white),
+          bottom: TabBar(
             controller: _tabController,
-            children: [
-              ChatThreadList(
-                threads: allThreads,
-                getOtherParticipantId: _getOtherParticipantId,
-                onLongPress: (thread) => _showChatOptions(context, thread, null),
-                onThreadSelected: widget.onThreadSelected,
-              ),
-              ViewingAppointmentList(
-                appointments: viewingAppointments,
-                getOtherParticipantId: _getOtherParticipantId,
-                onLongPress: (appointment) => _showChatOptions(context, appointment.thread, appointment),
-              ),
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
+            tabs: const [
+              Tab(text: 'All'),
+              Tab(text: 'Viewing'),
             ],
-          );
-        },
+          ),
+        ),
+        body: StreamBuilder<List<ChatThread>>(
+          stream: _isarService.watchChatThreads(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text("Error: ${snapshot.error}"));
+            }
+            if (snapshot.data == null || snapshot.data!.isEmpty) {
+                  return Consumer<SuggestionViewModel>(
+                    builder: (context, suggestionViewModel, child) {
+                      if (suggestionViewModel.isLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+      
+                      return SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 250,
+                                height: 250,
+                                child: RiveAnimation.asset(
+                                  'assets/chat.riv',
+                                  controllers: [_controller],
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Text(
+                                "No chats yet",
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                "Let's talk to someone to find the best room!",
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 32),
+                              if (suggestionViewModel.suggestions.isNotEmpty) ...[
+                                Text(
+                                  "Here are some suggestions for you",
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 16),
+                                ...suggestionViewModel.suggestions.map((item) {
+                                  if (item is PostModel) {
+                                    return SuggestedPostCard(
+                                      post: item,
+                                      onTap: () {
+                                        final post = item;
+                                        final chatThreadId = _generateChatThreadId(userData.userId, post.userId);
+                                        final propertyTemplate = PropertyTemplate(
+                                          postId: post.id,
+                                          name: post.condominiumName,
+                                          rent: post.rent,
+                                          location: post.location,
+                                          description: post.description,
+                                          roomType: post.roomType,
+                                          gender: post.gender,
+                                          photoUrls: post.imageUrls,
+                                          nationality: 'Any',
+                                        );
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => IndividualChatScreenWithProvider(
+                                              chatThreadId: chatThreadId,
+                                              otherUserUid: post.userId,
+                                              otherUserName: post.username,
+                                              otherUserPhotoUrl: post.userProfileImageUrl,
+                                              initialPropertyTemplate: propertyTemplate,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  } else if (item is UserProfile) {
+                                    return SuggestedTenantCard(
+                                      tenant: item,
+                                      onTap: () {
+                                        final tenant = item;
+                                        final chatThreadId = _generateChatThreadId(userData.userId, tenant.uid);
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => IndividualChatScreenWithProvider(
+                                              chatThreadId: chatThreadId,
+                                              otherUserUid: tenant.uid,
+                                              otherUserName: tenant.displayName,
+                                              otherUserPhotoUrl: tenant.profileImageUrl,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                }).toList(),
+                              ]
+      
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+            }
+      
+            final allThreads = snapshot.data!;
+            allThreads.sort((a, b) => b.timeStamp.compareTo(a.timeStamp));
+      
+            final viewingAppointments = allThreads.expand<ViewingAppointment>((thread) {
+              return thread.viewingTimes.asMap().entries.map((entry) {
+                int index = entry.key;
+                DateTime time = entry.value;
+                String? note = (index < thread.viewingNotes.length) ? thread.viewingNotes[index] : null;
+                List<String> imageUrls = [];
+                if (index < thread.viewingImageUrls.length && thread.viewingImageUrls[index].isNotEmpty) {
+                  try {
+                    var decoded = jsonDecode(thread.viewingImageUrls[index]);
+                    if (decoded is String) {
+                      decoded = jsonDecode(decoded);
+                    }
+                    if (decoded is List) {
+                      imageUrls = List<String>.from(decoded);
+                    }
+                  } catch (e) {
+                    print("Error decoding image urls: $e");
+                  }
+                }
+                return ViewingAppointment(
+                  thread: thread,
+                  viewingTime: time,
+                  note: note,
+                  imageUrls: imageUrls,
+                  viewingIndex: index,
+                );
+              });
+            }).toList();
+      
+            viewingAppointments.sort((a, b) => a.viewingTime.compareTo(b.viewingTime));
+      
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                ChatThreadList(
+                  threads: allThreads,
+                  getOtherParticipantId: _getOtherParticipantId,
+                  onLongPress: (thread) => _showChatOptions(context, thread, null),
+                  onThreadSelected: widget.onThreadSelected,
+                ),
+                ViewingAppointmentList(
+                  appointments: viewingAppointments,
+                  getOtherParticipantId: _getOtherParticipantId,
+                  onLongPress: (appointment) => _showChatOptions(context, appointment.thread, appointment),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

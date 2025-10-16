@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/features/2_tenant_feature/1_discover/model/comment_model.dart';
@@ -49,7 +50,7 @@ class _CommentTileState extends State<CommentTile> {
           ListTile(
             leading: CircleAvatar(
               radius: 20,
-              backgroundImage: NetworkImage(widget.comment.userProfileImageUrl),
+              backgroundImage: CachedNetworkImageProvider(widget.comment.userProfileImageUrl),
             ),
             title: RichText(
               text: TextSpan(
@@ -70,7 +71,7 @@ class _CommentTileState extends State<CommentTile> {
                   style: textTheme.bodySmall?.copyWith(color: Colors.grey),
                 ),
                 const SizedBox(width: 12),
-                if (!widget.isReply) // Don't allow replying to a reply
+                if (!widget.isReply)
                   GestureDetector(
                     onTap: () => setState(() => _isReplying = !_isReplying),
                     child: Text(

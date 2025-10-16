@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:lottie/lottie.dart';
@@ -67,8 +68,7 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
   Future<UserCredential?> _signInWithGoogle() async {
     try {
       await GoogleSignIn.instance.initialize(
-        serverClientId:
-            "965355667703-7md7nnua0qk4jafafle96rqqc9v7sukv.apps.googleusercontent.com",
+        serverClientId:dotenv.env['GOOGLE_SERVER_CLIENT_ID'],
       );
       final GoogleSignInAccount? googleUser = await GoogleSignIn.instance
           .authenticate();
@@ -83,8 +83,9 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
       final authClient = googleUser.authorizationClient;
       final GoogleSignInClientAuthorization? clientAuth = await authClient.authorizeScopes(['email']);
       final String? accessToken = clientAuth?.accessToken;
-
+      pr('GOAuth breakpoint2');
       if (accessToken == null) {
+        
         throw 'Failed to get access token from Google.';
       }
       if (idToken == null) {
@@ -99,7 +100,6 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
         credential,
       );
       if (userCredential.user != null) {
-        pr('Google Login success');
             await _navigateAfterSignIn(userCredential.user!);
         }
       return userCredential;

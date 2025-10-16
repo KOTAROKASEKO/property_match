@@ -12,7 +12,6 @@ import 'package:re_conver/features/notifications/view/notification_screen.dart';
 
 class AgentMainScaffold extends StatefulWidget {
   const AgentMainScaffold({super.key});
-
   @override
   State<AgentMainScaffold> createState() => _AgentMainScaffoldState();
 }

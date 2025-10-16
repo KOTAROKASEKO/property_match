@@ -6,13 +6,11 @@ import 'package:re_conver/app/database_path.dart';
 import 'package:re_conver/common_feature/chat/model/template_model.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
-import 'package:re_conver/main.dart';
 import 'package:re_conver/tenant_main_scaffold.dart';
 import 'package:re_conver/app/debug_print.dart';
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
-
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
 }
@@ -56,7 +54,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         }
 
         if (snapshot.hasError) {
-           return Scaffold(
+          return Scaffold(
             body: Center(
               child: Text('Error initializing app: ${snapshot.error}'),
             ),

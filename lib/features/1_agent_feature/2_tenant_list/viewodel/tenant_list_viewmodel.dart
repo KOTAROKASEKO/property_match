@@ -65,11 +65,14 @@ class TenantListViewModel extends ChangeNotifier {
           .collection('users_prof')
           .where('role', isEqualTo: 'tenant');
 
-       if (_filterOptions.minBudget != null && _filterOptions.minBudget! > 0) {
-        query = query.where('budget', isGreaterThanOrEqualTo: _filterOptions.minBudget);
+      if (_filterOptions.minBudget != null && _filterOptions.minBudget! > 0) {
+        query = query.where('budget',
+            isGreaterThanOrEqualTo: _filterOptions.minBudget);
       }
-      if (_filterOptions.maxBudget != null && _filterOptions.maxBudget! < 5000) {
-        query = query.where('budget', isLessThanOrEqualTo: _filterOptions.maxBudget);
+      if (_filterOptions.maxBudget != null &&
+          _filterOptions.maxBudget! < 5000) {
+        query = query.where('budget',
+            isLessThanOrEqualTo: _filterOptions.maxBudget);
       }
       if (_filterOptions.roomType != null) {
         query = query.where('roomType', isEqualTo: _filterOptions.roomType);
@@ -77,13 +80,26 @@ class TenantListViewModel extends ChangeNotifier {
       if (_filterOptions.pax != null) {
         query = query.where('pax', isEqualTo: _filterOptions.pax);
       }
-      if (_filterOptions.nationality != null && _filterOptions.nationality!.isNotEmpty) {
-        query = query.where('nationality', isEqualTo: _filterOptions.nationality);
+      if (_filterOptions.nationality != null &&
+          _filterOptions.nationality!.isNotEmpty) {
+        query = query.where('nationality',
+            isEqualTo: _filterOptions.nationality);
       }
       if (_filterOptions.gender != null) {
         query = query.where('gender', isEqualTo: _filterOptions.gender);
       }
-      query = query.orderBy('displayName');
+      if (_filterOptions.hobbies != null && _filterOptions.hobbies!.isNotEmpty) {
+        query = query.where('hobbies', arrayContainsAny: _filterOptions.hobbies);
+      }
+      // ★★★ Move-in Date Filter ★★★
+      if (_filterOptions.moveinDate != null) {
+        query = query.where('moveinDate',
+            isGreaterThanOrEqualTo:
+                Timestamp.fromDate(_filterOptions.moveinDate!));
+      }
+
+      // ★★★ Order by move-in date ★★★
+      query = query.orderBy('moveinDate');
 
       if (_lastDocument != null && !isInitial) {
         query = query.startAfterDocument(_lastDocument!);
@@ -99,7 +115,8 @@ class TenantListViewModel extends ChangeNotifier {
         _lastDocument = snapshot.docs.last;
         final newTenants = snapshot.docs
             .map((doc) => UserProfile.fromFirestore(doc))
-            .where((tenant) => !_blockedUserIds.contains(tenant.uid)); // Filter blocked users locally
+            .where((tenant) => !_blockedUserIds.contains(
+                tenant.uid)); // Filter blocked users locally
         _allTenants.addAll(newTenants);
       }
 
@@ -143,4 +160,4 @@ class TenantListViewModel extends ChangeNotifier {
     }
     notifyListeners();
   }
-}
+} 

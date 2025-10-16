@@ -24,10 +24,8 @@ import 'package:re_conver/firebase_options.dart';
 import 'package:re_conver/core/responsive/responsive_layout.dart';
 import 'package:rive/rive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:re_conver/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
-
-
-//box names
 
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -38,6 +36,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await dotenv.load(fileName: ".env");
   await _setupInteractedMessage();
   await RiveFile.initialize();
   await Hive.initFlutter();
@@ -123,7 +122,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   
   Future<String?> _getRoleFromPrefs() async {
-    
     final prefs = await SharedPreferences.getInstance();
     String? role = prefs.getString('role');
     pr('Getting role : role is ${role}');
@@ -183,7 +181,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
             },
           );
         }
-
         return const LoginPlaceholderScreen();
       },
     );

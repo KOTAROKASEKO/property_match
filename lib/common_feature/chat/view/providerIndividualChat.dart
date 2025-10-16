@@ -14,8 +14,8 @@ import 'package:re_conver/common_feature/chat/view/message_list_widget.dart';
 import 'package:re_conver/common_feature/chat/view/reply_widget.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageList.dart';
 import 'package:re_conver/common_feature/chat/viewmodel/messageTemplate_viewmodel.dart';
+import 'package:re_conver/features/2_tenant_feature/1_discover/view/agent_profile_screen.dart';
 import 'package:re_conver/features/authentication/userdata.dart';
-
 
 class IndividualChatScreenWithProvider extends StatelessWidget {
   final String chatThreadId;
@@ -46,7 +46,9 @@ class IndividualChatScreenWithProvider extends StatelessWidget {
           ),
           ChangeNotifierProvider(create: (_) => AgentTemplateViewModel()),
           ChangeNotifierProvider(
-            create: (_) => MessagetemplateViewmodel(userRole: userData.role)..loadTemplates(),
+            create: (_) =>
+                MessagetemplateViewmodel(userRole: userData.role)
+                  ..loadTemplates(),
           ),
         ],
         child: _IndividualChatScreenView(
@@ -83,12 +85,12 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
   late MessageListProvider _messageListProvider;
   PropertyTemplate? _templateToPreview; // ★ プレビュー用のStateを追加
 
-    @override
+  @override
   void initState() {
     super.initState();
     // ★ プレビュー用のテンプレートをStateにセット
     _templateToPreview = widget.initialPropertyTemplate;
-    
+
     _messageListProvider = Provider.of<MessageListProvider>(
       context,
       listen: false,
@@ -96,7 +98,6 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-
         _messageListProvider.clearMessages();
         _messageListProvider.loadInitialMessages().then((_) {
           if (mounted) {
@@ -109,8 +110,7 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
     });
   }
 
-  
-    Future<void> _pickImage() async {
+  Future<void> _pickImage() async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -130,82 +130,112 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Row(
-          children: [
-            if (widget.otherUserPhotoUrl != null &&
-                widget.otherUserPhotoUrl!.isNotEmpty)
-              CircleAvatar(
-                backgroundImage: CachedNetworkImageProvider(
-                  widget.otherUserPhotoUrl!,
+        title: GestureDetector(
+          onTap: () {
+            if (userData.role == Roles.tenant) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      AgentProfileScreen(agentId: widget.otherUserUid),
                 ),
+              );
+            }
+          },
+          child: Row(
+            children: [
+              if (widget.otherUserPhotoUrl != null &&
+                  widget.otherUserPhotoUrl!.isNotEmpty)
+                CircleAvatar(
+                  backgroundImage: CachedNetworkImageProvider(
+                    widget.otherUserPhotoUrl!,
+                  ),
+                ),
+              const SizedBox(width: 8),
+              Text(
+                widget.otherUserName,
+                style: const TextStyle(color: Colors.white),
               ),
-            const SizedBox(width: 8),
-            Text(
-              widget.otherUserName,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ],
+            ],
+          ),
         ),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Column(
-        children: [
-          if (provider.isLoading && provider.displayItems.isEmpty)
-            const Expanded(child: Center(child: CircularProgressIndicator()))
-          else if (!provider.isLoading && provider.displayItems.isEmpty && _templateToPreview == null)
-            Expanded(
-              child: userData.role == Roles.agent
-                  ? PropertyTemplateCarouselWidget(
-                      onTemplateSelected: (template) {
-                        setState(() {
-                          _templateToPreview = template;
-                        });
-                      },
-                    )
-                  : const _TenantTextTemplatesView(),
-            )
-          else
-            Expanded(
-              child: MessageListView(
-                otherUserName: widget.otherUserName,
-                otherUserPhotoUrl: widget.otherUserPhotoUrl,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("assets/background.png"),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Column(
+          children: [
+            if (provider.isLoading && provider.displayItems.isEmpty)
+              const Expanded(child: Center(child: CircularProgressIndicator()))
+            else if (!provider.isLoading &&
+                provider.displayItems.isEmpty &&
+                _templateToPreview == null)
+              Expanded(
+                child: userData.role == Roles.agent
+                    ? PropertyTemplateCarouselWidget(
+                        onTemplateSelected: (template) {
+                          setState(() {
+                            _templateToPreview = template;
+                          });
+                        },
+                      )
+                    : const _TenantTextTemplatesView(),
+              )
+            else
+              Expanded(
+                child: MessageListView(
+                  otherUserName: widget.otherUserName,
+                  otherUserPhotoUrl: widget.otherUserPhotoUrl,
+                ),
               ),
-            ),
-          ReplyPreviewWidget(otherUserName: widget.otherUserName),
-          MessageInputWidget(
-            editingMessage: provider.editingMessage,
-            isSending: provider.isSending,
-            previewTemplate: _templateToPreview, // ★ プレビュー情報を渡す
-            onCancelPreview: () { // ★ プレビューキャンセル時の処理
-              setState(() {
-                _templateToPreview = null;
-              });
-            },
-            onSendMessage: (
-                {File? audioFile, String? text, XFile? imageFile, PropertyTemplate? propertyTemplate}) { // ★ シグネチャ変更
-              _messageListProvider.sendMessage(
-                  audioFile: audioFile, text: text, imageFile: imageFile, propertyTemplate: propertyTemplate);
-              // ★ テンプレートを送信したらプレビューをクリア
-              if (propertyTemplate != null) {
+            ReplyPreviewWidget(otherUserName: widget.otherUserName),
+            MessageInputWidget(
+              editingMessage: provider.editingMessage,
+              isSending: provider.isSending,
+              previewTemplate: _templateToPreview, // ★ プレビュー情報を渡す
+              onCancelPreview: () {
+                // ★ プレビューキャンセル時の処理
                 setState(() {
                   _templateToPreview = null;
                 });
-              }
-            },
-            onSaveEditedMessage: provider.saveEditedMessage,
-            onCancelEditing: provider.cancelEditing,
-            onPickImage: _pickImage,
-          ),
-        ],
+              },
+              onSendMessage:
+                  ({
+                    File? audioFile,
+                    String? text,
+                    XFile? imageFile,
+                    PropertyTemplate? propertyTemplate,
+                  }) {
+                    // ★ シグネチャ変更
+                    _messageListProvider.sendMessage(
+                      audioFile: audioFile,
+                      text: text,
+                      imageFile: imageFile,
+                      propertyTemplate: propertyTemplate,
+                    );
+                    // ★ テンプレートを送信したらプレビューをクリア
+                    if (propertyTemplate != null) {
+                      setState(() {
+                        _templateToPreview = null;
+                      });
+                    }
+                  },
+              onSaveEditedMessage: provider.saveEditedMessage,
+              onCancelEditing: provider.cancelEditing,
+              onPickImage: _pickImage,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
-
 
 class _TenantTextTemplatesView extends StatelessWidget {
   const _TenantTextTemplatesView();
@@ -235,12 +265,21 @@ class _TenantTextTemplatesView extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final template = viewModel.templates[index];
                   return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
                     child: ListTile(
-                      title: Text(template, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      title: Text(
+                        template,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       trailing: const Icon(Icons.send),
                       onTap: () {
-                        context.read<MessageListProvider>().sendMessage(text: template);
+                        context.read<MessageListProvider>().sendMessage(
+                          text: template,
+                        );
                       },
                     ),
                   );

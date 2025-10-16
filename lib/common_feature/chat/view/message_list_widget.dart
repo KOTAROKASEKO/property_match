@@ -421,7 +421,7 @@ class _MessageListViewState extends State<MessageListView> {
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: CircleAvatar(
-                    backgroundImage: NetworkImage(
+                    backgroundImage: CachedNetworkImageProvider(
                       otherUserPhotoUrl,
                     ),
                   ),
