@@ -36,8 +36,8 @@ class UserProfile {
     this.nationality = 'Not specified',
     this.selfIntroduction = '',
     this.moveinDate,
-    this.gender = 'Not specified', // ★★★ 追加 (デフォルト値設定) ★★★
-    this.hobbies = const [], // Added hobbies
+    this.gender = 'Not specified',
+    this.hobbies = const [],
   });
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {

@@ -1,14 +1,13 @@
-// 5_chat/model/message_model.dart
 import 'package:isar/isar.dart';
 
-part 'message_model.g.dart'; // Isar will generate this file
+part 'message_model.g.dart';
 
-@Collection()
+@collection
 class MessageModel {
-  Id id = Isar.autoIncrement; // Local Isar ID
+  Id id = Isar.autoIncrement; // ✅ Isar用の内部ID（Webでも動く）
 
   @Index(unique: true, replace: true)
-  late String messageId;
+  late String messageId; // ✅ Firestoreなどで使う文字列ID
 
   @Index()
   late String chatRoomId;

@@ -51,7 +51,7 @@ class ChatThread {
   }
 
   int fastHash(String string) {
-    var hash = 0xcbf29ce484222325;
+    var hash = 0xcbf29ce484222000;
     var i = 0;
     while (i < string.length) {
       hash ^= string.codeUnitAt(i++);

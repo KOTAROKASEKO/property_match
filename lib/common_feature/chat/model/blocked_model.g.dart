@@ -15,7 +15,7 @@ extension GetBlockedUsersModelCollection on Isar {
 
 const BlockedUsersModelSchema = CollectionSchema(
   name: r'BlockedUsersModel',
-  id: 1195020560146205258,
+  id: 1195020560146205184,
   properties: {
     r'blockedUsers': PropertySchema(
       id: 0,

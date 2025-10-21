@@ -150,6 +150,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
+          foregroundColor: Colors.white,
           backgroundColor: Colors.deepPurple,
           title: const Text('Edit Profile'),
           actions: [
@@ -343,7 +344,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         TextFormField(
           controller: _hobbyController,
           decoration: InputDecoration(
-            labelText: 'Hobbies (add one by one)',
+            labelText: 'Tag of you (add one by one)',
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
