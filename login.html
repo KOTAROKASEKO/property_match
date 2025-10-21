@@ -1,0 +1,25 @@
+<html>
+<head>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <h1>外部ログインページ</h1>
+    <div id="g_id_onload"
+         data-client_id="YOUR_WEB_CLIENT_ID" 
+         data-callback="handleCredentialResponse">
+    </div>
+    <div class="g_id_signin" data-type="standard"></div>
+
+    <script>
+        function handleCredentialResponse(response) {
+            // 3. 認証情報 (ID Token) を取得
+            const id_token = response.credential;
+            
+            // 4. Flutterアプリにリダイレクトして情報を引き渡す
+            // ここで、リダイレクトURLとしてFlutter WebアプリのURLを使用し、
+            // IDトークンをパラメータとして渡します。
+            window.location.href = 'https://your-flutter-app-url.com/#/login-success?token=' + id_token;
+        }
+    </script>
+</body>
+</html>
