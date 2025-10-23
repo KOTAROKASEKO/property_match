@@ -1,16 +1,23 @@
-# re_conver
+Hello!
+Welcome to my repository. 
 
-A new Flutter project.
+This project is so complicated as it has crossplatform feature that serves on web and android.
 
-## Getting Started
+root/
+├─ shared/
+│   ├─ lib/
+│   └─ pubspec.yaml
+│
+├─ app_mobile/
+│   ├─ lib/
+│   └─ pubspec.yaml
+│
+└─ app_web/
+    ├─ lib/
+    └─ pubspec.yaml
 
-This project is a starting point for a Flutter application.
+It is structured like this.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+As for local database, 
+Web chat uses drift
+mobile uses isar

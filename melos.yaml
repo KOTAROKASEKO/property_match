@@ -1,0 +1,5 @@
+name: re_conver_workspace
+packages:
+  - 1-mobile-lib/
+  - 2-web-lib/
+  - 3-shared/
