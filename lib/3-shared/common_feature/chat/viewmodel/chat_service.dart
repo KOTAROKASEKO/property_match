@@ -6,8 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:re_conver/1-mobile-lib/data/chat_thread.dart';
+import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
 import '../../../app/debug_print.dart';
-import '../data/local/chat_repository.dart';
 import '../data/repository_provider.dart';
 import '../../../features/authentication/userdata.dart';
 

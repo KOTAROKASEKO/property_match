@@ -15,7 +15,7 @@ extension GetMessageModelCollection on Isar {
 
 const MessageModelSchema = CollectionSchema(
   name: r'MessageModel',
-  id: -902762555029995904,
+  id: -902762555029995869,
   properties: {
     r'chatRoomId': PropertySchema(
       id: 0,
@@ -120,7 +120,7 @@ const MessageModelSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'messageId': IndexSchema(
-      id: -635287409172016000,
+      id: -635287409172016016,
       name: r'messageId',
       unique: true,
       replace: true,
@@ -133,7 +133,7 @@ const MessageModelSchema = CollectionSchema(
       ],
     ),
     r'chatRoomId': IndexSchema(
-      id: -5738161724496397312,
+      id: -5738161724496397148,
       name: r'chatRoomId',
       unique: false,
       replace: false,
@@ -146,7 +146,7 @@ const MessageModelSchema = CollectionSchema(
       ],
     ),
     r'timestamp': IndexSchema(
-      id: 1852253767416892160,
+      id: 1852253767416892198,
       name: r'timestamp',
       unique: false,
       replace: false,

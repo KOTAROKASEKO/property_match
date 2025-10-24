@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/common_feature/chat/data/repository_provider.dart';
 import '../../../features/1_agent_feature/chat_template/model/property_template.dart';
 import '../../../features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
 import '../../../features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
@@ -42,6 +43,7 @@ class IndividualChatScreenWithProvider extends StatelessWidget {
             create: (_) => MessageListProvider(
               chatThreadId: chatThreadId,
               otherUserUid: otherUserUid,
+              chatRepository: getChatRepository(),
             ),
           ),
           ChangeNotifierProvider(create: (_) => AgentTemplateViewModel()),

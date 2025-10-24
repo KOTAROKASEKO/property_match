@@ -4,8 +4,9 @@ import 'package:drift/drift.dart';
 import 'package:re_conver/1-mobile-lib/data/chat_thread.dart';
 import 'package:re_conver/1-mobile-lib/data/message_model.dart';
 import 'package:re_conver/3-shared/app/debug_print.dart';
-import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
 import 'dart:convert';
+
+import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
 
 part 'drift_database.g.dart';
 
@@ -266,11 +267,10 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
     await createOrUpdateMessage(message);
   }
 
-  @override
+@override
   Future<void> createOrUpdateMessage(MessageModel message) async {
     final companion = _mapMessageModelToCompanion(message);
-    // messageId をユニークキーとして Upsert (Insert or Replace)
-    await into(messages).insertOnConflictUpdate(companion);
+    await into(messages).insert(companion, mode: InsertMode.replace);
   }
 
   @override

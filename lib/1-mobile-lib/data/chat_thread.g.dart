@@ -15,7 +15,7 @@ extension GetChatThreadCollection on Isar {
 
 const ChatThreadSchema = CollectionSchema(
   name: r'ChatThread',
-  id: -7804860880153140224,
+  id: -7804860880153139966,
   properties: {
     r'generalImageUrls': PropertySchema(
       id: 0,
@@ -100,7 +100,7 @@ const ChatThreadSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'whoSent': IndexSchema(
-      id: -1478251415264109568,
+      id: -1478251415264109684,
       name: r'whoSent',
       unique: false,
       replace: false,
@@ -113,7 +113,7 @@ const ChatThreadSchema = CollectionSchema(
       ],
     ),
     r'whoReceived': IndexSchema(
-      id: 5236519281694465024,
+      id: 5236519281694465316,
       name: r'whoReceived',
       unique: false,
       replace: false,

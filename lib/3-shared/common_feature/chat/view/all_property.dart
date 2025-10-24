@@ -97,7 +97,7 @@ class ChatThreadList extends StatelessWidget {
                         const SizedBox(height: 4),
                         if (unreadCount > 0)
                           Container(
-                            padding: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(5),
                             decoration: const BoxDecoration(
                                 color: Colors.deepPurple,
                                 shape: BoxShape.circle),

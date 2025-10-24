@@ -3,7 +3,7 @@
 import 'package:re_conver/1-mobile-lib/data/chat_thread.dart';
 import 'package:re_conver/1-mobile-lib/data/message_model.dart';
 import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
-import 'drift_database.dart'; // 作成したファイルをインポート
+import '../data/drift_database.dart'; // 作成したファイルをインポート
 
 class DriftChatRepository implements ChatRepository {
   final AppDatabase _db;

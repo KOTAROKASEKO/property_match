@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/wasm.dart';
 import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
 import '../data/drift_database.dart';
-import '../data/drift_chat_repository.dart';
+import 'drift_chat_repository.dart';
 
 ChatRepository getPlatformRepository() {
   print('[Repository Provider] Creating DriftChatRepository for Web using WasmDatabase.open');

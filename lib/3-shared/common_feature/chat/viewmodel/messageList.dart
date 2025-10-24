@@ -9,13 +9,9 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart'; // Required for kIsWeb
 import 'package:image_picker/image_picker.dart';
 import 'package:re_conver/1-mobile-lib/data/message_model.dart';
-import '../../../../1-mobile-lib/repo/chat_repository_mobile.dart';
+import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
 import '../../../features/1_agent_feature/chat_template/model/property_template.dart';
 // Import the abstract repository ✨
-import '../data/local/chat_repository.dart';
-import '../../../../2-web-lib/data/drift_chat_repository.dart';
-import '../../../../2-web-lib/data/drift_database.dart';
-import '../../../../2-web-lib/repo/connection.dart' as web_connection;
 // Import concrete implementations ✨
 // TODO: Create and import the Drift repository implementation ✨
 // import 'package:re_conver/common_feature/chat/data/local/web/drift_chat_repository.dart';
@@ -30,19 +26,14 @@ class MessageListProvider extends ChangeNotifier {
   final String otherUserUid;
   late final ChatRepository _chatRepository; // Use the abstract type ✨
 
-  MessageListProvider({required this.chatThreadId, required this.otherUserUid}) {
-    // Conditional instantiation (Manual Factory) ✨
-    if (kIsWeb) {
-      pr('[MessageListProvider] Initializing for Web (Drift)');
-      final driftDb = AppDatabase(web_connection.connect()); //
-      _chatRepository = DriftChatRepository(driftDb);
-    } else {
-      pr('[MessageListProvider] Initializing for Mobile (Isar)');
-      _chatRepository = IsarChatRepository();
-    }
-    // Initialize the repository if needed (e.g., open DB) and load data
-    _initializeAndLoadData();
-  }
+
+  MessageListProvider({
+  required this.chatThreadId,
+  required this.otherUserUid,
+  required ChatRepository chatRepository, // 引数で受け取る
+}) : _chatRepository = chatRepository { // 受け取ったものを使うだけ
+  _initializeAndLoadData();
+}
 
   // --- Firestore/Storage instances (remain the same) ---
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -113,7 +104,6 @@ class MessageListProvider extends ChangeNotifier {
   // --- Initialization ---
   Future<void> _initializeAndLoadData() async {
     try {
-      await _chatRepository.init(); // Initialize the chosen repository ✨
       await loadInitialMessages();
       listenToFirebaseMessages();
       markMessagesAsRead(); // Mark as read after initial load
