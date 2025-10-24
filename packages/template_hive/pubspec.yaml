@@ -1,0 +1,21 @@
+name: template_hive
+description: Hive implementation for storing message and property templates.
+environment:
+  sdk: '>=3.9.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  cloud_firestore: ^6.0.0 # For TimestampAdapter and TemplateRepo
+  firebase_auth: ^6.0.1   # For TemplateRepo (userData)
+  shared_preferences: ^2.5.3 # For TemplateRepo (userData)
+  shared_data:
+    path: ../shared_data
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.13
