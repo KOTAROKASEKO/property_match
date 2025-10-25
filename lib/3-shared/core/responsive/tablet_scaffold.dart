@@ -1,11 +1,11 @@
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
-import 'package:re_conver/1-mobile-lib/data/chat_thread.dart';
+import 'package:shared_data/shared_data.dart';
 import '../../features/1_agent_feature/1_profile/view/agent_profile_view.dart';
 import '../../common_feature/chat/view/chatThreadScreen.dart';
 import '../../common_feature/chat/view/providerIndividualChat.dart';
 import '../../features/2_tenant_feature/1_discover/view/discover_screen.dart';
 import '../../features/2_tenant_feature/3_profile/view/profile_screen.dart';
-import '../../features/authentication/userdata.dart';
 
 class TabletScaffold extends StatefulWidget {
   const TabletScaffold({super.key});

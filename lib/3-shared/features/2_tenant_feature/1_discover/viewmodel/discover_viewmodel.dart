@@ -1,11 +1,11 @@
 // lib/features/2_tenant_feature/1_discover/viewmodel/discover_viewmodel.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_data/shared_data.dart';
 import '../../../../common_feature/post_actions_viewmodel.dart';
 import '../../../../core/model/PostModel.dart';
 import '../model/filter_options.dart';
 import 'post_service.dart';
-import '../../../authentication/userdata.dart';
 
 class DiscoverViewModel extends PostActionsViewModel  {
   final PostService _postService = PostService();

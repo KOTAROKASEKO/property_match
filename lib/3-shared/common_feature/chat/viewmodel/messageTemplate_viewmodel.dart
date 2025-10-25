@@ -1,7 +1,7 @@
 // lib/2_tenant_feature/4_chat/viewmodel/messageTemplate_viewmodel.dart
 import 'package:flutter/material.dart';
-import '../template_repo/TemplateRepo.dart';
-import '../../../features/authentication/userdata.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:template_hive/template_hive.dart';
 
 //Used by tenant and agent
 class MessagetemplateViewmodel extends ChangeNotifier {

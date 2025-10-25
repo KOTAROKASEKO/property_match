@@ -1,6 +1,6 @@
 // common_feature/chat/viewmodel/blocked_users_viewmodel.dart
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/foundation.dart';
-import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
 import '../data/repository_provider.dart';
 import 'chat_service.dart';
 

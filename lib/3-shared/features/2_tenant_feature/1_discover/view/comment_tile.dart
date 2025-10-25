@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import '../model/comment_model.dart';
 import '../viewmodel/post_service.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 class CommentTile extends StatefulWidget {
   final String postId;

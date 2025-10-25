@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_data/shared_data.dart';
 import '../viewmodel/messageList.dart';
-import '../../../features/authentication/userdata.dart';
 
 class ReplyPreviewWidget extends StatelessWidget {
     final String otherUserName;

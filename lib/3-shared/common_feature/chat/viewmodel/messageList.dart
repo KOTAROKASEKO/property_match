@@ -4,13 +4,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart'; // Required for kIsWeb
 import 'package:image_picker/image_picker.dart';
-import 'package:re_conver/1-mobile-lib/data/message_model.dart';
-import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
-import '../../../features/1_agent_feature/chat_template/model/property_template.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:template_hive/template_hive.dart';
 // Import the abstract repository ✨
 // Import concrete implementations ✨
 // TODO: Create and import the Drift repository implementation ✨
@@ -18,8 +18,6 @@ import '../../../features/1_agent_feature/chat_template/model/property_template.
 // TODO: Import Drift database if needed for web instantiation ✨
 // import 'package:re_conver/common_feature/chat/data/local/web/drift_database.dart';
 import 'chat_service.dart'; // Keep for Firestore operations like reportUser
-import '../../../features/authentication/userdata.dart';
-import '../../../app/debug_print.dart'; // Assuming pr() is defined here
 
 class MessageListProvider extends ChangeNotifier {
   final String chatThreadId;
@@ -260,7 +258,7 @@ class MessageListProvider extends ChangeNotifier {
             final index =
                 _messages.indexWhere((m) => m.messageId == message.messageId);
             if (index == -1) {
-              _messages.add(message); // Add new message
+              _addOrUpdateMessageInUI(message);
               if (!message.isOutgoing) {
                 newIncomingMessage = true;
               }
@@ -274,10 +272,7 @@ class MessageListProvider extends ChangeNotifier {
             // Update in UI list
             final index =
                 _messages.indexWhere((m) => m.messageId == message.messageId);
-            if (index != -1) {
-              _messages[index] = message;
-              requiresUIRefresh = true;
-            }
+            _addOrUpdateMessageInUI(message);
           } else if (change.type == DocumentChangeType.removed) {
              pr('[MessageListProvider] Removed message: ${message.messageId}');
             // TODO: Handle removal in local DB via Repository if needed (e.g., hard delete)

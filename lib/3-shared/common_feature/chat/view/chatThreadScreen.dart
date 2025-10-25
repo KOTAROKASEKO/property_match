@@ -3,12 +3,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/1-mobile-lib/data/chat_thread.dart';
-import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
-import '../../../app/debug_print.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:template_hive/template_hive.dart';
 import '../data/repository_provider.dart';
 import 'add_edit_general_note_screen.dart';
 import 'add_edit_viewing_note_screen.dart';
@@ -23,9 +23,7 @@ import 'report_user_dialogue.dart';
 import '../viewmodel/chat_service.dart';
 import '../viewmodel/suggestion_viewmodel.dart';
 import '../../../core/model/PostModel.dart';
-import '../../../features/1_agent_feature/chat_template/model/property_template.dart';
 import '../../../features/2_tenant_feature/3_profile/models/profile_model.dart';
-import '../../../features/authentication/userdata.dart';
 import 'package:rive/rive.dart';
 
 class ViewingAppointment {
@@ -149,7 +147,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
             for (var change in snapshot.docChanges) {
               if (!change.doc.exists || change.doc.data() == null) continue;
 
-              final thread = ChatThread.fromFirestore(change.doc);
+              final thread = ChatThread.fromFirestore(change.doc, userData.role==Roles.agent? 'agent':'tenant');
 
               final otherUserId = _getOtherParticipantId(thread);
               final userDoc = await _firestore
@@ -313,7 +311,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
         onTap: () async {
           Navigator.of(ctx).pop();
           try {
-            pr('blocking user : ${_getOtherParticipantId(thread)}');
+            print('blocking user : ${_getOtherParticipantId(thread)}');
             await _chatService.blockUser(_getOtherParticipantId(thread));
 
             ScaffoldMessenger.of(

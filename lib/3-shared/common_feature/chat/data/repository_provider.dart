@@ -1,7 +1,7 @@
 // lib/common_feature/chat/data/repository_provider.dart
+import 'package:chatrepo_drift/chatrepo_drift.dart';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:re_conver/2-web-lib/repo/_repository_provider_web.dart';
-import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
 
 ChatRepository? _cachedRepository;
 

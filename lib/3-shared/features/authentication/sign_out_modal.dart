@@ -2,9 +2,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../../app/debug_print.dart';
-import '../../app/localDB_Manager.dart';
-import 'userdata.dart';
+import 'package:re_conver/app/localDB_Manager.dart';
+import 'package:shared_data/shared_data.dart';
 
 class SignOutModal extends StatefulWidget {
   const SignOutModal({super.key});

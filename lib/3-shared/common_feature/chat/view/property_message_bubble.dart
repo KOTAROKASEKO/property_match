@@ -2,9 +2,9 @@
 
 import 'dart:convert';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:re_conver/1-mobile-lib/data/message_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PropertyMessageBubble extends StatelessWidget {

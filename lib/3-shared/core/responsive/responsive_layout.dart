@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_data/shared_data.dart';
 import '../../agent_main_scaffold.dart';
 import 'tablet_scaffold.dart';
-import '../../features/authentication/userdata.dart';
 import '../../tenant_main_scaffold.dart';
 
 class ResponsiveLayout extends StatelessWidget {

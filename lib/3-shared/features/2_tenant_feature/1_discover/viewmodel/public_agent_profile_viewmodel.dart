@@ -1,10 +1,11 @@
 
+import 'package:shared_data/shared_data.dart';
+
 import '../../../../core/model/PostModel.dart';
 import '../../../1_agent_feature/1_profile/model/agent_profile_model.dart';
 import '../../../1_agent_feature/1_profile/repo/profile_repository.dart';
 import '../../../../common_feature/post_actions_viewmodel.dart';
 import 'post_service.dart';
-import '../../../authentication/userdata.dart';
 
 class PublicAgentProfileViewModel extends PostActionsViewModel {
   final ProfileRepository _profileRepository = FirestoreProfileRepository();

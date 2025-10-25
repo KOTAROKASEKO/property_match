@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../../../../app/debug_print.dart';
+import 'package:shared_data/shared_data.dart';
 import '../../../../core/model/PostModel.dart';
 import 'agent_profile_screen.dart';
 import 'comment_bottomsheet.dart';

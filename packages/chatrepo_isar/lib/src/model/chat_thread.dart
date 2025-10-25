@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Index;
 import 'package:isar/isar.dart';
-import 'package:re_conver/3-shared/features/authentication/userdata.dart';
+import 'package:shared_data/shared_data.dart';
 
 part 'chat_thread.g.dart';
 

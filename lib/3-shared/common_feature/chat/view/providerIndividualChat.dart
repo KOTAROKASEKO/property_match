@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/3-shared/common_feature/chat/data/repository_provider.dart';
-import '../../../features/1_agent_feature/chat_template/model/property_template.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:template_hive/template_hive.dart';
 import '../../../features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
 import '../../../features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 import 'message_input_widget.dart';
@@ -16,7 +17,6 @@ import 'reply_widget.dart';
 import '../viewmodel/messageList.dart';
 import '../viewmodel/messageTemplate_viewmodel.dart';
 import '../../../features/2_tenant_feature/1_discover/view/agent_profile_screen.dart';
-import '../../../features/authentication/userdata.dart';
 
 class IndividualChatScreenWithProvider extends StatelessWidget {
   final String chatThreadId;
@@ -183,7 +183,7 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
                     ? PropertyTemplateCarouselWidget(
                         onTemplateSelected: (template) {
                           setState(() {
-                            _templateToPreview = template;
+                            _templateToPreview = template as PropertyTemplate?;
                           });
                         },
                       )

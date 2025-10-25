@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/foundation.dart';
-import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
+import 'package:shared_data/shared_data.dart';
 import '../data/repository_provider.dart';
-import '../../../features/authentication/userdata.dart';
+
 class UnreadMessagesViewModel extends ChangeNotifier {
   final ChatRepository chatRepo = getChatRepository();
   int _totalUnreadCount = 0;

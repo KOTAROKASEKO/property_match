@@ -1,8 +1,8 @@
 // Widget for the "Viewing" tab
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:re_conver/1-mobile-lib/data/chat_thread.dart';
 import 'chatThreadScreen.dart';
 import 'providerIndividualChat.dart';
 import 'viewing_details_bottomsheet.dart';

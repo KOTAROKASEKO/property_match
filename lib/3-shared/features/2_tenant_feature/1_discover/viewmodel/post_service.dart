@@ -3,11 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
+import 'package:shared_data/shared_data.dart';
 import '../../../../core/model/PostModel.dart';
 import '../model/comment_model.dart';
 import '../model/filter_options.dart';
 import '../model/paginated_post.dart';
-import '../../../authentication/userdata.dart';
 
 enum SortOrder { byDate, byPopularity }
 

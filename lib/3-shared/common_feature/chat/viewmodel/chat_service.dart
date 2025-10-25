@@ -2,14 +2,12 @@
 import 'dart:convert'; // Make sure to add this import
 import 'dart:io';
 
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:re_conver/1-mobile-lib/data/chat_thread.dart';
-import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
-import '../../../app/debug_print.dart';
+import 'package:shared_data/shared_data.dart';
 import '../data/repository_provider.dart';
-import '../../../features/authentication/userdata.dart';
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -80,7 +78,7 @@ class ChatService {
     try{
       await _isarService.addToBlockedUsers(blockedUserId);
     }catch(e){
-      pr('Error blocking a user :${e}');
+      print('Error blocking a user :${e}');
     }
   }
 
@@ -104,7 +102,7 @@ class ChatService {
 
       // 3. Update Firestore with the new list.
       transaction.update(docRef, {'blockedUsers': updatedBlocked});
-      pr('The user was updated on firestore successfully');
+      print('The user was updated on firestore successfully');
     });
   }
 

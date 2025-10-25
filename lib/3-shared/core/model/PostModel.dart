@@ -2,7 +2,7 @@
 
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../features/authentication/userdata.dart';
+import 'package:shared_data/shared_data.dart';
 
 class PostModel {
   final String condominiumName_searchKey;

@@ -1,7 +1,8 @@
+import 'package:shared_data/shared_data.dart';
+
 import '../../../../common_feature/post_actions_viewmodel.dart';
 import '../../../../core/model/PostModel.dart';
 import '../../1_discover/viewmodel/post_service.dart';
-import '../../../authentication/userdata.dart';
 
 class SavedPostsViewModel extends PostActionsViewModel {
   final PostService _postService = PostService();

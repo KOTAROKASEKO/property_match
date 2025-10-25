@@ -7,7 +7,7 @@ import 'package:chatrepo_isar/src/model/message_model.dart'; // Isar の Message
 import 'package:chatrepo_isar/src/model/blocked_model.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_data/debug_print.dart'; // pr() のために必要
+import 'package:shared_data/shared_data.dart'; // pr() のために必要
 
 class IsarChatRepository implements repo_interface.ChatRepository {
   late Future<Isar> db;

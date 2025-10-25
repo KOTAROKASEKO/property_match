@@ -2,16 +2,16 @@
 
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/1-mobile-lib/data/message_model.dart';
+import 'package:shared_data/shared_data.dart';
 import 'audio_player_widget.dart';
 import 'full_screen_image_view.dart';
 import 'property_message_bubble.dart';
 import '../viewmodel/messageList.dart';
-import '../../../features/authentication/userdata.dart';
 
 class MessageListView extends StatefulWidget {
   final String otherUserName;

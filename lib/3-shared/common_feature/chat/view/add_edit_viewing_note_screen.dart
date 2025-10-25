@@ -2,9 +2,9 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:re_conver/1-mobile-lib/data/chat_thread.dart';
 import '../viewmodel/chat_service.dart'; 
 
 class AddEditViewingNoteScreen extends StatefulWidget {

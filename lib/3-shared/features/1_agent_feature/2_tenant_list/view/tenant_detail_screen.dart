@@ -2,9 +2,9 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_data/shared_data.dart';
 import '../../../../common_feature/chat/view/providerIndividualChat.dart';
 import '../../../2_tenant_feature/3_profile/models/profile_model.dart';
-import '../../../authentication/userdata.dart';
 
 // --- 元の画面 ---
 // これは、何らかの理由で詳細ページに直接遷移したい場合のために残しておく

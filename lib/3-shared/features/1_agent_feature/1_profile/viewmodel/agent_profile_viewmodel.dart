@@ -1,13 +1,13 @@
 // lib/features/1_agent_feature/1_profile/viewmodel/agent_profile_viewmodel.dart
 import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../../app/database_path.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:shared_data/src/database_path.dart';
+import 'package:template_hive/template_hive.dart';
 import '../../../../core/model/PostModel.dart';
 import '../model/agent_profile_model.dart';
 import '../repo/profile_repository.dart';
-import '../../chat_template/model/property_template.dart';
 import 'package:flutter/material.dart';
-import '../../../../app/debug_print.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   final ProfileRepository _repository;

@@ -1,12 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:shared_data/src/database_path.dart';
 import '../../MainScaffold.dart';
-import '../../app/database_path.dart';
-import '../../app/debug_print.dart';
 import '../2_tenant_feature/3_profile/models/profile_model.dart';
 import '../2_tenant_feature/3_profile/view/edit_profile_screen.dart';
-import 'userdata.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RoleSelectionScreen extends StatelessWidget {

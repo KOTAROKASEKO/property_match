@@ -8,8 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:template_hive/template_hive.dart';
 import '../../../../core/model/PostModel.dart';
-import '../../chat_template/model/property_template.dart';
 import '../repo/profile_repository.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 

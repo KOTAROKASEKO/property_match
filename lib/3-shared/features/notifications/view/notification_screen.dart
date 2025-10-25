@@ -5,9 +5,9 @@ import '../model/notification_model.dart';
 import '../viewmodel/notification_viewmodel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:timeago/timeago.dart' as timeago;
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../1_agent_feature/1_profile/view/agent_post_detail_screen.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 String pref_name = 'notification_permission_requested';
 

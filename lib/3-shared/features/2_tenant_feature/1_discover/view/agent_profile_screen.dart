@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:template_hive/template_hive.dart';
 import '../../../1_agent_feature/1_profile/model/agent_profile_model.dart';
 import '../../../../common_feature/chat/view/providerIndividualChat.dart';
-import '../../../1_agent_feature/chat_template/model/property_template.dart';
 import 'post_card.dart';
 import '../viewmodel/public_agent_profile_viewmodel.dart';
-import '../../../authentication/userdata.dart';
 
 class AgentProfileScreen extends StatelessWidget {
   final String agentId;

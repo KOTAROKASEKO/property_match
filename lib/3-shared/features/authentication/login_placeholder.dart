@@ -8,10 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:lottie/lottie.dart';
+import 'package:shared_data/shared_data.dart';
 import '../../MainScaffold.dart';
 import 'register_screen.dart';
 import 'role_selection_screen.dart';
-import 'userdata.dart';
 import 'widgets/sign_in_button_web.dart';
 // 'widgets/sing_in_button.dart' (条件付き) ではなく、
 // 'widgets/sign_in_button.dart' (Web専用) を直接インポート

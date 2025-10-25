@@ -1,102 +1,95 @@
 name: re_conver
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: 'none' # Prevent accidental publishing to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.0
+  sdk: '>=3.9.0 <4.0.0' # Adjust SDK constraint if needed
 
 dependencies:
   flutter:
     sdk: flutter
+
+  # --- Core & UI ---
   cupertino_icons: ^1.0.8
-  firebase_auth: ^6.0.1
-  google_sign_in: ^7.1.1
-  rive: ^0.13.20
   provider: ^6.1.5
+  intl: ^0.20.2 # For date/time formatting
+  cached_network_image: ^3.4.1 # For displaying network images
+  rive: ^0.13.20 # For Rive animations
+  lottie: ^3.3.1 # For Lottie animations
+  google_fonts: ^6.3.0 # Or your preferred font package
+  shimmer: ^3.0.0 # For loading placeholders
+  carousel_slider: ^5.1.1 # For image carousels
+  google_nav_bar: ^5.0.7 # Example navigation bar
+  animated_bottom_navigation_bar: ^1.4.0 # Example navigation bar
+  curved_navigation_bar: ^1.0.6 # Example navigation bar
+  flutter_svg: ^2.2.1 # For SVG assets
+  appinio_swiper: ^2.1.1 # For swipe cards
+  timeline_tile: ^2.0.0 # Used in profile? (Keep if needed)
+
+  # --- Firebase ---
+  firebase_core: ^4.0.0 # Use versions compatible with your Flutter SDK
+  firebase_auth: ^6.0.1
   cloud_firestore: ^6.0.0
-  firebase_core: ^4.0.0
-  intl: ^0.20.2
-  image_picker: ^1.1.2
   firebase_storage: ^13.0.0
-  timeago: ^3.7.1
+  firebase_messaging: ^16.0.0
+
+  # --- Google Sign In ---
+  google_sign_in: ^7.1.1
+  google_sign_in_platform_interface: ^3.1.0 # Keep this if google_sign_in needs it
+  googleapis_auth: ^2.0.0 # Needed for Google Sign In web/server flow?
+
+  # --- Local Storage (Non-DB) ---
+  shared_preferences: ^2.5.3
+
+  # --- Utilities ---
+  image_picker: ^1.1.2
   flutter_image_compress: ^2.4.0
-  foundation: ^0.0.5
-  timeline_tile: ^2.0.0
-  webview_flutter: ^4.13.0
+  path_provider: ^2.0.0 # Needed by Isar/Drift implementations & others
   url_launcher: ^6.3.2
   flutter_dotenv: ^5.2.1
   google_places_flutter: ^2.1.0
-  shimmer: ^3.0.0
-  lottie: ^3.3.1
-  google_fonts: ^6.3.0
-  googleapis_auth: ^2.0.0
-  shared_preferences: ^2.5.3
   google_places_autocomplete_text_field: ^1.1.0
   country_picker: ^2.0.27
-  firebase_messaging: ^16.0.0
-  speech_to_text: ^7.3.0
-  sqflite: ^2.4.2
-  record: ^6.1.1
-  audioplayers: ^6.5.0
-  permission_handler: ^12.0.1
-  flutter_slidable: ^4.0.1
-  cached_network_image: ^3.4.1
-  gallery_saver_plus: ^3.2.9
-  device_info_plus: ^12.1.0
-  carousel_slider: ^5.1.1
-  change_app_package_name: ^1.5.0
-  share_plus: ^12.0.0
-  geoflutterfire_plus: ^0.0.33
+  speech_to_text: ^7.3.0 # Voice messages
+  record: ^6.1.1 # Voice messages
+  audioplayers: ^6.5.0 # Voice messages
+  permission_handler: ^12.0.1 # For mic/storage permissions
+  flutter_slidable: ^4.0.1 # Used in chat? (Keep if needed)
+  gallery_saver_plus: ^3.2.9 # Saving images
+  device_info_plus: ^12.1.0 # Device info? (Keep if needed)
+  share_plus: ^12.0.0 # Sharing posts
+  geoflutterfire_plus: ^0.0.33 # Geo queries for posts
   geocoding: ^4.0.0
-  google_nav_bar: ^5.0.7
-  animated_bottom_navigation_bar: ^1.4.0
-  curved_navigation_bar: ^1.0.6
-  flutter_svg: ^2.2.1
-  appinio_swiper: ^2.1.1
-  google_sign_in_platform_interface: ^3.1.0
-  
-  # mobile local database
-  isar: ^3.1.0+1
-  isar_flutter_libs: ^3.1.0+1
+  timeago: ^3.7.1
 
-  # cross-platform local database
-  hive: ^2.2.3
+  # --- WebView ---
+  webview_flutter: ^4.13.0 # If you use WebView directly in the main app
+
+  # --- Monorepo Local Packages ---
+  chatrepo_interface:
+    path: packages/chatrepo_interface
+  chatrepo_isar: # For mobile builds
+    path: packages/chatrepo_isar
+  chatrepo_drift: # For web builds
+    path: packages/chatrepo_drift
+  template_hive:
+    path: packages/template_hive
+  shared_data:
+    path: packages/shared_data
   hive_flutter: ^1.1.0
-
-  # web/local database
-  # sqlite3_flutter_libs: ^0.5.40
-  # drift: ^2.29.0
-  path: ^1.9.1
-
-  
-
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  hive_generator: ^2.0.1
-  # drift_dev: ^2.29.0
   flutter_lints: ^5.0.0
   build_runner: ^2.4.13
-
-  #===== mobile local ==========
-  isar_generator: ^3.1.0+1
-
-  #======== web local ==========
-  # build_web_compilers: ^4.3.0
-
-# dependency_overrides:
-#   build: ^4.0.0
-#   analyzer: ^8.4.0
-#   source_gen: ^4.0.2
-#   dart_style: ^3.1.2
 
 flutter:
   uses-material-design: true
   assets:
     - assets/
-    - .env
+    - .env # Make sure .env is at the project root
   fonts:
     - family: default
       fonts:
@@ -107,4 +100,3 @@ flutter:
     - family: fancy
       fonts:
         - asset: assets/fancy2.ttf
-#

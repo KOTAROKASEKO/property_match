@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:template_hive/template_hive.dart';
 import '../../1_profile/repo/profile_repository.dart';
-import '../model/property_template.dart';
-import '../../../authentication/userdata.dart';
 
 class AgentTemplateViewModel extends ChangeNotifier {
   final Box<PropertyTemplate> _propertyTemplateBox =

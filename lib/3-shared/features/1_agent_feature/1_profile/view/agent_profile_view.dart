@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_data/shared_data.dart';
 import '../../../../core/model/PostModel.dart';
 import '../repo/profile_repository.dart';
 import 'agent_create_post_screen.dart';
@@ -8,7 +9,6 @@ import 'edit_agent_profile_view.dart';
 import '../viewmodel/agent_profile_viewmodel.dart';
 import '../../../authentication/auth_service.dart';
 import '../../../authentication/login_placeholder.dart';
-import '../../../authentication/userdata.dart';
 import '../../../notifications/view/notification_screen.dart';
 import '../../../notifications/viewmodel/notification_viewmodel.dart';
 

@@ -1,9 +1,9 @@
 // lib/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_data/shared_data.dart';
 import '../model/tenant_filter_options.dart';
 import '../../../2_tenant_feature/3_profile/models/profile_model.dart';
-import '../../../authentication/userdata.dart';
 
 class TenantListViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

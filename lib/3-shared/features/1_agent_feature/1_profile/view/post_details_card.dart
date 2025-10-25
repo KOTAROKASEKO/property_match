@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import '../../../../core/model/PostModel.dart';
 import '../../../2_tenant_feature/1_discover/view/comment_bottomsheet.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 class PostDetailsCard extends StatefulWidget {
   final PostModel post;

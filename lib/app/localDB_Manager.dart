@@ -1,10 +1,9 @@
 // lib/app/localDB_Manager.dart
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:re_conver/3-shared/common_feature/chat/data/local/chat_repository.dart';
-import 'database_path.dart';
-import '../common_feature/chat/data/repository_provider.dart';
+import '../3-shared/common_feature/chat/data/repository_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'debug_print.dart';
+import 'package:shared_data/shared_data.dart';
 
 Future<void> deleteAllData() async {
   pr('Starting local data deletion for logout...');

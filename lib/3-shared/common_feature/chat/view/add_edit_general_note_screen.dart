@@ -1,9 +1,9 @@
 // lib/2_tenant_feature/4_chat/view/add_edit_general_note_screen.dart
 
 import 'dart:io';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:re_conver/1-mobile-lib/data/chat_thread.dart';
 import '../viewmodel/chat_service.dart';
 
 class AddEditGeneralNoteScreen extends StatefulWidget {

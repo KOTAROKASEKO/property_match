@@ -1,9 +1,9 @@
 // lib/common_feature/chat/viewmodel/suggestion_viewmodel.dart
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_data/shared_data.dart';
 import '../../../core/model/PostModel.dart';
 import '../../../features/2_tenant_feature/3_profile/models/profile_model.dart';
-import '../../../features/authentication/userdata.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SuggestionViewModel extends ChangeNotifier {

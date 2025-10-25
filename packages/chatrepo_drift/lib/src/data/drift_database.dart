@@ -205,6 +205,7 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
 
   ChatThread _mapRowToChatThread(ChatThreadRow row) {
     print('--- Mapping ChatThreadRow ---');
+    print('message: ${row.lastMessage}');
     print('id: ${row.id} (Type: ${row.id.runtimeType})');
     print('whoSent: ${row.whoSent} (Type: ${row.whoSent.runtimeType})');
     print('whoReceived: ${row.whoReceived} (Type: ${row.whoReceived.runtimeType})');
@@ -331,9 +332,10 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
     // IsarChatRepository の実装 (フィルタリングなし) に合わせる
     // Inside ChatDao watchChatThreads
   final query = select(chatThreads)
-    ..orderBy([ /* ... ordering ... */ ]);
-  // Directly maps and returns all rows - NO filtering here
-  return query.watch().map((rows) => rows.map(_mapRowToChatThread).toList());
+      ..orderBy([
+        (t) => OrderingTerm(expression: t.timeStamp, mode: OrderingMode.desc),
+      ]);
+    return query.watch().map((rows) => rows.map(_mapRowToChatThread).toList());
   }
 
   // watchChatThreadsで使うための補助Stream (もしDAOでフィルタリングする場合)

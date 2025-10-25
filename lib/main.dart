@@ -6,19 +6,16 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-import '3-shared/app/database_path.dart';
-import '3-shared/app/debug_print.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:shared_data/src/database_path.dart';
 import '3-shared/common_feature/chat/viewmodel/unread_messages_viewmodel.dart';
 import '3-shared/features/1_agent_feature/1_profile/repo/profile_repository.dart';
 import '3-shared/features/1_agent_feature/1_profile/view/agent_post_detail_screen.dart';
 import '3-shared/features/1_agent_feature/1_profile/viewmodel/agent_profile_viewmodel.dart';
 import '3-shared/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart';
-import '3-shared/features/1_agent_feature/chat_template/model/property_template.dart';
-import '3-shared/common_feature/chat/model/template_model.dart';
+import 'package:template_hive/template_hive.dart';
 import '3-shared/features/authentication/login_placeholder.dart';
 import '3-shared/features/authentication/role_selection_screen.dart';
-import '3-shared/common_feature/chat/model/timestamp_adopter.dart';
-import '3-shared/features/authentication/userdata.dart';
 import '3-shared/features/notifications/viewmodel/notification_viewmodel.dart';
 import '3-shared/firebase_options.dart';
 import '3-shared/core/responsive/responsive_layout.dart';
@@ -125,7 +122,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<String?> _getRoleFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     String? role = prefs.getString('role');
-    pr('Getting role : role is ${role}');
+    print('Getting role : role is ${role}');
     return role;
   }
 
@@ -173,8 +170,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       }
                     }
                       
-                      pr('main.dart// Navigate to the role selection because userdocnapshot : ${userDocSnapshot.hasData} userdocdata existance : ${userDocSnapshot.data!.exists}');
-                      pr('the uid is ${userData.userId}');
+                      print('main.dart// Navigate to the role selection because userdocnapshot : ${userDocSnapshot.hasData} userdocdata existance : ${userDocSnapshot.data!.exists}');
+                      print('the uid is ${userData.userId}');
                     return const RoleSelectionScreen();
                   },
                 );

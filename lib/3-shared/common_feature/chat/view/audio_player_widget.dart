@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
-import 'package:re_conver/1-mobile-lib/data/message_model.dart';
 
 class AudioMessagePlayer extends StatefulWidget {
   final MessageModel message;

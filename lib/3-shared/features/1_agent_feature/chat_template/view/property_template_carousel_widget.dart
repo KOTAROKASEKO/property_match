@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../model/property_template.dart';
+import 'package:template_hive/template_hive.dart';
 import '../viewmodel/agent_template_viewmodel.dart';
 
 class PropertyTemplateCarouselWidget extends StatelessWidget {

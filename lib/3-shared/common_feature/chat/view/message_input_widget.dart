@@ -2,18 +2,18 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/1-mobile-lib/data/message_model.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:template_hive/template_hive.dart';
 import 'chat_templates/text_template_carousel_widget.dart';
-import '../../../features/1_agent_feature/chat_template/model/property_template.dart';
 import '../../../features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
 import '../../../features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 import '../viewmodel/messageList.dart';
 import '../viewmodel/messageTemplate_viewmodel.dart';
-import '../../../features/authentication/userdata.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -324,7 +324,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                 child: PropertyTemplateCarouselWidget(
                   onTemplateSelected: (template) {
                     _textFieldFocusNode.unfocus(); // Unfocus the text field
-                    _messageListProvider.sendMessage(propertyTemplate: template);
+                    _messageListProvider.sendMessage(propertyTemplate: template as PropertyTemplate);
                     Navigator.of(ctx).pop();
                   },
                 ),

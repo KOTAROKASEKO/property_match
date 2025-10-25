@@ -1,13 +1,12 @@
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:re_conver/1-mobile-lib/data/chat_thread.dart';
+import 'package:shared_data/shared_data.dart';
 import 'providerIndividualChat.dart';
 import 'viewing_details_bottomsheet.dart';
-import '../../../app/debug_print.dart';
-import '../../../features/authentication/userdata.dart';
 
 class ChatThreadList extends StatelessWidget {
   final List<ChatThread> threads;
@@ -112,7 +111,7 @@ class ChatThreadList extends StatelessWidget {
                       if (onThreadSelected != null) {
                         onThreadSelected!(thread);
                       } else {
-                        pr('thread id is ::::  ${thread.id}');
+                        print('thread id is ::::  ${thread.id}');
                         Navigator.of(context).push(
                           PageRouteBuilder(
                             pageBuilder:
