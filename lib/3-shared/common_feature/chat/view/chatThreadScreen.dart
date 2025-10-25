@@ -9,7 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_data/shared_data.dart';
 import 'package:template_hive/template_hive.dart';
-import '../data/repository_provider.dart';
+import '../../repository_provider.dart';
 import 'add_edit_general_note_screen.dart';
 import 'add_edit_viewing_note_screen.dart';
 import 'all_property.dart';

@@ -3,18 +3,15 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:flutter/foundation.dart'; // <-- 削除 (kIsWebを使わないため)
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:lottie/lottie.dart';
+import 'sign_in_button_stub.dart';
 import 'package:shared_data/shared_data.dart';
 import '../../MainScaffold.dart';
 import 'register_screen.dart';
 import 'role_selection_screen.dart';
-import 'widgets/sign_in_button_web.dart';
-// 'widgets/sing_in_button.dart' (条件付き) ではなく、
-// 'widgets/sign_in_button.dart' (Web専用) を直接インポート
 import '../../service/FirebaseApi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -117,6 +114,49 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
     _passwordController.dispose();
     _authSubscription?.cancel();
     super.dispose();
+  }
+
+    Future<UserCredential?> _signInWithGoogleMobile() async {
+    try {
+      await GoogleSignIn.instance.initialize(
+        serverClientId: "965355667703-7md7nnua0qk4jafafle96rqqc9v7sukv.apps.googleusercontent.com",
+      );
+      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
+
+      if (googleUser == null) {
+        return null;
+      }
+
+      final googleAuth = googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      final authClient = googleUser.authorizationClient;
+      final GoogleSignInClientAuthorization? clientAuth = await authClient.authorizeScopes(['email']);
+      final String? accessToken = clientAuth?.accessToken;
+
+      if (accessToken == null) {
+        throw 'Failed to get access token from Google.';
+      }
+      if (idToken == null) {
+        throw 'Failed to get id token from Google.';
+      }
+
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: accessToken,
+        idToken: idToken,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // The post-login handling is now managed by the logic in login_placeholder.dart
+      // and the AuthWrapper in main.dart, so we don't need to duplicate it here.
+      // We just need to pop the modal and let the authStateChanges stream handle the navigation.
+      
+      return userCredential;
+    } catch (error) {
+      print("Error during Google Sign-In: $error");
+      return null;
+    }
   }
 
   /// メール/パスワードでのサインイン
@@ -310,11 +350,11 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
                   // _isSigningIn が true の場合、スピナーを表示
                   // false の場合のみ、Google サインインボタンを表示
                   _isSigningIn
-                      ? const Center(child: CircularProgressIndicator())
-                      : SignInButton(
-                          // onPressed: _signInWithGoogle, // <-- 削除
-                          isSigningIn: _isSigningIn, // <-- ボタン側では使わないが念の為残す
-                        ),
+                  ? const Center(child: CircularProgressIndicator())
+                  : SignInButtonMobile( // ★ Stubから解決される
+                      isSigningIn: _isSigningIn,
+                      onPressed: _signInWithGoogleMobile,
+                    ),
                   const SizedBox(height: 32),
 
                   // Sign Up Link
@@ -419,4 +459,5 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
       ],
     );
   }
+
 }

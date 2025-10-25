@@ -11,12 +11,6 @@ import 'package:flutter/foundation.dart'; // Required for kIsWeb
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_data/shared_data.dart';
 import 'package:template_hive/template_hive.dart';
-// Import the abstract repository ✨
-// Import concrete implementations ✨
-// TODO: Create and import the Drift repository implementation ✨
-// import 'package:re_conver/common_feature/chat/data/local/web/drift_chat_repository.dart';
-// TODO: Import Drift database if needed for web instantiation ✨
-// import 'package:re_conver/common_feature/chat/data/local/web/drift_database.dart';
 import 'chat_service.dart'; // Keep for Firestore operations like reportUser
 
 class MessageListProvider extends ChangeNotifier {
@@ -266,12 +260,8 @@ class MessageListProvider extends ChangeNotifier {
             }
           } else if (change.type == DocumentChangeType.modified) {
             pr('[MessageListProvider] Modified message: ${message.messageId}');
-            // Save/Update in local DB via Repository ✨
             await _chatRepository.createOrUpdateMessage(message);
-
-            // Update in UI list
-            final index =
-                _messages.indexWhere((m) => m.messageId == message.messageId);
+            _messages.indexWhere((m) => m.messageId == message.messageId);
             _addOrUpdateMessageInUI(message);
           } else if (change.type == DocumentChangeType.removed) {
              pr('[MessageListProvider] Removed message: ${message.messageId}');

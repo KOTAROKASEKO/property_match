@@ -1,5 +1,6 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:re_conver/app/localDB_Manager.dart';
@@ -34,6 +35,12 @@ class _SignOutModalState extends State<SignOutModal> {
                   await FirebaseAuth.instance.signOut();
                   if (mounted) {
                     userData.clearUser();
+                    if (!kIsWeb) {
+                      await GoogleSignIn.instance.disconnect().catchError((error) {
+                        // Handle potential error during disconnect, but proceed
+                        print("Error disconnecting Google Sign-In: $error");
+                      });
+                    }
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Sign out successful.'),

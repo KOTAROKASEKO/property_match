@@ -6,7 +6,7 @@ import '../../1_profile/repo/profile_repository.dart';
 
 class AgentTemplateViewModel extends ChangeNotifier {
   final Box<PropertyTemplate> _propertyTemplateBox =
-      Hive.box<PropertyTemplate>('propertyTemplateBox');
+      Hive.box<PropertyTemplate>(propertyTemplateBox);
   final ProfileRepository _profileRepository = FirestoreProfileRepository();
 
   List<PropertyTemplate> _templates = [];

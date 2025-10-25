@@ -1,7 +1,7 @@
 // lib/app/localDB_Manager.dart
 import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../3-shared/common_feature/chat/data/repository_provider.dart';
+import '../3-shared/common_feature/repository_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_data/shared_data.dart';
 

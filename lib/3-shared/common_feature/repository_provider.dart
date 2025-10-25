@@ -1,5 +1,5 @@
 // lib/common_feature/chat/data/repository_provider.dart
-import 'package:chatrepo_drift/chatrepo_drift.dart';
+import 'platform_repository_stub.dart';
 import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 

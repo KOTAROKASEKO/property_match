@@ -1,7 +1,7 @@
 // common_feature/chat/viewmodel/blocked_users_viewmodel.dart
 import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/foundation.dart';
-import '../data/repository_provider.dart';
+import '../../repository_provider.dart';
 import 'chat_service.dart';
 
 class BlockedUsersViewModel extends ChangeNotifier {
