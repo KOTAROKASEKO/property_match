@@ -1,0 +1,22 @@
+name: chatrepo_interface
+description: Defines the abstract ChatRepository interface and common data models.
+environment:
+  sdk: '>=3.9.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # モデル（MessageModel, ChatThread）が Isar の型とアノテーションに依存しているため
+  isar: ^3.1.0+1 
+  
+  # ChatThread.fromFirestore が Timestamp に依存しているため
+  cloud_firestore: ^6.0.0
+
+  # ChatThread.fromFirestore が userData に依存しているため (これは本来的には別パッケージにすべきです)
+  firebase_auth: ^6.0.1
+  shared_preferences: ^2.5.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

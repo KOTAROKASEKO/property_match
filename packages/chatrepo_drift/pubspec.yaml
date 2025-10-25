@@ -1,0 +1,34 @@
+name: chatrepo_drift
+description: Drift (web) implementation of the ChatRepository.
+environment:
+  sdk: '>=3.9.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ✅ 共通インターフェース（とモデル）に依存
+  chatrepo_interface:
+    path: ../chatrepo_interface
+
+  # ✅ Drift の実行時ライブラリ
+  drift: ^2.29.0
+  # sqlite3_flutter_libs: ^0.5.40 # Web では不要
+  path: ^1.9.1 # drift が内部で使う可能性あり
+  
+  # ✅ drift_dev は dev_dependencies へ移動
+  # drift_dev: ^2.29.0 
+
+  # ✅ drift_database.dart が jsonDecode を使っている (dart:convert は不要)
+
+  # ✅ drift_database.dart が debug_print (pr) を使っているため (必要なら追加)
+  # path: ../../lib/3-shared/app/debug_print.dart 
+  # -> debug_print もパッケージ化するか、依存しないように修正するのが望ましい
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # ✅ Drift のコードジェネレータ
+  drift_dev: ^2.29.0
+  build_runner: ^2.4.13

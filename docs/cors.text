@@ -1,0 +1,10 @@
+echo '[
+  {
+    "origin": [
+      "http://localhost:5000", 
+      "https://whatsappclone-5ad8f.firebaseapp.com/"
+    ],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600
+  }
+]' > cors-config.json

@@ -2,23 +2,30 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/features/1_agent_feature/1_profile/repo/profile_repository.dart';
-import 'package:re_conver/features/1_agent_feature/1_profile/viewmodel/agent_profile_viewmodel.dart';
-import 'package:re_conver/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart';
-import 'package:re_conver/features/1_agent_feature/chat_template/model/property_template.dart';
-import 'package:re_conver/common_feature/chat/model/template_model.dart';
-import 'package:re_conver/features/authentication/login_placeholder.dart';
-import 'package:re_conver/features/authentication/role_selection_screen.dart';
-import 'package:re_conver/common_feature/chat/model/timestamp_adopter.dart';
-import 'package:re_conver/features/authentication/userdata.dart';
-import 'package:re_conver/firebase_options.dart';
-import 'package:re_conver/core/responsive/responsive_layout.dart';
+import 'package:shared_data/shared_data.dart';
+import 'package:shared_data/src/database_path.dart';
+import '3-shared/common_feature/chat/viewmodel/unread_messages_viewmodel.dart';
+import '3-shared/features/1_agent_feature/1_profile/repo/profile_repository.dart';
+import '3-shared/features/1_agent_feature/1_profile/view/agent_post_detail_screen.dart';
+import '3-shared/features/1_agent_feature/1_profile/viewmodel/agent_profile_viewmodel.dart';
+import '3-shared/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart';
+import 'package:template_hive/template_hive.dart';
+import '3-shared/features/authentication/login_placeholder.dart';
+import '3-shared/features/authentication/role_selection_screen.dart';
+import '3-shared/features/notifications/viewmodel/notification_viewmodel.dart';
+import '3-shared/firebase_options.dart';
+import '3-shared/core/responsive/responsive_layout.dart';
 import 'package:rive/rive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:re_conver/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '3-shared/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
+
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,16 +33,21 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await dotenv.load(fileName: ".env");
+  await _setupInteractedMessage();
   await RiveFile.initialize();
   await Hive.initFlutter();
+
   Hive.registerAdapter(TimestampAdapter());
   Hive.registerAdapter(TemplateModelAdapter());
   Hive.registerAdapter(PropertyTemplateAdapter());
-  userData.setUser(FirebaseAuth.instance.currentUser);
-  await Hive.openBox<TemplateModel>('tenantMessageTemplates');
-  await Hive.openBox<TemplateModel>('agentMessageTemplates');
-  await Hive.openBox<PropertyTemplate>('propertyTemplateBox'); 
+  
+  await Hive.openBox<TemplateModel>(tenanTemplateMessageBoxName);
+  await Hive.openBox<TemplateModel>(agentTemplateMessageBoxName);
+  await Hive.openBox<PropertyTemplate>(propertyTemplateBox);
 
+  userData.setUser(FirebaseAuth.instance.currentUser);
 
   runApp(
     MultiProvider(
@@ -43,12 +55,33 @@ void main() async {
         ChangeNotifierProvider(create: (_) => TenantListViewModel()),
           ChangeNotifierProvider(create: (_) => ProfileViewModel(FirestoreProfileRepository())),
           ChangeNotifierProvider(create: (_) => AgentTemplateViewModel()),
+          ChangeNotifierProvider(create: (_) => UnreadMessagesViewModel()),
+          ChangeNotifierProvider(create: (_) => NotificationViewModel()),
         ],
         child: const SafeArea(
           child: MyApp(),
           ),
       ),
   );
+}
+Future<void> _setupInteractedMessage() async {
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null) {
+    _handleMessage(initialMessage);
+  }
+
+  FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
+}
+
+void _handleMessage(RemoteMessage message) {
+  final postId = message.data['postId'];
+  if (message.data['type'] == 'comment' && postId != null) {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (context) => AgentPostDetailScreen(postId: postId),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -57,9 +90,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Property_match',
       theme: ThemeData(
+        fontFamily: 'fancy',
+        
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
@@ -68,12 +104,26 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    
+  }
+
+  
   Future<String?> _getRoleFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('role');
+    String? role = prefs.getString('role');
+    print('Getting role : role is ${role}');
+    return role;
   }
 
   Future<void> _saveRoleToPrefs(String role) async {
@@ -104,7 +154,7 @@ class AuthWrapper extends StatelessWidget {
                 return const ResponsiveLayout();
               } else {
                 return FutureBuilder<DocumentSnapshot>(
-                  future: FirebaseFirestore.instance.collection('users_prof').doc(snapshot.data!.uid).get(),
+                  future: FirebaseFirestore.instance.collection('users_prof').doc(userData.userId).get(),
                   builder: (context, userDocSnapshot) {
                     if (userDocSnapshot.connectionState == ConnectionState.waiting) {
                       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -119,7 +169,9 @@ class AuthWrapper extends StatelessWidget {
                         return const ResponsiveLayout();
                       }
                     }
-                    
+                      
+                      print('main.dart// Navigate to the role selection because userdocnapshot : ${userDocSnapshot.hasData} userdocdata existance : ${userDocSnapshot.data!.exists}');
+                      print('the uid is ${userData.userId}');
                     return const RoleSelectionScreen();
                   },
                 );
@@ -127,7 +179,6 @@ class AuthWrapper extends StatelessWidget {
             },
           );
         }
-
         return const LoginPlaceholderScreen();
       },
     );
