@@ -1,7 +1,3 @@
-// lib/common_feature/chat/view/providerIndividualChat.dart
-
-import 'dart:io';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,7 +14,8 @@ import '../viewmodel/messageList.dart';
 import '../viewmodel/messageTemplate_viewmodel.dart';
 import '../../../features/2_tenant_feature/1_discover/view/agent_profile_screen.dart';
 
-class IndividualChatScreenWithProvider extends StatelessWidget {
+// 1. STATEFULWIDGET に変換
+class IndividualChatScreenWithProvider extends StatefulWidget {
   final String chatThreadId;
   final String otherUserUid;
   final String otherUserName;
@@ -35,35 +32,88 @@ class IndividualChatScreenWithProvider extends StatelessWidget {
   });
 
   @override
+  State<IndividualChatScreenWithProvider> createState() =>
+      _IndividualChatScreenWithProviderState();
+}
+
+class _IndividualChatScreenWithProviderState
+    extends State<IndividualChatScreenWithProvider> {
+  // 2. PROVIDER を STATE として管理
+  late MessageListProvider _messageListProvider;
+  late MessagetemplateViewmodel _messagetemplateViewmodel;
+  late AgentTemplateViewModel _agentTemplateViewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    // 3. INITSTATE で PROVIDER を作成
+    _messageListProvider = MessageListProvider(
+      chatThreadId: widget.chatThreadId,
+      otherUserUid: widget.otherUserUid,
+      chatRepository: getChatRepository(),
+    );
+
+    _messagetemplateViewmodel =
+        MessagetemplateViewmodel(userRole: userData.role)..loadTemplates();
+    
+    _agentTemplateViewModel = AgentTemplateViewModel();
+  }
+
+  @override
+  void didUpdateWidget(IndividualChatScreenWithProvider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // 4. ID の変更を検知し、PROVIDER を再作成
+    if (widget.chatThreadId != oldWidget.chatThreadId) {
+      // 4a. 古い PROVIDER を dispose
+      _messageListProvider.dispose();
+      _messagetemplateViewmodel.dispose();
+
+      // 4b. 新しい widget.chatThreadId で新しい PROVIDER を作成
+      _messageListProvider = MessageListProvider(
+        chatThreadId: widget.chatThreadId,
+        otherUserUid: widget.otherUserUid,
+        chatRepository: getChatRepository(),
+      );
+
+      _messagetemplateViewmodel =
+          MessagetemplateViewmodel(userRole: userData.role)..loadTemplates();
+    }
+  }
+
+  @override
+  void dispose() {
+    // 5. すべての PROVIDER を dispose
+    _messageListProvider.dispose();
+    _messagetemplateViewmodel.dispose();
+    _agentTemplateViewModel.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: MultiProvider(
         providers: [
-          ChangeNotifierProvider(
-            create: (_) => MessageListProvider(
-              chatThreadId: chatThreadId,
-              otherUserUid: otherUserUid,
-              chatRepository: getChatRepository(),
-            ),
-          ),
-          ChangeNotifierProvider(create: (_) => AgentTemplateViewModel()),
-          ChangeNotifierProvider(
-            create: (_) =>
-                MessagetemplateViewmodel(userRole: userData.role)
-                  ..loadTemplates(),
-          ),
+          // 6. .VALUE コンストラクタを使用
+          ChangeNotifierProvider.value(value: _messageListProvider),
+          ChangeNotifierProvider.value(value: _messagetemplateViewmodel),
+          ChangeNotifierProvider.value(value: _agentTemplateViewModel),
         ],
         child: _IndividualChatScreenView(
-          otherUserName: otherUserName,
-          otherUserUid: otherUserUid,
-          otherUserPhotoUrl: otherUserPhotoUrl,
-          initialPropertyTemplate: initialPropertyTemplate,
+          // VIEW の KEY は引き続き必要
+          key: ValueKey(widget.chatThreadId),
+          otherUserName: widget.otherUserName,
+          otherUserUid: widget.otherUserUid,
+          otherUserPhotoUrl: widget.otherUserPhotoUrl,
+          initialPropertyTemplate: widget.initialPropertyTemplate,
         ),
       ),
     );
   }
 }
 
+// ... _IndividualChatScreenView ...
 class _IndividualChatScreenView extends StatefulWidget {
   final String otherUserName;
   final String otherUserUid;
@@ -71,6 +121,7 @@ class _IndividualChatScreenView extends StatefulWidget {
   final PropertyTemplate? initialPropertyTemplate;
 
   const _IndividualChatScreenView({
+    super.key,
     required this.otherUserName,
     required this.otherUserUid,
     this.otherUserPhotoUrl,
@@ -85,25 +136,24 @@ class _IndividualChatScreenView extends StatefulWidget {
 class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
   final ImagePicker _picker = ImagePicker();
   late MessageListProvider _messageListProvider;
-  PropertyTemplate? _templateToPreview; // ★ プレビュー用のStateを追加
+  PropertyTemplate? _templateToPreview;
 
   @override
   void initState() {
     super.initState();
-    // ★ プレビュー用のテンプレートをStateにセット
     _templateToPreview = widget.initialPropertyTemplate;
 
     _messageListProvider = Provider.of<MessageListProvider>(
       context,
       listen: false,
     );
-
+    
+    // 親の StatefulWidget が正しいインスタンスを保証するため、このロジックは安全です
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _messageListProvider.clearMessages();
         _messageListProvider.loadInitialMessages().then((_) {
           if (mounted) {
-            // ★ 自動送信ロジックは削除
             _messageListProvider.listenToFirebaseMessages();
             _messageListProvider.markMessagesAsRead();
           }
@@ -200,28 +250,25 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
             MessageInputWidget(
               editingMessage: provider.editingMessage,
               isSending: provider.isSending,
-              previewTemplate: _templateToPreview, // ★ プレビュー情報を渡す
+              previewTemplate: _templateToPreview,
               onCancelPreview: () {
-                // ★ プレビューキャンセル時の処理
                 setState(() {
                   _templateToPreview = null;
                 });
               },
               onSendMessage:
                   ({
-                    File? audioFile,
+                    XFile? audioFile, // <-- Web対応のため XFile
                     String? text,
                     XFile? imageFile,
                     PropertyTemplate? propertyTemplate,
                   }) {
-                    // ★ シグネチャ変更
                     _messageListProvider.sendMessage(
-                      audioFile: audioFile,
+                      audioFile: audioFile, // <-- XFile を渡す
                       text: text,
                       imageFile: imageFile,
                       propertyTemplate: propertyTemplate,
                     );
-                    // ★ テンプレートを送信したらプレビューをクリア
                     if (propertyTemplate != null) {
                       setState(() {
                         _templateToPreview = null;
@@ -280,8 +327,8 @@ class _TenantTextTemplatesView extends StatelessWidget {
                       trailing: const Icon(Icons.send),
                       onTap: () {
                         context.read<MessageListProvider>().sendMessage(
-                          text: template,
-                        );
+                              text: template,
+                            );
                       },
                     ),
                   );

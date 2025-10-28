@@ -219,8 +219,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              child: ListView(
                 children: [
                   Container(
                     width: 40,
@@ -246,6 +245,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
+                    textAlign: TextAlign.center,
                     displayName,
                     style: const TextStyle(
                       fontSize: 18,

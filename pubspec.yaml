@@ -26,9 +26,10 @@ dependencies:
   flutter_svg: ^2.2.1 # For SVG assets
   appinio_swiper: ^2.1.1 # For swipe cards
   timeline_tile: ^2.0.0 # Used in profile? (Keep if needed)
+  
 
   # --- Firebase ---
-  firebase_core: ^4.0.0 # Use versions compatible with your Flutter SDK
+  firebase_core: ^4.0.0
   firebase_auth: ^6.0.1
   cloud_firestore: ^6.0.0
   firebase_storage: ^13.0.0
@@ -62,6 +63,9 @@ dependencies:
   geoflutterfire_plus: ^0.0.33 # Geo queries for posts
   geocoding: ^4.0.0
   timeago: ^3.7.1
+  mime: ^2.0.0
+  http: ^1.5.0
+  go_router: ^16.3.0
 
   # --- WebView ---
   webview_flutter: ^4.13.0 # If you use WebView directly in the main app

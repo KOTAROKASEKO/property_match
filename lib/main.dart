@@ -95,7 +95,6 @@ class MyApp extends StatelessWidget {
       title: 'Property_match',
       theme: ThemeData(
         fontFamily: 'fancy',
-        
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),

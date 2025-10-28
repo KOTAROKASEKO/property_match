@@ -111,6 +111,7 @@ class MyProfilePage extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // --- ★ _PostList を直接呼び出す ---
                   _PostList(posts: viewModel.posts),
                 ],
               ),
@@ -122,7 +123,6 @@ class MyProfilePage extends StatelessWidget {
   }
 }
 
-// --- UI Helper Widgets ---
 
 class _ProfileHeader extends StatelessWidget {
   final ProfileViewModel viewModel;

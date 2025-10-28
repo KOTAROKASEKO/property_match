@@ -2,11 +2,11 @@
 import 'package:flutter/material.dart';
 // Add other necessary mobile imports
 
-class SignInButtonMobile extends StatelessWidget {
+class SignInButton extends StatelessWidget {
   final bool isSigningIn;
   final VoidCallback onPressed; // Mobile needs the onPressed callback
 
-  const SignInButtonMobile({
+  const SignInButton({
     super.key,
     required this.onPressed,
     required this.isSigningIn,

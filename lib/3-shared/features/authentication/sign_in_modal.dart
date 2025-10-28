@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class SignInModal extends StatefulWidget {
@@ -14,8 +15,14 @@ class _SignInModalState extends State<SignInModal> {
 
   Future<UserCredential?> _signInWithGoogle() async {
     try {
+      // Ensure you added `import 'package:flutter_dotenv/flutter_dotenv.dart';` at the top
+      final serverClientId = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
+      if (serverClientId == null || serverClientId.isEmpty) {
+        throw 'Missing google_client_server_id in .env';
+      }
+
       await GoogleSignIn.instance.initialize(
-        serverClientId: "965355667703-7md7nnua0qk4jafafle96rqqc9v7sukv.apps.googleusercontent.com",
+        serverClientId: serverClientId,
       );
       final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
 
@@ -42,11 +49,8 @@ class _SignInModalState extends State<SignInModal> {
         idToken: idToken,
       );
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-
-      // The post-login handling is now managed by the logic in login_placeholder.dart
-      // and the AuthWrapper in main.dart, so we don't need to duplicate it here.
-      // We just need to pop the modal and let the authStateChanges stream handle the navigation.
+      final userCredential;
+      userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       
       return userCredential;
     } catch (error) {

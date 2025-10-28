@@ -1,13 +1,16 @@
 // lib/common_feature/chat/view/message_input_widget.dart
 
 import 'dart:async';
-import 'dart:io';
 import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_data/shared_data.dart';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:mime/mime.dart';
+import 'package:http/http.dart' as http;
 import 'package:template_hive/template_hive.dart';
 import 'chat_templates/text_template_carousel_widget.dart';
 import '../../../features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
@@ -19,7 +22,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class MessageInputWidget extends StatefulWidget {
-  final Function({File? audioFile, String? text, XFile? imageFile, PropertyTemplate? propertyTemplate}) onSendMessage; // ★ シグネチャ変更
+  final Function({XFile? audioFile, String? text, XFile? imageFile, PropertyTemplate? propertyTemplate}) onSendMessage; // ★ シグネチャ変更
   final Function(String editedText) onSaveEditedMessage;
   final VoidCallback onCancelEditing;
   final VoidCallback onPickImage;
@@ -97,11 +100,20 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
 
     HapticFeedback.lightImpact();
 
-    final path = '${(await getTemporaryDirectory()).path}/voice_message.m4a';
-    await _audioRecorder.start(
-      const RecordConfig(encoder: AudioEncoder.aacLc),
-      path: path,
-    );
+    // 2. ADD WEB CHECK
+    if (kIsWeb) {
+      await _audioRecorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: '', // Let the package handle web in-memory recording
+      );
+    } else {
+      // This is the original mobile-only code
+      final path = '${(await getTemporaryDirectory()).path}/voice_message.m4a';
+      await _audioRecorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: path,
+      );
+    }
 
     setState(() {
       _isRecording = true;
@@ -117,12 +129,24 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     try {
       final path = await _audioRecorder.stop();
       if (path != null && !cancelled) {
-        widget.onSendMessage(audioFile: File(path));
-      } else if (path != null && cancelled) {
-        final file = File(path);
-        if (await file.exists()) {
-          await file.delete();
+        
+        // 3. CREATE XFile FOR ALL PLATFORMS
+        XFile audioXFile;
+        if (kIsWeb) {
+          // On web, 'path' is a URL. Fetch bytes.
+          final http.Response response = await http.get(Uri.parse(path));
+          final Uint8List data = response.bodyBytes;
+          audioXFile = XFile.fromData(
+            data,
+            mimeType: lookupMimeType(path) ?? 'audio/m4a',
+            name: 'voice_message.m4a',
+            path: path, // Store the blob URL as the local path
+          );
+        } else {
+          // On mobile, 'path' is a file path.
+          audioXFile = XFile(path, mimeType: 'audio/m4a');
         }
+        widget.onSendMessage(audioFile: audioXFile); // <-- Pass XFile
       }
     } catch (e) {
       print("Recording error: $e");
@@ -136,7 +160,6 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
       }
     }
   }
-
 
   Future<bool> _handleMicPermission() async {
     final status = await Permission.microphone.request();
@@ -324,7 +347,7 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
                 child: PropertyTemplateCarouselWidget(
                   onTemplateSelected: (template) {
                     _textFieldFocusNode.unfocus(); // Unfocus the text field
-                    _messageListProvider.sendMessage(propertyTemplate: template as PropertyTemplate);
+                    _messageListProvider.sendMessage(propertyTemplate: template);
                     Navigator.of(ctx).pop();
                   },
                 ),

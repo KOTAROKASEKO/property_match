@@ -2,7 +2,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -293,7 +292,7 @@ class MessageListProvider extends ChangeNotifier {
   Future<void> sendMessage({
     String? text,
     XFile? imageFile,
-    File? audioFile,
+    XFile? audioFile,
     PropertyTemplate? propertyTemplate,
   }) async {
     // Basic validation
@@ -367,8 +366,8 @@ class MessageListProvider extends ChangeNotifier {
     // Add to local DB and UI optimistically ✨
     await _chatRepository.createOrUpdateMessage(optimisticMessage);
     _addOrUpdateMessageInUI(optimisticMessage);
-     _shouldScrollToBottom = true; // Scroll after sending own message
-     notifyListeners(); // Update UI immediately
+     _shouldScrollToBottom = true;
+     notifyListeners();
 
     try {
       String? remoteUrl; // URL after upload
@@ -376,17 +375,16 @@ class MessageListProvider extends ChangeNotifier {
       // Upload file if necessary
       if (imageFile != null) {
         remoteUrl = await _uploadFileToStorage(
-          File(imageFile.path),
+          XFile(imageFile.path),
           'chat_images/$chatThreadId/$tempMessageId', // More specific path
         );
         pr('[MessageListProvider] Image uploaded: $remoteUrl');
-      } else if (audioFile != null) {
-        remoteUrl = await _uploadFileToStorage(
-          audioFile,
-          'chat_audio/$chatThreadId/$tempMessageId.m4a', // More specific path
-        );
-         pr('[MessageListProvider] Audio uploaded: $remoteUrl');
-      }
+      } else if (audioFile != null) { // <-- CHANGE
+      messageType = 'audio';
+      localPath = audioFile.path; // This is fine (blob URL on web, file path on mobile)
+      lastMessageText = '[Voice Message]';
+      messageContent = null;
+    }
 
       // Prepare data for Firestore
       Map<String, dynamic> firebaseMessageData = {
@@ -626,21 +624,22 @@ class MessageListProvider extends ChangeNotifier {
       return message;
   }
 
-  // Uploads a file to Firebase Storage
-  Future<String> _uploadFileToStorage(File file, String path) async {
+  Future<String> _uploadFileToStorage(XFile file, String path) async {
     try {
       final ref = _storage.ref().child(path);
-      final uploadTask = ref.putFile(file);
+      
+      final Uint8List data = await file.readAsBytes();
+      final uploadTask = ref.putData(data); 
+      
       final snapshot = await uploadTask.whenComplete(() => {});
       final downloadUrl = await snapshot.ref.getDownloadURL();
       return downloadUrl;
     } catch (e) {
       pr("Error uploading file ($path): $e");
-      throw Exception("File upload failed: ${e.toString()}"); // Rethrow for handling in sendMessage
+      throw Exception("File upload failed: ${e.toString()}");
     }
   }
 
-  // Generates a preview text for replied messages
   String? _getRepliedTextPreview(MessageModel? message) {
     if (message == null) return null;
     switch (message.messageType) {
