@@ -34,7 +34,7 @@ class TenantListViewModel extends ChangeNotifier {
       final snapshot = await _firestore
           .collection('users_prof')
           .doc(userData.userId)
-          .collection('blockedUsers')
+          .collection('blockedList')
           .get();
       _blockedUserIds = snapshot.docs.map((doc) => doc.id).toList();
     } catch (e) {

@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBSrv_NciH-II4WVLSoAdWVXSAFxHpS9jU"></script>
-  <meta name="google-signin-client_id" content="1049878222012-tromh38165m6n4vcg9atv5u7abqh4euq.apps.googleusercontent.com">
+  <meta name="google-signin-client_id"
+    content="1049878222012-tromh38165m6n4vcg9atv5u7abqh4euq.apps.googleusercontent.com">
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
@@ -16,12 +18,34 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="favicon.png" />
 
   <title>re_conver</title>
   <link rel="manifest" href="manifest.json">
 </head>
+
 <body>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-messaging-compat.js"></script>
+
+  <!-- ✅ あなたのFirebase設定を貼る -->
+  <script>
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBCCxQ0AYTHy6A6DrfW7ylYxjGW6AZA1OQ",
+      authDomain: "whatsappclone-5ad8f.firebaseapp.com",
+      projectId: "whatsappclone-5ad8f",
+      storageBucket: "whatsappclone-5ad8f.firebasestorage.app",
+      messagingSenderId: "1049878222012",
+      appId: "1:1049878222012:web:54584a8098728e70acecb9",
+      measurementId: "G-EQ99QMVB2Y"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
+  </script>
+
+  <!-- Flutterアプリを最後に起動 -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
+
 </html>

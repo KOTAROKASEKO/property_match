@@ -13,82 +13,93 @@ class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  final ChatRepository _isarService = getChatRepository();
+  final ChatRepository _chatRepo = getChatRepository();
 
   Future<void> updateViewingDetails({
-  required String threadId,
-  required String note,
-  required List<dynamic> images,
-  required int viewingIndex,
-}) async {
-  List<String> finalImageUrls = [];
-  List<File> filesToUpload = [];
+    required String threadId,
+    required String note,
+    required List<dynamic> images,
+    required int viewingIndex,
+  }) async {
+    List<String> finalImageUrls = [];
+    List<File> filesToUpload = [];
 
-  for (var image in images) {
-    if (image is String) {
-      pr('found existing image url');
-      finalImageUrls.add(image);
-    } else if (image is File) {
-      pr('start uploading..');
-      filesToUpload.add(image);
-    }
-  }
-
-  if (filesToUpload.isNotEmpty) {
-    pr('found files to upload');
-    List<String> newImageUrls = await _uploadImages(threadId, filesToUpload);
-    pr('uploaded images: $newImageUrls');
-    finalImageUrls.addAll(newImageUrls);
-  }
-
-  final docRef = _firestore.collection('chats').doc(threadId);
-
-  // ★★★ 役割に応じたフィールド名を取得 ★★★
-  String viewingNotePath = userData.role == Roles.agent ? 'agentViewingNote' : 'tenantViewingNote';
-  String photoImagePath = userData.role == Roles.agent ? 'agentphotoPath' : 'tenantPhotoPath';
-
-  await _firestore.runTransaction((transaction) async {
-    final snapshot = await transaction.get(docRef);
-    if (!snapshot.exists) {
-      throw Exception("Document does not exist!");
+    for (var image in images) {
+      if (image is String) {
+        pr('found existing image url');
+        finalImageUrls.add(image);
+      } else if (image is File) {
+        pr('start uploading..');
+        filesToUpload.add(image);
+      }
     }
 
-    // ★★★ 役割に応じたフィールドからデータを読み込む ★★★
-    List<dynamic> currentNotes = snapshot.data()?[viewingNotePath] ?? [];
-    List<dynamic> currentImageUrls = snapshot.data()?[photoImagePath] ?? [];
-    
-    while (currentNotes.length <= viewingIndex) {
-      currentNotes.add("");
+    if (filesToUpload.isNotEmpty) {
+      pr('found files to upload');
+      List<String> newImageUrls = await _uploadImages(threadId, filesToUpload);
+      pr('uploaded images: $newImageUrls');
+      finalImageUrls.addAll(newImageUrls);
     }
-    while (currentImageUrls.length <= viewingIndex) {
-      currentImageUrls.add('[]');
-    }
-    
-    currentNotes[viewingIndex] = note;
-    currentImageUrls[viewingIndex] = jsonEncode(finalImageUrls);
 
-    // ★★★ 役割に応じたフィールドにデータを書き込む ★★★
-    transaction.update(docRef, {
-      viewingNotePath: currentNotes,
-      photoImagePath: currentImageUrls,
+    final docRef = _firestore.collection('chats').doc(threadId);
+
+    // ★★★ 役割に応じたフィールド名を取得 ★★★
+    String viewingNotePath = userData.role == Roles.agent
+        ? 'agentViewingNote'
+        : 'tenantViewingNote';
+    String photoImagePath = userData.role == Roles.agent
+        ? 'agentphotoPath'
+        : 'tenantPhotoPath';
+
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) {
+        throw Exception("Document does not exist!");
+      }
+
+      // ★★★ 役割に応じたフィールドからデータを読み込む ★★★
+      List<dynamic> currentNotes = snapshot.data()?[viewingNotePath] ?? [];
+      List<dynamic> currentImageUrls = snapshot.data()?[photoImagePath] ?? [];
+
+      while (currentNotes.length <= viewingIndex) {
+        currentNotes.add("");
+      }
+      while (currentImageUrls.length <= viewingIndex) {
+        currentImageUrls.add('[]');
+      }
+
+      currentNotes[viewingIndex] = note;
+      currentImageUrls[viewingIndex] = jsonEncode(finalImageUrls);
+
+      // ★★★ 役割に応じたフィールドにデータを書き込む ★★★
+      transaction.update(docRef, {
+        viewingNotePath: currentNotes,
+        photoImagePath: currentImageUrls,
+      });
     });
-  });
-}
+  }
 
-
+  // lib/3-shared/common_feature/chat/viewmodel/chat_service.dart
 
   Future<void> blockUser(String blockedUserId) async {
+    try {
+      // ★★★ 1. Firestore (サーバー) に追加 ★★★
+      final docRef = _firestore.collection('blockedList').doc(userData.userId);
+      await docRef.set({
+        'blockedUsers': FieldValue.arrayUnion([blockedUserId]),
+      }, SetOptions(merge: true)); // set(merge:true) でドキュメントがなくても自動作成
 
-    try{
-      await _isarService.addToBlockedUsers(blockedUserId);
-    }catch(e){
+      // ★★★ 2. ローカルDB (キャッシュ) にも追加 ★★★
+      // (もしローカルも使うなら。不要なら消してもOK)
+      await _chatRepo.addToBlockedUsers(blockedUserId);
+    } catch (e) {
       print('Error blocking a user :${e}');
+      rethrow; // エラーを呼び出し元に伝える
     }
   }
 
-    Future<void> unblockUser(String blockedUserId) async {
-    
-      final docRef = _firestore.collection('blockedList').doc(userData.userId);
+  Future<void> unblockUser(String blockedUserId) async {
+    final docRef = _firestore.collection('blockedList').doc(userData.userId);
 
     await _firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(docRef);
@@ -98,8 +109,9 @@ class ChatService {
 
       // *** THE FIX IS HERE ***
       // 1. Get the list from Firestore.
-      final List<dynamic> currentBlocked = snapshot.data()?['blockedUsers'] ?? [];
-      
+      final List<dynamic> currentBlocked =
+          snapshot.data()?['blockedUsers'] ?? [];
+
       // 2. Create a new, explicitly growable list from the original.
       final updatedBlocked = List.from(currentBlocked)
         ..remove(blockedUserId); // Now .remove() will work safely.
@@ -132,15 +144,19 @@ class ChatService {
     }
 
     // ★★★ 役割に応じたフィールド名を取得 ★★★
-    String generalNotePath = userData.role == Roles.agent ? 'agentGeneralNote' : 'tenantGeneralNote';
-    String generalphotoImagePath = userData.role == Roles.agent ? 'agentGeneralPhotoPath' : 'tenantGeneralPhotoPath';
+    String generalNotePath = userData.role == Roles.agent
+        ? 'agentGeneralNote'
+        : 'tenantGeneralNote';
+    String generalphotoImagePath = userData.role == Roles.agent
+        ? 'agentGeneralPhotoPath'
+        : 'tenantGeneralPhotoPath';
 
     // ★★★ 役割に応じたフィールドにデータを書き込む ★★★
     await _firestore.collection('chats').doc(thread.id).update({
       generalNotePath: note,
       generalphotoImagePath: finalImageUrls,
     });
-    
+
     // isarも更新
     if (userData.role == Roles.agent) {
       thread.generalNote = note;
@@ -150,13 +166,16 @@ class ChatService {
       thread.generalNote = note;
       thread.generalImageUrls = finalImageUrls;
     }
-    _isarService.saveChatThread(thread);
+    _chatRepo.saveChatThread(thread);
   }
 
   Future<void> deleteChat(String threadId) async {
     // 1. Delete from Firestore
     // First, get all messages in the subcollection
-    final messagesRef = _firestore.collection('chats').doc(threadId).collection('messages');
+    final messagesRef = _firestore
+        .collection('chats')
+        .doc(threadId)
+        .collection('messages');
     final messagesSnapshot = await messagesRef.get();
 
     // Use a batch to delete all messages efficiently
@@ -168,13 +187,18 @@ class ChatService {
 
     // After deleting the subcollection, delete the main chat document
     await _firestore.collection('chats').doc(threadId).delete();
-    await _isarService.deleteChatThreadAndMessages(threadId);
+    await _chatRepo.deleteChatThreadAndMessages(threadId);
   }
 
   Future<List<String>> _uploadImages(String threadId, List<File> files) async {
     List<Future<String>> uploadFutures = files.map((file) async {
-      String fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
-      Reference ref = _storage.ref().child('viewing_images').child(threadId).child(fileName);
+      String fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
+      Reference ref = _storage
+          .ref()
+          .child('viewing_images')
+          .child(threadId)
+          .child(fileName);
       UploadTask uploadTask = ref.putFile(file);
       TaskSnapshot snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();

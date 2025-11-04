@@ -6,6 +6,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/common_feature/repository_provider.dart';
+import 'package:re_conver/3-shared/service/FirebaseApi.dart';
 import 'package:shared_data/shared_data.dart';
 import '3-shared/common_feature/chat/viewmodel/unread_messages_viewmodel.dart';
 import '3-shared/features/1_agent_feature/1_profile/repo/profile_repository.dart';
@@ -23,15 +25,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '3-shared/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 
-
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // ★ アプリがフォアグラウンド（起動中）の時も
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print('Got a message whilst in the foreground!');
+    if (message.data['type'] == 'block_update') {
+      // バックグラウンドハンドラと同じ処理を実行
+      _firebaseMessagingBackgroundHandler(message);
+    }
+  });
 
   await dotenv.load(fileName: ".env");
   await _setupInteractedMessage();
@@ -41,32 +51,59 @@ void main() async {
   Hive.registerAdapter(TimestampAdapter());
   Hive.registerAdapter(TemplateModelAdapter());
   Hive.registerAdapter(PropertyTemplateAdapter());
-  
+
   userData.setUser(FirebaseAuth.instance.currentUser);
 
   setupAuthListener();
 
   runApp(
     MultiProvider(
-        providers: [
+      providers: [
         ChangeNotifierProvider(create: (_) => TenantListViewModel()),
-          ChangeNotifierProvider(create: (_) => ProfileViewModel(FirestoreProfileRepository())),
-          ChangeNotifierProvider(create: (_) => AgentTemplateViewModel()),
-          ChangeNotifierProvider(create: (_) => UnreadMessagesViewModel()),
-          ChangeNotifierProvider(create: (_) => NotificationViewModel()),
-        ],
-        child: const SafeArea(
-          child: MyApp(),
-          ),
-      ),
+        ChangeNotifierProvider(
+          create: (_) => ProfileViewModel(FirestoreProfileRepository()),
+        ),
+        ChangeNotifierProvider(create: (_) => AgentTemplateViewModel()),
+        ChangeNotifierProvider(create: (_) => UnreadMessagesViewModel()),
+        ChangeNotifierProvider(create: (_) => NotificationViewModel()),
+      ],
+      child: const SafeArea(child: MyApp()),
+    ),
   );
+}
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+
+  pr("Handling a background message: ${message.messageId}");
+
+  // Cloud Function から送られてきたデータを解析
+  final Map<String, dynamic> data = message.data;
+
+  if (data['type'] == 'block_update') {
+    // リポジトリを取得
+    final chatRepo = getChatRepository();
+
+    if (data['action'] == 'blocked_by') {
+      final String blockerUid = data['blockerUid'];
+      pr('Received silent notification: BLOCKED by $blockerUid');
+      await chatRepo.addToBlockedUsers(blockerUid);
+    } else if (data['action'] == 'unblocked_by') {
+      final String unblockerUid = data['unblockerUid'];
+      pr('Received silent notification: UNBLOCKED by $unblockerUid');
+      await chatRepo.removeFromBlockedUsers(unblockerUid);
+    }
+  }
 }
 
 void setupAuthListener() {
   FirebaseAuth.instance.authStateChanges().listen((User? user) async {
     if (user != null) {
-      pr('Auth state changed: User is logged in (${user.uid}). Initializing DBs...');
+      pr(
+        'Auth state changed: User is logged in (${user.uid}). Initializing DBs...',
+      );
       await TemplateRepo().initializeUserDatabases();
+      await saveTokenToDatabase();
     } else {
       // ログアウトした！
       pr('Auth state changed: User is logged out.');
@@ -75,7 +112,8 @@ void setupAuthListener() {
 }
 
 Future<void> _setupInteractedMessage() async {
-  RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance
+      .getInitialMessage();
   if (initialMessage != null) {
     _handleMessage(initialMessage);
   }
@@ -124,28 +162,30 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    
   }
 
-  
   Future<String?> _getRoleFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     String? role = prefs.getString('role');
-    if(role == null){
-      try{
+    if (role == null) {
+      try {
         FirebaseFirestore firestore = FirebaseFirestore.instance;
-      await firestore.collection('users_prof').doc(userData.userId).get().then((doc) {
-        if(doc.exists){
-          final data = doc.data() as Map<String, dynamic>;
-          if(data['role'] != null){
-            _saveRoleToPrefs(data['role']);
-            role = data['role'];
-            return role;
-          }
-          return null;
-        }
-      });
-      }catch(e){
+        await firestore
+            .collection('users_prof')
+            .doc(userData.userId)
+            .get()
+            .then((doc) {
+              if (doc.exists) {
+                final data = doc.data() as Map<String, dynamic>;
+                if (data['role'] != null) {
+                  _saveRoleToPrefs(data['role']);
+                  role = data['role'];
+                  return role;
+                }
+                return null;
+              }
+            });
+      } catch (e) {
         pr('error during getting role from firestore : ${e}');
       }
     }
@@ -164,7 +204,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         if (snapshot.hasData) {
@@ -172,9 +214,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
             future: _getRoleFromPrefs(),
             builder: (context, prefsSnapshot) {
               if (prefsSnapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
               }
-              if(prefsSnapshot.data == null){
+              if (prefsSnapshot.data == null) {
                 return RoleSelectionScreen();
               }
               if (prefsSnapshot.hasData && prefsSnapshot.data != null) {
@@ -185,26 +229,36 @@ class _AuthWrapperState extends State<AuthWrapper> {
               } else {
                 pr('user id is : ${userData.userId}');
                 return FutureBuilder<DocumentSnapshot>(
-                  
-                  future: FirebaseFirestore.instance.collection('users_prof').doc(userData.userId).get(),
+                  future: FirebaseFirestore.instance
+                      .collection('users_prof')
+                      .doc(userData.userId)
+                      .get(),
                   builder: (context, userDocSnapshot) {
-                    
-                    if (userDocSnapshot.connectionState == ConnectionState.waiting) {
-                      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                    if (userDocSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()),
+                      );
                     }
 
-                    if (userDocSnapshot.hasData && userDocSnapshot.data!.exists) {
-                      final data = userDocSnapshot.data!.data() as Map<String, dynamic>;
+                    if (userDocSnapshot.hasData &&
+                        userDocSnapshot.data!.exists) {
+                      final data =
+                          userDocSnapshot.data!.data() as Map<String, dynamic>;
                       if (data.containsKey('role')) {
                         final role = data['role'] as String;
                         _saveRoleToPrefs(role);
-                        userData.setRole(role == 'agent' ? Roles.agent : Roles.tenant);
+                        userData.setRole(
+                          role == 'agent' ? Roles.agent : Roles.tenant,
+                        );
                         return const ResponsiveLayout();
                       }
                     }
-                      
-                      print('main.dart// Navigate to the role selection because userdocnapshot : ${userDocSnapshot.hasData} userdocdata existance : ${userDocSnapshot.data!.exists}');
-                      print('the uid is ${userData.userId}');
+
+                    print(
+                      'main.dart// Navigate to the role selection because userdocnapshot : ${userDocSnapshot.hasData} userdocdata existance : ${userDocSnapshot.data!.exists}',
+                    );
+                    print('the uid is ${userData.userId}');
                     return const RoleSelectionScreen();
                   },
                 );

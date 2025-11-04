@@ -21,6 +21,8 @@ class IsarChatRepository implements repo_interface.ChatRepository {
     await openDB();
   }
 
+
+
   Future<Isar> openDB() async {
     final dir = await getApplicationDocumentsDirectory();
     if (Isar.instanceNames.isEmpty) {
@@ -310,5 +312,19 @@ class IsarChatRepository implements repo_interface.ChatRepository {
         }
       }
     });
+  }
+  
+    @override
+  Stream<List<String>> watchBlockedUsers() async* {
+    final isar = await db;
+    // BlockedUsersModel (ID=1) の変更を監視します
+    await for (final model
+        in isar.blockedUsersModels.watchObject(1, fireImmediately: true)) {
+      if (model != null) {
+        yield model.blockedUsers;
+      } else {
+        yield []; // ドキュメントが存在しない場合は空のリストを流します
+      }
+    }
   }
 }

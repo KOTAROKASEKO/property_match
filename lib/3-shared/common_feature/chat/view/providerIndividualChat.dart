@@ -178,6 +178,8 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<MessageListProvider>();
+    final bool isUserBlocked = provider.isBlocked;
+    
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
@@ -251,6 +253,9 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
                 ),
               ),
             ReplyPreviewWidget(otherUserName: widget.otherUserName),
+            if (isUserBlocked)
+              _buildBlockedBanner() // ★ ブロック中バナー
+            else
             MessageInputWidget(
               editingMessage: provider.editingMessage,
               isSending: provider.isSending,
@@ -288,10 +293,26 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
       ),
     );
   }
+  
+  Widget _buildBlockedBanner() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      width: double.infinity,
+      color: Colors.grey[200],
+      child: Center(
+        child: Text(
+          "You have blocked this user.",
+          style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w500),
+        ),
+      ),
+    );
+  }
 }
 
 class _TenantTextTemplatesView extends StatelessWidget {
   const _TenantTextTemplatesView();
+
+  
 
   @override
   Widget build(BuildContext context) {

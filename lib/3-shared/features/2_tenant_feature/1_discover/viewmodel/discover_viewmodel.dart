@@ -39,7 +39,7 @@ class DiscoverViewModel extends PostActionsViewModel  {
   Future<void> _fetchBlockedUsers() async {
     try {
       final snapshot = await FirebaseFirestore.instance
-          .collection('users_prof')
+          .collection('blockedList')
           .doc(userData.userId)
           .collection('blockedUsers')
           .get();

@@ -9,12 +9,11 @@ class DriftChatRepository implements ChatRepository {
   late final ChatDao _chatDao;
 
   DriftChatRepository(this._db) {
-    _chatDao = ChatDao(_db); // DAO を初期化
+    _chatDao = ChatDao(_db);
   }
 
   @override
   Future<void> init() async {
-    // DAOに実装を移したので、DAOのinitを呼ぶ (今回は空)
     await _chatDao.init();
   }
 
@@ -74,12 +73,15 @@ class DriftChatRepository implements ChatRepository {
   @override
   Future<void> addToBlockedUsers(String blockedUser) async {
     await _chatDao.addToBlockedUsers(blockedUser);
-    // Firestoreへの書き込みは ChatService が担当
   }
 
   @override
   Future<void> removeFromBlockedUsers(String blockedUser) async {
     await _chatDao.removeFromBlockedUsers(blockedUser);
-    // Firestoreへの書き込みは ChatService が担当
+  }
+  
+  @override
+  Stream<List<String>> watchBlockedUsers() {
+    return _chatDao.watchBlockedUsers();
   }
 }

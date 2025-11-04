@@ -30,6 +30,7 @@ class MessageListProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   StreamSubscription? _firebaseMessagesSubscription;
+  StreamSubscription? _blockSubscription;
 
   // --- State variables (remain mostly the same) ---
   List<MessageModel> _messages = [];
@@ -40,7 +41,8 @@ class MessageListProvider extends ChangeNotifier {
   bool _canLoadMore = true;
   List<dynamic> _displayItems = [];
   MessageModel? _replyingToMessage;
-  DocumentSnapshot? _lastVisible; // Firestore pagination cursor
+  DocumentSnapshot? _lastVisible; // Firestore pagination cursor\
+  bool _isBlocked = false;
 
   List<MessageModel> get messages => _messages;
   bool get isLoading => _isLoading;
@@ -52,6 +54,7 @@ class MessageListProvider extends ChangeNotifier {
   MessageModel? get replyingToMessage => _replyingToMessage;
   bool _shouldScrollToBottom = false;
   bool get shouldScrollToBottom => _shouldScrollToBottom;
+  bool get isBlocked => _isBlocked;
 
   static const int _messagesPerPage = 20;
 
@@ -95,16 +98,92 @@ class MessageListProvider extends ChangeNotifier {
   // --- Initialization ---
   Future<void> _initializeAndLoadData() async {
     try {
+      if (kIsWeb) {
+        // A案 (Web): 起動時にFirestoreから1回だけ取得
+        await _checkBlockStatusFromFirestore();
+      } else {
+        // C案 (Mobile): ローカルDBの変更をリアルタイムで監視
+        _listenToBlockStatus();
+      }
       await loadInitialMessages();
       listenToFirebaseMessages();
-      markMessagesAsRead(); // Mark as read after initial load
+      markMessagesAsRead();
     } catch (e) {
       pr("Error initializing or loading initial data: $e");
       // Handle initialization error appropriately
     }
   }
 
-  // --- Data Loading ---
+  Future<void> _checkBlockStatusFromFirestore() async {
+    pr('[MessageListProvider] Running A-Plan (Web): Checking Firestore block list...');
+    bool currentlyBlocked = false;
+    try {
+      // 1. 自分が相手をブロックしているか？
+      final myBlockListDoc = await _firestore
+          .collection('blockedList')
+          .doc(userData.userId)
+          .get();
+
+      if (myBlockListDoc.exists && myBlockListDoc.data() != null) {
+        final List<dynamic> myBlockedUsers =
+            myBlockListDoc.data()!['blockedUsers'] ?? [];
+        if (myBlockedUsers.contains(otherUserUid)) {
+          currentlyBlocked = true;
+        }
+      }
+
+      // 2. 相手が自分をブロックしているか？
+      if (!currentlyBlocked) {
+        final otherBlockListDoc = await _firestore
+            .collection('blockedList')
+            .doc(otherUserUid) // ★ 相手のUID
+            .get();
+
+        if (otherBlockListDoc.exists && otherBlockListDoc.data() != null) {
+          final List<dynamic> otherBlockedUsers =
+              otherBlockListDoc.data()!['blockedUsers'] ?? [];
+          if (otherBlockedUsers.contains(userData.userId)) {
+            currentlyBlocked = true;
+          }
+        }
+      }
+    } catch (e) {
+      pr("Error checking block status from Firestore: $e");
+    }
+
+    // 状態をセット（notifyListeners() は _initializeAndLoadData が終わるまで不要）
+    _isBlocked = currentlyBlocked;
+    pr('[MessageListProvider] A-Plan check complete: isBlocked = $_isBlocked');
+  }
+
+  void _listenToBlockStatus() {
+    _blockSubscription?.cancel();
+    // _chatRepository (Isar/Drift) が提供する Stream を監視する
+    // main.dart の FCM ハンドラが書き込むのと同じ場所
+    _blockSubscription = _chatRepository.watchBlockedUsers().listen((blockedUserIds) {
+      // ★ 相手(otherUserUid)ではなく、ブロックしてきた側(blockerUid)を
+      //    監視する必要があるのでは？ -> いいえ、相手がリストにいるかでOK
+      //    FCMハンドラは「ブロックしてきた人」をリストに追加するので
+      //    otherUserUid がリストに含まれているかを見ればOK
+      
+      // ... と思ったが、FCMハンドラは「自分がブロックされた」相手(blockerUid)を
+      // リストに追加している。
+      // chat_service の blockUser は「自分がブロックした」相手(blockedUserId)を
+      // リストに追加している。
+      // つまり、このリストは「自分がブロックした人」と「自分をブロックした人」の
+      // 両方が入るリストになっている。
+      // よって、このロジックで正しい。
+      final bool currentlyBlocked = blockedUserIds.contains(otherUserUid);
+      
+      // 状態が変化した場合のみUIに通知する
+      if (_isBlocked != currentlyBlocked) {
+        _isBlocked = currentlyBlocked;
+        pr('[MessageListProvider] Block status changed (from Local DB): $_isBlocked');
+        notifyListeners(); // ★ UIに変更を通知
+      }
+    });
+  }
+
   Future<void> loadInitialMessages() async {
     if (_isLoading) return;
     setLoading(true);
@@ -875,6 +954,7 @@ class MessageListProvider extends ChangeNotifier {
   void dispose() {
     pr('[MessageListProvider] Disposing...');
     _firebaseMessagesSubscription?.cancel(); // Cancel Firestore listener
+    _blockSubscription?.cancel();
     super.dispose();
   }
 }

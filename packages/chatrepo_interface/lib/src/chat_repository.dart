@@ -18,4 +18,5 @@ abstract class ChatRepository {
   Future<void> removeFromBlockedUsers(String blockedUser);
 
   Future<void> clearDatabaseOnLogout();
+  Stream<List<String>> watchBlockedUsers();
 }

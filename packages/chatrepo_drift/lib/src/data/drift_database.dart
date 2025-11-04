@@ -377,6 +377,15 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
       blockedUsers,
     )..where((tbl) => tbl.userId.equals(blockedUser))).go();
   }
+  
+  @override
+  Stream<List<String>> watchBlockedUsers() {
+    // blockedUsers テーブルの変更を監視し、
+    // 変更があるたびに全行を取得して List<String> に変換します
+    return select(blockedUsers)
+        .watch()
+        .map((rows) => rows.map((row) => row.userId).toList());
+  }
 
 
 }
