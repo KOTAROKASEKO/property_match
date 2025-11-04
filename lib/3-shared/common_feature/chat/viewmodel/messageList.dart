@@ -17,14 +17,14 @@ class MessageListProvider extends ChangeNotifier {
   final String otherUserUid;
   late final ChatRepository _chatRepository; // Use the abstract type ✨
 
-
   MessageListProvider({
-  required this.chatThreadId,
-  required this.otherUserUid,
-  required ChatRepository chatRepository, // 引数で受け取る
-}) : _chatRepository = chatRepository { // 受け取ったものを使うだけ
-  _initializeAndLoadData();
-}
+    required this.chatThreadId,
+    required this.otherUserUid,
+    required ChatRepository chatRepository, // 引数で受け取る
+  }) : _chatRepository = chatRepository {
+    // 受け取ったものを使うだけ
+    _initializeAndLoadData();
+  }
 
   // --- Firestore/Storage instances (remain the same) ---
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -112,11 +112,15 @@ class MessageListProvider extends ChangeNotifier {
     try {
       pr('[MessageListProvider] Loading initial messages from local DB...');
       // 1. Load from local DB (Isar or Drift via Repository) ✨
-      _messages = await _chatRepository.getMessagesForChatRoom(chatThreadId,
-          limit: _messagesPerPage);
+      _messages = await _chatRepository.getMessagesForChatRoom(
+        chatThreadId,
+        limit: _messagesPerPage,
+      );
       _buildDisplayListWithDates();
       setLoading(false); // Show cached data immediately
-      pr('[MessageListProvider] Loaded ${_messages.length} messages from local DB.');
+      pr(
+        '[MessageListProvider] Loaded ${_messages.length} messages from local DB.',
+      );
 
       pr('[MessageListProvider] Fetching initial messages from Firestore...');
       // 2. Fetch from Firestore to sync and get the pagination cursor
@@ -128,13 +132,18 @@ class MessageListProvider extends ChangeNotifier {
           .limit(_messagesPerPage)
           .get();
 
-       pr('[MessageListProvider] Fetched ${snapshot.docs.length} messages from Firestore.');
+      pr(
+        '[MessageListProvider] Fetched ${snapshot.docs.length} messages from Firestore.',
+      );
 
       if (snapshot.docs.isNotEmpty) {
         _lastVisible = snapshot.docs.last; // Set pagination cursor
         final firestoreMessages = snapshot.docs.map((doc) {
           final data = doc.data();
-          final message = _mapFirestoreDocToMessageModel(doc.id, data); // Use helper
+          final message = _mapFirestoreDocToMessageModel(
+            doc.id,
+            data,
+          ); // Use helper
           // Save/Update in local DB via Repository ✨
           _chatRepository.createOrUpdateMessage(message);
           return message;
@@ -149,7 +158,9 @@ class MessageListProvider extends ChangeNotifier {
         _canLoadMore = false;
         // If local had messages but Firestore doesn't, clear local (or handle sync strategy)
         if (_messages.isNotEmpty) {
-           pr('[MessageListProvider] Firestore is empty, clearing local messages.');
+          pr(
+            '[MessageListProvider] Firestore is empty, clearing local messages.',
+          );
           // Decide if you want to clear local cache if Firestore is empty
           // _messages = [];
           // _buildDisplayListWithDates();
@@ -178,7 +189,9 @@ class MessageListProvider extends ChangeNotifier {
           .limit(_messagesPerPage)
           .get();
 
-      pr('[MessageListProvider] Fetched ${snapshot.docs.length} more messages from Firestore.');
+      pr(
+        '[MessageListProvider] Fetched ${snapshot.docs.length} more messages from Firestore.',
+      );
 
       if (snapshot.docs.isNotEmpty) {
         _lastVisible = snapshot.docs.last; // Update cursor
@@ -195,7 +208,9 @@ class MessageListProvider extends ChangeNotifier {
         final uniqueOlderMessages = olderMessages
             .where((m) => !existingMessageIds.contains(m.messageId))
             .toList();
-        _messages.addAll(uniqueOlderMessages); // Add to the end (since list is reversed in UI)
+        _messages.addAll(
+          uniqueOlderMessages,
+        ); // Add to the end (since list is reversed in UI)
 
         _buildDisplayListWithDates(); // Rebuild display list
         setCanLoadMore(olderMessages.length == _messagesPerPage);
@@ -217,75 +232,90 @@ class MessageListProvider extends ChangeNotifier {
 
     // Determine the starting point for the listener
     Timestamp startAfterTimestamp = _messages.isNotEmpty
-        ? Timestamp.fromDate(_messages.first.timestamp) // Get timestamp of the *latest* message in the current list
-        : Timestamp.fromMillisecondsSinceEpoch(0); // Or start from beginning if list is empty
+        ? Timestamp.fromDate(
+            _messages.first.timestamp,
+          ) // Get timestamp of the *latest* message in the current list
+        : Timestamp.fromMillisecondsSinceEpoch(
+            0,
+          ); // Or start from beginning if list is empty
 
     _firebaseMessagesSubscription = _firestore
         .collection('chats')
         .doc(chatThreadId)
         .collection('messages')
         .orderBy('timestamp', descending: false) // Listen in ascending order
-        .where('timestamp', isGreaterThan: startAfterTimestamp) // Only get newer messages
+        .where(
+          'timestamp',
+          isGreaterThan: startAfterTimestamp,
+        ) // Only get newer messages
         .snapshots()
         .listen(
-      (snapshot) async {
-        if (!snapshot.docChanges.isNotEmpty) return;
-        pr('[MessageListProvider] Received ${snapshot.docChanges.length} changes from Firestore listener.');
+          (snapshot) async {
+            if (!snapshot.docChanges.isNotEmpty) return;
+            pr(
+              '[MessageListProvider] Received ${snapshot.docChanges.length} changes from Firestore listener.',
+            );
 
-        bool requiresUIRefresh = false;
-        bool newIncomingMessage = false;
+            bool requiresUIRefresh = false;
+            bool newIncomingMessage = false;
 
-        for (var change in snapshot.docChanges) {
-          final doc = change.doc;
-          final data = doc.data();
-          if (data == null) continue;
+            for (var change in snapshot.docChanges) {
+              final doc = change.doc;
+              final data = doc.data();
+              if (data == null) continue;
 
-          final message = _mapFirestoreDocToMessageModel(doc.id, data);
+              final message = _mapFirestoreDocToMessageModel(doc.id, data);
 
-          if (change.type == DocumentChangeType.added) {
-            pr('[MessageListProvider] Added message: ${message.messageId}');
-             // Save/Update in local DB via Repository ✨
-            await _chatRepository.createOrUpdateMessage(message);
+              if (change.type == DocumentChangeType.added) {
+                pr('[MessageListProvider] Added message: ${message.messageId}');
+                // Save/Update in local DB via Repository ✨
+                await _chatRepository.createOrUpdateMessage(message);
 
-            // Add to UI list if not already present (handles potential duplicates)
-            final index =
+                // Add to UI list if not already present (handles potential duplicates)
+                final index = _messages.indexWhere(
+                  (m) => m.messageId == message.messageId,
+                );
+                if (index == -1) {
+                  _addOrUpdateMessageInUI(message);
+                  if (!message.isOutgoing) {
+                    newIncomingMessage = true;
+                  }
+                  requiresUIRefresh = true;
+                }
+              } else if (change.type == DocumentChangeType.modified) {
+                pr(
+                  '[MessageListProvider] Modified message: ${message.messageId}',
+                );
+                await _chatRepository.createOrUpdateMessage(message);
                 _messages.indexWhere((m) => m.messageId == message.messageId);
-            if (index == -1) {
-              _addOrUpdateMessageInUI(message);
-              if (!message.isOutgoing) {
-                newIncomingMessage = true;
+                _addOrUpdateMessageInUI(message);
+              } else if (change.type == DocumentChangeType.removed) {
+                pr(
+                  '[MessageListProvider] Removed message: ${message.messageId}',
+                );
+                // TODO: Handle removal in local DB via Repository if needed (e.g., hard delete)
+                // await _chatRepository.deleteMessagePermanently(message.messageId); // Example
+
+                // Remove from UI list
+                _messages.removeWhere((m) => m.messageId == message.messageId);
+                requiresUIRefresh = true;
               }
-              requiresUIRefresh = true;
             }
-          } else if (change.type == DocumentChangeType.modified) {
-            pr('[MessageListProvider] Modified message: ${message.messageId}');
-            await _chatRepository.createOrUpdateMessage(message);
-            _messages.indexWhere((m) => m.messageId == message.messageId);
-            _addOrUpdateMessageInUI(message);
-          } else if (change.type == DocumentChangeType.removed) {
-             pr('[MessageListProvider] Removed message: ${message.messageId}');
-            // TODO: Handle removal in local DB via Repository if needed (e.g., hard delete)
-            // await _chatRepository.deleteMessagePermanently(message.messageId); // Example
 
-            // Remove from UI list
-            _messages.removeWhere((m) => m.messageId == message.messageId);
-            requiresUIRefresh = true;
-          }
-        }
-
-        if (requiresUIRefresh) {
-          _buildDisplayListWithDates(); // Rebuild display list after updates
-          if (newIncomingMessage) {
-            _shouldScrollToBottom = true; // Flag to scroll down on new incoming
-            markMessagesAsRead(); // Mark as read when new message arrives
-          }
-          notifyListeners();
-        }
-      },
-      onError: (error) {
-        pr("Error listening to Firebase messages: $error");
-      },
-    );
+            if (requiresUIRefresh) {
+              _buildDisplayListWithDates(); // Rebuild display list after updates
+              if (newIncomingMessage) {
+                _shouldScrollToBottom =
+                    true; // Flag to scroll down on new incoming
+                markMessagesAsRead(); // Mark as read when new message arrives
+              }
+              notifyListeners();
+            }
+          },
+          onError: (error) {
+            pr("Error listening to Firebase messages: $error");
+          },
+        );
   }
 
   // --- Sending / Editing / Deleting ---
@@ -312,7 +342,10 @@ class MessageListProvider extends ChangeNotifier {
     final replyingTo = _replyingToMessage; // Capture reply context
     if (replyingTo != null) setReplyingTo(null); // Clear reply state in UI
 
-    final tempMessageId = _firestore.collection('_').doc().id; // Generate temporary ID
+    final tempMessageId = _firestore
+        .collection('_')
+        .doc()
+        .id; // Generate temporary ID
     final now = DateTime.now();
     String messageType = 'text';
     String? localPath;
@@ -343,22 +376,28 @@ class MessageListProvider extends ChangeNotifier {
         'roomType': propertyTemplate.roomType,
         'nationality': propertyTemplate.nationality,
       };
-      messageContent = jsonEncode(templateMap); // Encode template as JSON string
+      messageContent = jsonEncode(
+        templateMap,
+      ); // Encode template as JSON string
       lastMessageText = 'Property: ${propertyTemplate.name}';
     }
 
     // Create optimistic message for UI and local DB
     MessageModel optimisticMessage = MessageModel()
-      ..messageId = tempMessageId // Use temp ID
+      ..messageId =
+          tempMessageId // Use temp ID
       ..chatRoomId = chatThreadId
       ..whoSent = userData.userId
       ..whoReceived = otherUserUid
       ..isOutgoing = true
-      ..messageText = messageContent // Can be null for image/audio
+      ..messageText =
+          messageContent // Can be null for image/audio
       ..messageType = messageType
-      ..status = 'sending' // Initial status
+      ..status =
+          'sending' // Initial status
       ..timestamp = now
-      ..localPath = localPath // Store local path for image/audio
+      ..localPath =
+          localPath // Store local path for image/audio
       ..repliedToMessageId = replyingTo?.messageId
       ..repliedToMessageText = _getRepliedTextPreview(replyingTo)
       ..repliedToWhoSent = replyingTo?.whoSent;
@@ -366,8 +405,8 @@ class MessageListProvider extends ChangeNotifier {
     // Add to local DB and UI optimistically ✨
     await _chatRepository.createOrUpdateMessage(optimisticMessage);
     _addOrUpdateMessageInUI(optimisticMessage);
-     _shouldScrollToBottom = true;
-     notifyListeners();
+    _shouldScrollToBottom = true;
+    notifyListeners();
 
     try {
       String? remoteUrl; // URL after upload
@@ -375,16 +414,18 @@ class MessageListProvider extends ChangeNotifier {
       // Upload file if necessary
       if (imageFile != null) {
         remoteUrl = await _uploadFileToStorage(
-          XFile(imageFile.path),
+          imageFile, // ★ XFile をそのまま渡す
           'chat_images/$chatThreadId/$tempMessageId', // More specific path
         );
         pr('[MessageListProvider] Image uploaded: $remoteUrl');
-      } else if (audioFile != null) { // <-- CHANGE
-      messageType = 'audio';
-      localPath = audioFile.path; // This is fine (blob URL on web, file path on mobile)
-      lastMessageText = '[Voice Message]';
-      messageContent = null;
-    }
+      } else if (audioFile != null) {
+        // ★★★ FIX: audioFile もアップロードするロジックに変更 ★★★
+        remoteUrl = await _uploadFileToStorage(
+          audioFile, // ★ XFile をそのまま渡す
+          'chat_audio/$chatThreadId/$tempMessageId', // ★ audio 用のパスに変更
+        );
+        pr('[MessageListProvider] Audio uploaded: $remoteUrl');
+      }
 
       // Prepare data for Firestore
       Map<String, dynamic> firebaseMessageData = {
@@ -398,9 +439,9 @@ class MessageListProvider extends ChangeNotifier {
         'repliedToMessageId': replyingTo?.messageId,
         'repliedToMessageText': _getRepliedTextPreview(replyingTo),
         'repliedToWhoSent': replyingTo?.whoSent,
-         'isRead': false, // Initially unread by receiver
-         'editedAt': null, // Not edited yet
-         'operation': 'normal', // Default operation
+        'isRead': false, // Initially unread by receiver
+        'editedAt': null, // Not edited yet
+        'operation': 'normal', // Default operation
       };
 
       // Send to Firestore
@@ -411,7 +452,7 @@ class MessageListProvider extends ChangeNotifier {
           .doc(tempMessageId) // Use the same ID
           .set(firebaseMessageData);
 
-       pr('[MessageListProvider] Message sent to Firestore: $tempMessageId');
+      pr('[MessageListProvider] Message sent to Firestore: $tempMessageId');
 
       // Update local message status to 'sent' ✨
       optimisticMessage.status = 'sent';
@@ -420,21 +461,23 @@ class MessageListProvider extends ChangeNotifier {
       _addOrUpdateMessageInUI(optimisticMessage); // Update UI status
 
       // Update chat thread last message info (Firestore)
-      await _firestore.collection('chats').doc(chatThreadId).set({
-        'lastMessage': lastMessageText,
-        'timeStamp': Timestamp.fromDate(now),
-        'whoSent': userData.userId,
-        'whoReceived': otherUserUid,
-        'messageType': messageType,
-        'lastMessageId': tempMessageId,
-        // Increment unread count for the *other* user
-        'unreadCount_${otherUserUid}': FieldValue.increment(1),
-        // Ensure participant IDs exist for querying threads
-        'participants': [userData.userId, otherUserUid],
-      }, SetOptions(merge: true)); // Use merge to avoid overwriting other fields
+      await _firestore.collection('chats').doc(chatThreadId).set(
+        {
+          'lastMessage': lastMessageText,
+          'timeStamp': Timestamp.fromDate(now),
+          'whoSent': userData.userId,
+          'whoReceived': otherUserUid,
+          'messageType': messageType,
+          'lastMessageId': tempMessageId,
+          // Increment unread count for the *other* user
+          'unreadCount_${otherUserUid}': FieldValue.increment(1),
+          // Ensure participant IDs exist for querying threads
+          'participants': [userData.userId, otherUserUid],
+        },
+        SetOptions(merge: true),
+      ); // Use merge to avoid overwriting other fields
 
-       pr('[MessageListProvider] Chat thread updated.');
-
+      pr('[MessageListProvider] Chat thread updated.');
     } catch (e) {
       pr("Error sending message: $e");
       // Update local message status to 'failed' ✨
@@ -454,7 +497,8 @@ class MessageListProvider extends ChangeNotifier {
     }
 
     final messageToUpdate = _editingMessage!;
-    final originalText = messageToUpdate.messageText; // Keep original for rollback
+    final originalText =
+        messageToUpdate.messageText; // Keep original for rollback
     final now = DateTime.now();
 
     // Optimistic UI update
@@ -475,11 +519,13 @@ class MessageListProvider extends ChangeNotifier {
           .collection('messages')
           .doc(messageToUpdate.messageId)
           .update({
-        'text': editedText.trim(),
-        'editedAt': Timestamp.fromDate(now),
-        'operation': 'edited',
-      });
-       pr('[MessageListProvider] Edited message saved: ${messageToUpdate.messageId}');
+            'text': editedText.trim(),
+            'editedAt': Timestamp.fromDate(now),
+            'operation': 'edited',
+          });
+      pr(
+        '[MessageListProvider] Edited message saved: ${messageToUpdate.messageId}',
+      );
     } catch (e) {
       pr("Error saving edited message: $e");
       // Rollback UI changes on failure
@@ -495,12 +541,14 @@ class MessageListProvider extends ChangeNotifier {
     setEditingMessage(null);
   }
 
- Future<void> deleteMessageForEveryone(MessageModel message) async {
+  Future<void> deleteMessageForEveryone(MessageModel message) async {
     final originalText = message.messageText;
     final originalStatus = message.status;
     final originalOperation = message.operation;
 
-    pr('[MessageListProvider] Attempting to delete message: ${message.messageId}');
+    pr(
+      '[MessageListProvider] Attempting to delete message: ${message.messageId}',
+    );
 
     // Optimistically update UI and local DB
     message.messageText = 'This message was deleted';
@@ -511,24 +559,27 @@ class MessageListProvider extends ChangeNotifier {
 
     _addOrUpdateMessageInUI(message); // Update UI immediately
     try {
-        await _chatRepository.createOrUpdateMessage(message); // Update local DB ✨
-        pr('[MessageListProvider] Message updated locally for deletion.');
-    } catch(e) {
-        pr("Error updating local message for deletion: $e");
-        // If local update fails, maybe revert UI? Depends on desired behavior.
+      await _chatRepository.createOrUpdateMessage(message); // Update local DB ✨
+      pr('[MessageListProvider] Message updated locally for deletion.');
+    } catch (e) {
+      pr("Error updating local message for deletion: $e");
+      // If local update fails, maybe revert UI? Depends on desired behavior.
     }
-
 
     try {
       final chatThreadRef = _firestore.collection('chats').doc(chatThreadId);
-      final messageRef = chatThreadRef.collection('messages').doc(message.messageId);
+      final messageRef = chatThreadRef
+          .collection('messages')
+          .doc(message.messageId);
 
       await _firestore.runTransaction((transaction) async {
         final chatThreadDoc = await transaction.get(chatThreadRef);
         final messageDoc = await transaction.get(messageRef);
 
         if (!messageDoc.exists) {
-          pr('[MessageListProvider] Message ${message.messageId} already deleted or does not exist in Firestore.');
+          pr(
+            '[MessageListProvider] Message ${message.messageId} already deleted or does not exist in Firestore.',
+          );
           return; // Message already gone
         }
 
@@ -542,23 +593,34 @@ class MessageListProvider extends ChangeNotifier {
         });
 
         // If the deleted message was the *last* message in the thread...
-        if (chatThreadDoc.exists && chatThreadDoc.data()?['lastMessageId'] == message.messageId) {
-          pr('[MessageListProvider] Deleted message was the last message. Finding previous message...');
+        if (chatThreadDoc.exists &&
+            chatThreadDoc.data()?['lastMessageId'] == message.messageId) {
+          pr(
+            '[MessageListProvider] Deleted message was the last message. Finding previous message...',
+          );
           // Query for the new last message (the one before the deleted one)
           final previousMessagesQuery = chatThreadRef
               .collection('messages')
-              .where(FieldPath.documentId, isNotEqualTo: message.messageId) // Exclude the deleted one
+              .where(
+                FieldPath.documentId,
+                isNotEqualTo: message.messageId,
+              ) // Exclude the deleted one
               .orderBy('timestamp', descending: true)
               .limit(1); // Get the most recent remaining message
 
-          final previousMessagesSnapshot = await previousMessagesQuery.get(); // Get outside transaction
+          final previousMessagesSnapshot = await previousMessagesQuery
+              .get(); // Get outside transaction
 
           if (previousMessagesSnapshot.docs.isNotEmpty) {
             // Update thread with the previous message's info
             final newLastMessageDoc = previousMessagesSnapshot.docs.first;
             final newLastMessageData = newLastMessageDoc.data();
-            final newLastMessageText = _getLastMessageTextPreview(newLastMessageData);
-             pr('[MessageListProvider] Updating thread with previous message: ${newLastMessageDoc.id}');
+            final newLastMessageText = _getLastMessageTextPreview(
+              newLastMessageData,
+            );
+            pr(
+              '[MessageListProvider] Updating thread with previous message: ${newLastMessageDoc.id}',
+            );
             transaction.update(chatThreadRef, {
               'lastMessage': newLastMessageText,
               'timeStamp': newLastMessageData['timestamp'],
@@ -568,19 +630,23 @@ class MessageListProvider extends ChangeNotifier {
               'lastMessageId': newLastMessageDoc.id,
             });
           } else {
-             pr('[MessageListProvider] No previous messages found. Clearing thread last message info.');
+            pr(
+              '[MessageListProvider] No previous messages found. Clearing thread last message info.',
+            );
             // No other messages left, clear the last message fields
             transaction.update(chatThreadRef, {
               'lastMessage': null, //'No messages yet.',
               'lastMessageId': null,
               'messageType': null, // Or 'text'
-              'timeStamp': FieldValue.serverTimestamp(), // Update timestamp maybe?
+              'timeStamp':
+                  FieldValue.serverTimestamp(), // Update timestamp maybe?
             });
           }
         }
       });
-       pr('[MessageListProvider] Firestore transaction successful for deletion.');
-
+      pr(
+        '[MessageListProvider] Firestore transaction successful for deletion.',
+      );
     } catch (e) {
       pr("Error deleting message in Firestore transaction: $e");
       // Rollback UI and local DB on Firestore failure
@@ -590,47 +656,53 @@ class MessageListProvider extends ChangeNotifier {
       // Re-fetch remoteUrl/localPath if needed, or assume they are unchanged if rollback is simple
       _addOrUpdateMessageInUI(message);
       try {
-        await _chatRepository.createOrUpdateMessage(message); // Revert local DB ✨
-         pr('[MessageListProvider] Rollback successful.');
+        await _chatRepository.createOrUpdateMessage(
+          message,
+        ); // Revert local DB ✨
+        pr('[MessageListProvider] Rollback successful.');
       } catch (rollbackError) {
-         pr("Error rolling back local message state: $rollbackError");
+        pr("Error rolling back local message state: $rollbackError");
       }
       // Optionally, show a snackbar to the user
     }
   }
 
-
   // --- Helper Methods ---
 
   // Maps Firestore document data to a MessageModel instance
-  MessageModel _mapFirestoreDocToMessageModel(String docId, Map<String, dynamic> data) {
-      final message = MessageModel()
-        ..messageId = docId
-        ..chatRoomId = chatThreadId // Assuming this is correct context
-        ..whoSent = data['whoSentId'] as String? ?? ''
-        ..whoReceived = data['whoReceivedId'] as String? ?? ''
-        ..isOutgoing = (data['whoSentId'] as String?) == userData.userId
-        ..messageText = data['text'] as String?
-        ..messageType = data['messageType'] as String? ?? 'text'
-        ..operation = data['operation'] as String? ?? 'normal'
-        ..status = data['status'] as String? ?? 'sent'
-        ..timestamp = (data['timestamp'] as Timestamp? ?? Timestamp.now()).toDate()
-        ..editedAt = (data['editedAt'] as Timestamp?)?.toDate()
-        ..remoteUrl = data['remoteUrl'] as String?
-        ..repliedToMessageId = data['repliedToMessageId'] as String?
-        ..repliedToMessageText = data['repliedToMessageText'] as String?
-        ..repliedToWhoSent = data['repliedToWhoSent'] as String?
-        ..isRead = data['isRead'] as bool? ?? false; // Handle potential null
-      return message;
+  MessageModel _mapFirestoreDocToMessageModel(
+    String docId,
+    Map<String, dynamic> data,
+  ) {
+    final message = MessageModel()
+      ..messageId = docId
+      ..chatRoomId =
+          chatThreadId // Assuming this is correct context
+      ..whoSent = data['whoSentId'] as String? ?? ''
+      ..whoReceived = data['whoReceivedId'] as String? ?? ''
+      ..isOutgoing = (data['whoSentId'] as String?) == userData.userId
+      ..messageText = data['text'] as String?
+      ..messageType = data['messageType'] as String? ?? 'text'
+      ..operation = data['operation'] as String? ?? 'normal'
+      ..status = data['status'] as String? ?? 'sent'
+      ..timestamp = (data['timestamp'] as Timestamp? ?? Timestamp.now())
+          .toDate()
+      ..editedAt = (data['editedAt'] as Timestamp?)?.toDate()
+      ..remoteUrl = data['remoteUrl'] as String?
+      ..repliedToMessageId = data['repliedToMessageId'] as String?
+      ..repliedToMessageText = data['repliedToMessageText'] as String?
+      ..repliedToWhoSent = data['repliedToWhoSent'] as String?
+      ..isRead = data['isRead'] as bool? ?? false; // Handle potential null
+    return message;
   }
 
   Future<String> _uploadFileToStorage(XFile file, String path) async {
     try {
       final ref = _storage.ref().child(path);
-      
+
       final Uint8List data = await file.readAsBytes();
-      final uploadTask = ref.putData(data); 
-      
+      final uploadTask = ref.putData(data);
+
       final snapshot = await uploadTask.whenComplete(() => {});
       final downloadUrl = await snapshot.ref.getDownloadURL();
       return downloadUrl;
@@ -681,7 +753,6 @@ class MessageListProvider extends ChangeNotifier {
     }
   }
 
-
   // Updates or adds a message in the UI list (_messages)
   // Ensures the list remains sorted by timestamp after modification.
   void _addOrUpdateMessageInUI(MessageModel message) {
@@ -701,10 +772,14 @@ class MessageListProvider extends ChangeNotifier {
   // Marks messages as read in Firestore
   Future<void> markMessagesAsRead() async {
     // Find unread incoming messages *currently in the UI list*
-    final unreadMessagesInUI = _messages.where((m) => !m.isOutgoing && !m.isRead).toList();
+    final unreadMessagesInUI = _messages
+        .where((m) => !m.isOutgoing && !m.isRead)
+        .toList();
     if (unreadMessagesInUI.isEmpty) return;
 
-    pr('[MessageListProvider] Marking ${unreadMessagesInUI.length} messages as read...');
+    pr(
+      '[MessageListProvider] Marking ${unreadMessagesInUI.length} messages as read...',
+    );
 
     // Update Firestore via batch write
     final batch = _firestore.batch();
@@ -718,7 +793,9 @@ class MessageListProvider extends ChangeNotifier {
     }
     // Reset the current user's unread count on the thread document
     final threadRef = _firestore.collection('chats').doc(chatThreadId);
-    batch.set(threadRef, {'unreadCount_${userData.userId}': 0}, SetOptions(merge: true)); // Use set with merge
+    batch.set(threadRef, {
+      'unreadCount_${userData.userId}': 0,
+    }, SetOptions(merge: true)); // Use set with merge
 
     try {
       await batch.commit();
@@ -727,7 +804,7 @@ class MessageListProvider extends ChangeNotifier {
       // Update local state (UI and DB)
       for (var message in unreadMessagesInUI) {
         message.isRead = true;
-         // Update local DB via Repository ✨
+        // Update local DB via Repository ✨
         await _chatRepository.createOrUpdateMessage(message);
       }
       notifyListeners(); // Update UI to show read status (e.g., double ticks)
@@ -744,12 +821,10 @@ class MessageListProvider extends ChangeNotifier {
     _replyingToMessage = null;
     _lastVisible = null; // Reset pagination cursor
     _canLoadMore = true; // Reset load more flag
-     pr('[MessageListProvider] Message list cleared.');
+    pr('[MessageListProvider] Message list cleared.');
     // Don't notify listeners here if it's part of initial loading
   }
 
-  // --- UI List Building ---
-  // Builds the list containing messages and date separators for the UI
   void _buildDisplayListWithDates() {
     if (_messages.isEmpty) {
       _displayItems = [];
@@ -759,51 +834,43 @@ class MessageListProvider extends ChangeNotifier {
     List<dynamic> newDisplayList = [];
     DateTime? lastDate;
 
-    // Messages are already sorted descending by timestamp in _messages
-    // Iterate in reverse to build the display list chronologically
     for (int i = _messages.length - 1; i >= 0; i--) {
-        final message = _messages[i];
-        final messageDate = DateTime(
+      final message = _messages[i];
+      final messageDate = DateTime(
         message.timestamp.year,
         message.timestamp.month,
         message.timestamp.day,
-        );
+      );
 
-        // Add date separator if the day changes
-        if (lastDate == null || !_isSameDay(lastDate, messageDate)) {
+      if (lastDate == null || !_isSameDay(lastDate, messageDate)) {
         newDisplayList.add(messageDate);
         lastDate = messageDate;
-        }
-        newDisplayList.add(message);
+      }
+      newDisplayList.add(message);
     }
 
-    _displayItems = newDisplayList; // No need to reverse, built chronologically
-    // No notifyListeners() needed here, called by parent methods
+    _displayItems = newDisplayList;
   }
 
-  // Checks if two DateTime objects represent the same day
   bool _isSameDay(DateTime dateA, DateTime dateB) {
     return dateA.year == dateB.year &&
         dateA.month == dateB.month &&
         dateA.day == dateB.day;
   }
 
-   // --- Reporting ---
-   Future<void> reportUser(String reason) async {
-     try {
-       // Assuming ChatService handles the actual reporting logic
-       await ChatService().reportUser(
-         reportedUserId: otherUserUid,
-         reason: reason,
-       );
-        pr('[MessageListProvider] User reported: $otherUserUid, Reason: $reason');
-     } catch (e) {
-       pr("Error reporting user: $e");
-       rethrow; // Rethrow to allow UI to show error message
-     }
-   }
+  Future<void> reportUser(String reason) async {
+    try {
+      await ChatService().reportUser(
+        reportedUserId: otherUserUid,
+        reason: reason,
+      );
+      pr('[MessageListProvider] User reported: $otherUserUid, Reason: $reason');
+    } catch (e) {
+      pr("Error reporting user: $e");
+      rethrow;
+    }
+  }
 
-  // --- Cleanup ---
   @override
   void dispose() {
     pr('[MessageListProvider] Disposing...');

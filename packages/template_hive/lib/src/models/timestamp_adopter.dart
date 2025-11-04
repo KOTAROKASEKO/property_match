@@ -16,3 +16,4 @@ class TimestampAdapter extends TypeAdapter<Timestamp> {
     writer.writeInt(obj.microsecondsSinceEpoch);
   }
 }
+

@@ -63,7 +63,7 @@ class DriftChatRepository implements ChatRepository {
 
   @override
   Future<void> clearDatabaseOnLogout() async {
-    await _chatDao.clearAllTables();
+    await _chatDao.clearDatabaseOnLogout();
   }
 
   @override

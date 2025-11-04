@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_data/shared_data.dart';
 import '../../../../core/model/PostModel.dart';
@@ -149,17 +150,29 @@ class FirestoreProfileRepository implements ProfileRepository {
     }
   }
 
-  @override
-  Future<String> uploadProfileImage(String userId, XFile imageFile) async {
-    try {
-      final ref = _storage.ref().child('profile_images').child('$userId.jpg');
-      final uploadTask = ref.putFile(File(imageFile.path));
-      final snapshot = await uploadTask.whenComplete(() => {});
-      return await snapshot.ref.getDownloadURL();
-    } catch (e) {
-      throw Exception('Failed to upload profile image: $e');
+@override // Or just Future<String> in UserService
+Future<String> uploadProfileImage(String userId, XFile imageFile) async {
+  try {
+    final ref = _storage.ref().child('profile_images').child('$userId.jpg');
+    UploadTask uploadTask;
+    if (kIsWeb) {
+      // For Web: Read bytes and use putData
+      final Uint8List data = await imageFile.readAsBytes();
+      uploadTask = ref.putData(data, SettableMetadata(contentType: imageFile.mimeType ?? 'image/jpeg')); // Optionally set content type
+    } else {
+      // For Mobile: Use putFile with dart:io File
+      uploadTask = ref.putFile(File(imageFile.path));
     }
+    // ★★★ --------------------- ★★★
+
+    final snapshot = await uploadTask.whenComplete(() => {});
+    return await snapshot.ref.getDownloadURL();
+  } catch (e) {
+    // Keep original error message but add context
+    print("Error uploading profile image: $e"); // Log the specific error
+    throw Exception('Failed to upload profile image: ${e.toString()}');
   }
+}
 
   @override
   Future<void> deletePost(String postId) async {

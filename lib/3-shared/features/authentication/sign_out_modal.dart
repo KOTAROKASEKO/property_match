@@ -1,4 +1,3 @@
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -29,18 +28,24 @@ class _SignOutModalState extends State<SignOutModal> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                try{
-                  await deleteAllData();
-                  await GoogleSignIn.instance.disconnect();
-                  await FirebaseAuth.instance.signOut();
+                try {
+                  pr('Initiating sign out process...');
+                  var didSuccessfullyClearedSession = await deleteAllData();
+                  pr('break point1');
+                  if(didSuccessfullyClearedSession){
+                    await FirebaseAuth.instance.signOut();
+                  }
+                  
+                  if (!kIsWeb) {
+                    await GoogleSignIn.instance.disconnect();
+                  }
+
+                  
+                  pr('break point3: FirebaseAuth.signOut() complete');
+
+                  // 3. Clear local data and update UI
                   if (mounted) {
                     userData.clearUser();
-                    if (!kIsWeb) {
-                      await GoogleSignIn.instance.disconnect().catchError((error) {
-                        // Handle potential error during disconnect, but proceed
-                        print("Error disconnecting Google Sign-In: $error");
-                      });
-                    }
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Sign out successful.'),
@@ -49,10 +54,18 @@ class _SignOutModalState extends State<SignOutModal> {
                     );
                     Navigator.pop(context, true);
                   }
-                }catch(error){
-                  pr('Error in logging out : ${error}');
+                } catch (error) {
+                  pr('Error in logging out : $error');
+                  // Optionally, show the error to the user
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Sign out failed. Please try again.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
-                
               },
               child: const Text('Sign Out'),
             ),

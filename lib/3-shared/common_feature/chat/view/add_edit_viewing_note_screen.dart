@@ -2,10 +2,14 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chatrepo_interface/chatrepo_interface.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_data/shared_data.dart';
 import '../viewmodel/chat_service.dart'; 
+import 'dart:typed_data';
 
 class AddEditViewingNoteScreen extends StatefulWidget {
   final ChatThread thread;
@@ -53,11 +57,17 @@ void initState() {
 }
 
 
-  Future<void> _pickImages() async {
+Future<void> _pickImages() async {
     final pickedFiles = await _picker.pickMultiImage(imageQuality: 85);
     if (pickedFiles.isNotEmpty) {
       setState(() {
-        _images.addAll(pickedFiles.map((file) => File(file.path)));
+        if (kIsWeb) {
+          // On web, add the XFile objects directly
+          _images.addAll(pickedFiles);
+        } else {
+          // On mobile, convert to File objects
+          _images.addAll(pickedFiles.map((file) => File(file.path)));
+        }
       });
     }
   }
@@ -69,6 +79,7 @@ void initState() {
   }
 
   Future<void> _submit() async {
+    pr('submit method was called');
     setState(() => _isLoading = true);
     try {
       await _chatService.updateViewingDetails(
@@ -162,9 +173,44 @@ void initState() {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: image is String
-                  ? Image.network(image, fit: BoxFit.cover)
-                  : Image.file(image as File, fit: BoxFit.cover),
+              child: image is String // It's a URL
+                  ? CachedNetworkImage(
+                      imageUrl: image,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(color: Colors.grey.shade300),
+                      errorWidget: (context, url, error) => const Icon(Icons.error),
+                    )
+                  : kIsWeb // It's a selected file on the Web (must be XFile)
+                      ? FutureBuilder<Uint8List>(
+                          // ★★★ FIX: Only call readAsBytes on XFile ★★★
+                          future: (image is XFile)
+                              ? image.readAsBytes()
+                              // Provide a fallback future if it's not an XFile (shouldn't happen with image_picker)
+                              : Future.value(Uint8List(0)),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.done &&
+                                snapshot.hasData &&
+                                // ★★★ Add check for non-empty bytes ★★★
+                                snapshot.data!.isNotEmpty) {
+                              return Image.memory(
+                                snapshot.data!,
+                                fit: BoxFit.cover,
+                              );
+                            } else if (snapshot.hasError || (snapshot.connectionState == ConnectionState.done && (snapshot.data == null || snapshot.data!.isEmpty))) {
+                              // ★★★ Show an error if reading failed or bytes are empty ★★★
+                              return Container(
+                                color: Colors.grey.shade200,
+                                child: const Center(child: Icon(Icons.broken_image_outlined, color: Colors.grey)),
+                              );
+                            }
+                            // Show loading indicator
+                            return Container(color: Colors.grey.shade300, child: const Center(child: CircularProgressIndicator(strokeWidth: 2)));
+                          },
+                        )
+                      : Image.file( // It's a selected file on Mobile (must be File)
+                          image as File, // Assume File on mobile if not String
+                          fit: BoxFit.cover,
+                        ),
             ),
             Positioned(
               top: 4, right: 4,
@@ -179,7 +225,9 @@ void initState() {
             ),
           ],
         );
+      
       },
     );
+      
   }
 }

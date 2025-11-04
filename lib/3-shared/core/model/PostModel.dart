@@ -1,6 +1,5 @@
 // lib/core/model/PostModel.dart
 
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_data/shared_data.dart';
 
@@ -26,9 +25,11 @@ class PostModel {
   final GeoPoint? position; // ★★★ 追加 ★★★
   final String location;
   final DateTime? durationStart;
-  final DateTime? durationEnd;
+  final DateTime? moveInDate; // 例: 入居希望日
+  final int? durationMonths;
 
   PostModel({
+    this.moveInDate,
     required this.id,
     required this.userId,
     required this.username,
@@ -50,7 +51,7 @@ class PostModel {
     this.location = '',
     this.condominiumName_searchKey = '',
     this.durationStart,
-    this.durationEnd,
+    this.durationMonths,
   });
 
   bool get isLikedByCurrentUser {
@@ -59,7 +60,10 @@ class PostModel {
 
   List<String> get allTags => manualTags;
 
-  factory PostModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc, {bool isSaved = false}) {
+  factory PostModel.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> doc, {
+    bool isSaved = false,
+  }) {
     final data = doc.data();
     if (data == null) {
       throw Exception("Post data is null for document ${doc.id}");
@@ -67,12 +71,13 @@ class PostModel {
     final positionData = data['position'] as Map<String, dynamic>?;
     GeoPoint? postPosition;
     if (positionData != null) {
-      postPosition = GeoPoint(
-        positionData['geopoint'].latitude as double,
-        positionData['geopoint'].longitude as double,
-      );
+      // 'geopoint' が存在し、null でないことを確認
+      final geopoint = positionData['geopoint'] as GeoPoint?;
+      if (geopoint != null) {
+        postPosition = GeoPoint(geopoint.latitude, geopoint.longitude);
+      }
+      // geopoint が null の場合、postPosition は null のまま (安全)
     }
-    
 
     return PostModel(
       id: doc.id,
@@ -96,7 +101,60 @@ class PostModel {
       position: postPosition,
       location: data['location'] as String? ?? '',
       durationStart: (data['durationStart'] as Timestamp?)?.toDate(),
-      durationEnd: (data['durationEnd'] as Timestamp?)?.toDate(),
+      durationMonths: data['durationMonths'] as int? ?? 12,
+    );
+  }
+
+  factory PostModel.fromAlgolia(Map<String, dynamic> hit) {
+    // GeoPoint復元
+    GeoPoint geoPoint = const GeoPoint(0, 0);
+    if (hit['_geoloc'] != null &&
+        hit['_geoloc']['lat'] != null &&
+        hit['_geoloc']['lng'] != null) {
+      geoPoint = GeoPoint(
+        (hit['_geoloc']['lat'] as num).toDouble(),
+        (hit['_geoloc']['lng'] as num).toDouble(),
+      );
+    }
+
+    // UnixタイムをTimestampに変換
+    Timestamp safeTimestamp(dynamic ts) {
+      if (ts is num) {
+        return Timestamp.fromMillisecondsSinceEpoch((ts * 1000).toInt());
+      }
+      return Timestamp.now();
+    }
+
+    // Algoliaからのデータを元にPostModelを生成
+    return PostModel(
+      id: hit['objectID'] ?? '',
+      userId: hit['userId'] ?? '',
+      username: hit['username'] ?? 'Anonymous',
+      userProfileImageUrl: hit['userProfileImageUrl'] ?? '',
+      description: hit['description'] ?? hit['caption'] ?? '',
+      imageUrls: List<String>.from(hit['imageUrls'] ?? []),
+
+      // Firestore版に合わせたtimestamp構造
+      timestamp: safeTimestamp(hit['timestamp']),
+      likeCount: (hit['likeCount'] as num?)?.toInt() ?? 0,
+      likedBy: List<String>.from(hit['likedBy'] ?? []),
+
+      // Algoliaには保存していない可能性が高いのでデフォルトfalse
+      isSaved: false,
+
+      // 以下Firestore版に合わせて追加
+      manualTags: List<String>.from(hit['manualTags'] ?? []),
+      status: hit['status'] ?? 'open',
+      reportedBy: List<String>.from(hit['reportedBy'] ?? []),
+      gender: hit['gender'] ?? 'Mix',
+      roomType: hit['roomType'] ?? 'Middle',
+      condominiumName_searchKey: hit['condominiumName_searchKey'] ?? '',
+      rent: (hit['rent'] as num?)?.toDouble() ?? 0.0,
+      condominiumName: hit['condominiumName'] ?? '',
+      location: hit['location'] ?? '',
+      position: geoPoint,
+      durationStart: safeTimestamp(hit['durationStart']).toDate(),
+      durationMonths: hit['durationMonths'] as int?,
     );
   }
 }

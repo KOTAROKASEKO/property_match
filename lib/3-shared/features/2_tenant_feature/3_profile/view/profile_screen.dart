@@ -5,8 +5,7 @@ import '../models/profile_model.dart';
 import '../services/user_service.dart';
 import 'saved_posts_scen.dart';
 import '../../../authentication/auth_service.dart';
-import '../../../authentication/login_placeholder.dart';
-import 'edit_profile_screen.dart'; // We will create this next
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -56,9 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () async {
                   Navigator.pop(context);
                   await showSignOutModal(context);
-                  Navigator.of(context).pushReplacement(MaterialPageRoute(
-                    builder: (_) => const LoginPlaceholderScreen(),
-                  ));
+                  
                 },
               ),
             ],

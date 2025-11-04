@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +20,7 @@ class ChatThreadList extends StatelessWidget {
     this.onThreadSelected,
   });
 
+
   @override
   Widget build(BuildContext context) {
     if (threads.isEmpty) {
@@ -41,22 +40,14 @@ class ChatThreadList extends StatelessWidget {
         final unreadCount = thread.unreadCountMap[userData.userId] ?? 0;
         final note = thread.generalNote;
 
-        List<String> imageUrls = [];
-        if (thread.generalImageUrls.isNotEmpty &&
-            thread.generalImageUrls[0].isNotEmpty) {
-          try {
-            var decoded = jsonDecode(thread.viewingImageUrls[0]);
-            if (decoded is String) {
-              decoded = jsonDecode(decoded);
-            }
-            if (decoded is List) {
-              imageUrls = List<String>.from(decoded.map((item) => item.toString()));
-            }
-          } catch (e) {
-            print("Error decoding image urls in ChatThreadList: $e");
-          }
-        }
-        
+        // ★ Use the safe decoding helper for generalImageUrls
+        // Assuming generalImageUrls from Isar/Drift is List<String>
+        // If Firestore stores it differently, adjust accordingly
+        List<String> generalImageUrlsDecoded = thread.generalImageUrls; // Directly use if it's List<String>
+        // If thread.generalImageUrls might be dynamic/String from Firestore sync:
+        // List<String> generalImageUrlsDecoded = _decodeImageUrls(thread.generalImageUrls);
+
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
           child: Card(
@@ -140,7 +131,7 @@ class ChatThreadList extends StatelessWidget {
                     },
                     onLongPress: () => onLongPress(thread),
                   ),
-                  if (imageUrls.isNotEmpty || (note != null && note.isNotEmpty))
+                  if (generalImageUrlsDecoded.isNotEmpty || (note != null && note.isNotEmpty))
                     const Divider(height: 24),
                   GestureDetector(
                     onTap: () {
@@ -150,27 +141,29 @@ class ChatThreadList extends StatelessWidget {
                         backgroundColor: Colors.transparent,
                         builder: (_) => ViewingDetailsBottomSheet(
                           note: note ?? "",
-                          imageUrls: imageUrls,
+                          imageUrls: generalImageUrlsDecoded, // Use decoded URLs
                         ),
                       );
                     },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (imageUrls.isNotEmpty)
+                        if (generalImageUrlsDecoded.isNotEmpty)
                           SizedBox(
                             height: 80,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
-                              itemCount: imageUrls.length,
+                              itemCount: generalImageUrlsDecoded.length,
                               itemBuilder: (ctx, idx) => Padding(
                                 padding: const EdgeInsets.only(right: 8.0),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
                                   child: CachedNetworkImage(
-                                    imageUrl: imageUrls[idx],
+                                    imageUrl: generalImageUrlsDecoded[idx], // Use decoded URLs
                                     width: 80,
                                     fit: BoxFit.cover,
+                                     placeholder: (context, url) => Container(color: Colors.grey[200]),
+                                     errorWidget: (context, url, error) => const Icon(Icons.error),
                                   ),
                                 ),
                               ),

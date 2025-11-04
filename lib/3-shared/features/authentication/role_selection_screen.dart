@@ -78,6 +78,7 @@ class RoleSelectionScreen extends StatelessWidget {
     }
 
     try {
+      pr('saving basic profile data for role: $role');
       final roleString = role == Roles.agent ? 'agent' : 'tenant';
 
       final userProfileData = {

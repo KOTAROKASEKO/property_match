@@ -7,7 +7,7 @@ class FilterOptions {
   final double? minRent;
   final double? maxRent;
   final DateTime? durationStart;
-  final DateTime? durationEnd;
+  final int? durationMonth;
 
   FilterOptions({
     this.gender,
@@ -16,7 +16,7 @@ class FilterOptions {
     this.minRent,
     this.maxRent,
     this.durationStart,
-    this.durationEnd,
+    this.durationMonth,
   });
 
   // Check if any filters are applied
@@ -27,5 +27,5 @@ class FilterOptions {
       minRent == null &&
       maxRent == null &&
       durationStart == null &&
-      durationEnd == null;
+      durationMonth == null;
 }

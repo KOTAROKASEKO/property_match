@@ -1,6 +1,7 @@
 // lib/agent_main_scaffold.dart
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // 追加
 import 'features/1_agent_feature/1_profile/view/agent_profile_view.dart';
@@ -26,7 +27,7 @@ class _AgentMainScaffoldState extends State<AgentMainScaffold> {
     super.initState();
     final userId = FirebaseAuth.instance.currentUser?.uid;
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (user != null) {
+      if (user != null && !kIsWeb) {
         checkAndRequestNotificationPermission(context);
       }
     });

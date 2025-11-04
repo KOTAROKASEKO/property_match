@@ -10,12 +10,19 @@ class SuggestionViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isLoading = false;
   List<dynamic> _suggestions = [];
+  bool _isDisposed = false;
 
   bool get isLoading => _isLoading;
   List<dynamic> get suggestions => _suggestions;
 
   SuggestionViewModel() {
     fetchSuggestions();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 
   Future<void> fetchSuggestions() async {
@@ -33,7 +40,9 @@ class SuggestionViewModel extends ChangeNotifier {
     }
 
     _isLoading = false;
-    notifyListeners();
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   Future<void> _fetchPropertySuggestions() async {

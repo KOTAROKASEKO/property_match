@@ -192,10 +192,10 @@ class _PostCardState extends State<PostCard> {
             children: [
               _buildInfoChip(Icons.meeting_room_outlined, widget.post.roomType),
               _buildInfoChip(Icons.person_outline, '${widget.post.gender} Unit'),
-              if (widget.post.durationStart != null && widget.post.durationEnd != null)
+              if (widget.post.durationStart != null && widget.post.durationMonths != null)
                 _buildInfoChip(
                   Icons.date_range_outlined,
-                  '${DateFormat.yMd().format(widget.post.durationStart!)} - ${DateFormat.yMd().format(widget.post.durationEnd!)}',
+                  '${DateFormat.yMd().format(widget.post.durationStart!)} - ${widget.post.durationMonths!} months',
                 ),
             ],
           ),
@@ -310,6 +310,7 @@ class _PostCardState extends State<PostCard> {
               showSignInModal(context);
               return;
             }
+            pr('post id : ${widget.post.id}');
             // Use the callback from the widget's properties
             widget.onToggleLike(widget.post.id);
           },

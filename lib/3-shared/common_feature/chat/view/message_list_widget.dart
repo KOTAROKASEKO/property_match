@@ -348,7 +348,9 @@ class _MessageListViewState extends State<MessageListView> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          messageContent,
+          // ▼▼▼ 修正箇所 ▼▼▼
+          Flexible(child: messageContent), // ★ FIX: Wrap with Flexible
+          // ▲▲▲ 修正箇所 ▲▲▲
           const SizedBox(height: 4),
           timeStampAndStatus,
         ],
@@ -356,82 +358,84 @@ class _MessageListViewState extends State<MessageListView> {
     }
 
 
-    final messageBubble = ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width * 0.75,
-      ),
-      child: Column(
-        crossAxisAlignment:
-            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          if (message.repliedToMessageText != null)
-            _buildRepliedMessageContent(message, otherUserName),
-          Card(
-            elevation: 1,
-            color: color,
-            margin: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(16),
-                topRight: const Radius.circular(16),
-                bottomLeft: isMe ? const Radius.circular(16) : Radius.zero,
-                bottomRight: isMe ? Radius.zero : const Radius.circular(16),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-              child: bubbleContent,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final messageBubble = ConstrainedBox(
+          constraints: BoxConstraints(
+            // ★ 3. MediaQuery ではなく、LayoutBuilderの「constraints.maxWidth」を使う
+            maxWidth: constraints.maxWidth * 0.75,
           ),
-        ],
-      ),
-    );
-
-    return Dismissible(
-      key: ValueKey('dismiss_${message.messageId}'),
-      direction: message.status != 'deleted_for_everyone'
-          ? DismissDirection.startToEnd
-          : DismissDirection.none,
-      resizeDuration: null,
-      confirmDismiss: (direction) async {
-        provider.setReplyingTo(message);
-        return false;
-      },
-      background: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        alignment: Alignment.centerLeft,
-        child: const Icon(
-          Icons.reply,
-          color: Colors.grey,
-        ),
-      ),
-      child: GestureDetector(
-        onLongPress: () {
-          _showMessageOptions(context, message, isMe);
-        },
-        child: Container(
-          color: Colors.transparent,
-          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment:
-                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Column(
+            crossAxisAlignment:
+                isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
-              if (!isMe && otherUserPhotoUrl != null)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: CircleAvatar(
-                    backgroundImage: CachedNetworkImageProvider(
-                      otherUserPhotoUrl,
-                    ),
+              if (message.repliedToMessageText != null)
+                _buildRepliedMessageContent(message, otherUserName),
+              Card(
+                elevation: 1,
+                color: color,
+                margin: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(16),
+                    topRight: const Radius.circular(16),
+                    bottomLeft: isMe ? const Radius.circular(16) : Radius.zero,
+                    bottomRight: isMe ? Radius.zero : const Radius.circular(16),
                   ),
                 ),
-              // Timestamps are now inside the bubble
-              messageBubble,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                  child: bubbleContent,
+                ),
+              ),
             ],
           ),
-        ),
-      ),
+        );
+
+        // ★ 4. Dismissible以下を LayoutBuilder の builder の中で返す
+        return Dismissible(
+          key: ValueKey('dismiss_${message.messageId}'),
+          direction: message.status != 'deleted_for_everyone'
+              ? DismissDirection.startToEnd
+              : DismissDirection.none,
+          resizeDuration: null,
+          confirmDismiss: (direction) async {
+            provider.setReplyingTo(message);
+            return false;
+          },
+          background: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            alignment: Alignment.centerLeft,
+            child: const Icon(Icons.reply, color: Colors.grey),
+          ),
+          child: GestureDetector(
+            onLongPress: () {
+              _showMessageOptions(context, message, isMe);
+            },
+            child: Container(
+              color: Colors.transparent,
+              padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+              child: Row(
+                mainAxisAlignment:
+                    isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (!isMe && otherUserPhotoUrl != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: CircleAvatar(
+                        backgroundImage: CachedNetworkImageProvider(
+                          otherUserPhotoUrl,
+                        ),
+                      ),
+                    ),
+                  messageBubble, // ★ 5. 正しく幅が制約された bubble を配置
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

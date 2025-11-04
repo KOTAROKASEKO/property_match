@@ -18,9 +18,6 @@ dependencies:
   # ✅ IsarChatRepository が path_provider を使っているため
   path_provider: ^2.1.3 # プロジェクトに合わせてバージョンを更新
 
-  # ✅ IsarChatRepository が debug_print (pr) を使っているため (必要なら追加)
-  # path: ../../lib/3-shared/app/debug_print.dart 
-  # -> debug_print もパッケージ化するか、依存しないように修正するのが望ましい
   shared_data:
     path: ../shared_data
 

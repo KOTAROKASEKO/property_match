@@ -77,6 +77,8 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
     super.dispose();
   }
 
+
+
   String _generateChatThreadId(String uid1, String uid2) {
     List<String> uids = [uid1, uid2];
     uids.sort();
@@ -147,7 +149,10 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
             for (var change in snapshot.docChanges) {
               if (!change.doc.exists || change.doc.data() == null) continue;
 
-              final thread = ChatThread.fromFirestore(change.doc, userData.role==Roles.agent? 'agent':'tenant');
+              final thread = ChatThread.fromFirestore(
+                change.doc,
+                userData.role == Roles.agent ? 'agent' : 'tenant',
+              );
 
               final otherUserId = _getOtherParticipantId(thread);
               final userDoc = await _firestore
@@ -538,7 +543,7 @@ class _ChatThreadsScreenState extends State<ChatThreadsScreen>
           ),
         ),
         body: StreamBuilder<List<ChatThread>>(
-          stream:_chatRepository.watchChatThreads(),
+          stream: _chatRepository.watchChatThreads(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());

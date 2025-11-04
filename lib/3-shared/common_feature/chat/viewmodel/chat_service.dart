@@ -26,14 +26,18 @@ class ChatService {
 
   for (var image in images) {
     if (image is String) {
+      pr('found existing image url');
       finalImageUrls.add(image);
     } else if (image is File) {
+      pr('start uploading..');
       filesToUpload.add(image);
     }
   }
 
   if (filesToUpload.isNotEmpty) {
+    pr('found files to upload');
     List<String> newImageUrls = await _uploadImages(threadId, filesToUpload);
+    pr('uploaded images: $newImageUrls');
     finalImageUrls.addAll(newImageUrls);
   }
 
@@ -164,8 +168,6 @@ class ChatService {
 
     // After deleting the subcollection, delete the main chat document
     await _firestore.collection('chats').doc(threadId).delete();
-    
-    // 2. Delete from the local Isar database
     await _isarService.deleteChatThreadAndMessages(threadId);
   }
 

@@ -50,21 +50,16 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
   /// GoogleSignInを初期化し、認証ストリームのリスナーを設定
   Future<void> _initializeGoogleSignIn() async {
     try {
-      // v7.x で必須となった initialize を呼び出す
-      // Web専用なので kIsWeb 分岐を削除
+      pr('web google auth init');
       await GoogleSignIn.instance.initialize(
         clientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'],
-        // serverClientId: null, // Webでは不要なので null のまま
       );
-
-      // authenticationEvents を使用
       _authSubscription = GoogleSignIn.instance.authenticationEvents
           .listen((GoogleSignInAuthenticationEvent event) async {
         if (event is GoogleSignInAuthenticationEventSignIn) {
           if (mounted && !_isSigningIn) {
             setState(() => _isSigningIn = true);
           }
-
           final GoogleSignInAccount account = event.user;
           try {
             final String? idToken = account.authentication.idToken;
@@ -72,7 +67,6 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
             final GoogleSignInClientAuthorization? clientAuth =
                 await authClient.authorizeScopes(['email']);
             final String? accessToken = clientAuth?.accessToken;
-
             if (accessToken == null) {
               throw 'Failed to get access token from Google.';
             }
@@ -592,7 +586,6 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
     );
   }
 
-  /// Sign Up フォームを構築
   Widget _buildSignUpForm(BuildContext context) {
     // アニメーションのためにキーを設定
     return Container(

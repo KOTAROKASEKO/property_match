@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_data/shared_data.dart';
-import 'package:shared_data/src/database_path.dart';
 import '3-shared/common_feature/chat/viewmodel/unread_messages_viewmodel.dart';
 import '3-shared/features/1_agent_feature/1_profile/repo/profile_repository.dart';
 import '3-shared/features/1_agent_feature/1_profile/view/agent_post_detail_screen.dart';
@@ -43,11 +42,9 @@ void main() async {
   Hive.registerAdapter(TemplateModelAdapter());
   Hive.registerAdapter(PropertyTemplateAdapter());
   
-  await Hive.openBox<TemplateModel>(tenanTemplateMessageBoxName);
-  await Hive.openBox<TemplateModel>(agentTemplateMessageBoxName);
-  await Hive.openBox<PropertyTemplate>(propertyTemplateBox);
-
   userData.setUser(FirebaseAuth.instance.currentUser);
+
+  setupAuthListener();
 
   runApp(
     MultiProvider(
@@ -64,6 +61,19 @@ void main() async {
       ),
   );
 }
+
+void setupAuthListener() {
+  FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+    if (user != null) {
+      pr('Auth state changed: User is logged in (${user.uid}). Initializing DBs...');
+      await TemplateRepo().initializeUserDatabases();
+    } else {
+      // ログアウトした！
+      pr('Auth state changed: User is logged out.');
+    }
+  });
+}
+
 Future<void> _setupInteractedMessage() async {
   RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
   if (initialMessage != null) {
@@ -121,6 +131,24 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<String?> _getRoleFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     String? role = prefs.getString('role');
+    if(role == null){
+      try{
+        FirebaseFirestore firestore = FirebaseFirestore.instance;
+      await firestore.collection('users_prof').doc(userData.userId).get().then((doc) {
+        if(doc.exists){
+          final data = doc.data() as Map<String, dynamic>;
+          if(data['role'] != null){
+            _saveRoleToPrefs(data['role']);
+            role = data['role'];
+            return role;
+          }
+          return null;
+        }
+      });
+      }catch(e){
+        pr('error during getting role from firestore : ${e}');
+      }
+    }
     print('Getting role : role is ${role}');
     return role;
   }
@@ -146,15 +174,21 @@ class _AuthWrapperState extends State<AuthWrapper> {
               if (prefsSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(body: Center(child: CircularProgressIndicator()));
               }
-
+              if(prefsSnapshot.data == null){
+                return RoleSelectionScreen();
+              }
               if (prefsSnapshot.hasData && prefsSnapshot.data != null) {
                 final role = prefsSnapshot.data!;
+                pr('role is ${role}');
                 userData.setRole(role == 'agent' ? Roles.agent : Roles.tenant);
                 return const ResponsiveLayout();
               } else {
+                pr('user id is : ${userData.userId}');
                 return FutureBuilder<DocumentSnapshot>(
+                  
                   future: FirebaseFirestore.instance.collection('users_prof').doc(userData.userId).get(),
                   builder: (context, userDocSnapshot) {
+                    
                     if (userDocSnapshot.connectionState == ConnectionState.waiting) {
                       return const Scaffold(body: Center(child: CircularProgressIndicator()));
                     }

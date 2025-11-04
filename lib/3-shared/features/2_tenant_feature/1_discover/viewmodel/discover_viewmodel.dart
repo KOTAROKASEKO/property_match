@@ -9,14 +9,11 @@ import 'post_service.dart';
 
 class DiscoverViewModel extends PostActionsViewModel  {
   final PostService _postService = PostService();
-
-  // --- (1) REMOVED: _allFetchedPosts is no longer needed. ---
-  // List<PostModel> _allFetchedPosts = []; 
   
   List<PostModel> _posts = [];
   SortOrder _sortOrder = SortOrder.byDate;
+  int _currentPage = 0;
   FilterOptions _filterOptions = FilterOptions();
-  DocumentSnapshot? _lastDocument;
   bool _isLoading = false;
   bool _isLoadingMore = false;
   bool _hasMorePosts = true;
@@ -27,7 +24,7 @@ class DiscoverViewModel extends PostActionsViewModel  {
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
 
-  String _searchQuery = '';
+  String _searchQuery = ''; // ★ トップの検索バー（ロケーション用）
   List<String> _blockedUserIds = [];
   
   DiscoverViewModel() {
@@ -52,42 +49,31 @@ class DiscoverViewModel extends PostActionsViewModel  {
     }
   }
 
-  // --- (2) REMOVED: _applyFilter method is no longer needed. ---
-  /*
-  void _applyFilter() {
-    if (_searchQuery.isEmpty) {
-      _posts = _allFetchedPosts;
-    } else {
-      final query = _searchQuery.toLowerCase();
-      _posts = _allFetchedPosts.where((post) {
-        final descriptionMatch = post.description.toLowerCase().contains(query);
-        final tagMatch = post.allTags.any((tag) => tag.toLowerCase().contains(query));
-        return descriptionMatch || tagMatch;
-      }).toList();
-    }
-    notifyListeners();
-  }
-  */
+  // --- (2) REMOVED: _applyFilter method (ローカルフィルタリング) は不要 ---
 
   Future<void> fetchInitialPosts() async {
     _isLoading = true;
-    _hasMorePosts = true;
-    _lastDocument = null;
+    _hasMorePosts = true; 
+    _currentPage = 0; 
     notifyListeners();
 
     try {
+      // ★★★ 変更点 ★★★
+      // _searchQuery (ロケーション用) と _filterOptions (その他フィルター用) を渡す
       final result = await _postService.getPosts(
-        sortOrder: _sortOrder,
-        filters: _filterOptions,
-        searchQuery: _searchQuery, // The searchQuery is correctly passed here
+        locationQuery: _searchQuery, // ★ 変更 (searchQuery -> locationQuery)
+        filters: _filterOptions,     // ★ 追加
+        page: _currentPage,
       );
-      _posts = result.posts.where((post) => !_blockedUserIds.contains(post.userId)).toList();
-      _lastDocument = result.lastDocument;
-      if (result.posts.length < 10) {
-        _hasMorePosts = false;
-      }
+      // ★★★ ------- ★★★
+
+      _posts = result.posts
+          .where((post) => !_blockedUserIds.contains(post.userId))
+          .toList();
+      _hasMorePosts = result.hasMore; 
     } catch (e) {
       print("Error fetching initial posts: $e");
+      _hasMorePosts = false; 
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -98,40 +84,43 @@ class DiscoverViewModel extends PostActionsViewModel  {
     if (_isLoadingMore || !_hasMorePosts) return;
 
     _isLoadingMore = true;
+    _currentPage++; 
     notifyListeners();
 
     try {
+      // ★★★ 変更点 ★★★
       final result = await _postService.getPosts(
-        sortOrder: _sortOrder,
-        filters: _filterOptions,
-        searchQuery: _searchQuery,
-        lastDocument: _lastDocument,
+        locationQuery: _searchQuery, // ★ 変更 (searchQuery -> locationQuery)
+        filters: _filterOptions,     // ★ 追加
+        page: _currentPage,
       );
-      // Filter blocked users from the newly fetched posts before adding them
-      final newPosts = result.posts.where((post) => !_blockedUserIds.contains(post.userId));
-      _posts.addAll(newPosts);
+      // ★★★ ------- ★★★
       
-      _lastDocument = result.lastDocument;
-      if (result.posts.length < 10) {
-        _hasMorePosts = false;
-      }
+      final newPosts = result.posts
+          .where((post) => !_blockedUserIds.contains(post.userId));
+      _posts.addAll(newPosts);
+      _hasMorePosts = result.hasMore;
     } catch (e) {
       print("Error fetching more posts: $e");
+      _hasMorePosts = false; 
     } finally {
       _isLoadingMore = false;
       notifyListeners();
     }
   }
+  
+  // --- (3) FIXED: 検索とフィルターの適用 ---
+  // フィルターパネルや検索バーから呼び出された際、
+  // fetchInitialPosts() を呼ぶことで Algolia に新しいクエリが飛ぶ
 
-  // --- (3) FIXED: This is the core of the fix. ---
-  // Instead of calling the local _applyFilter, we now call fetchInitialPosts
-  // to trigger a new query to Firestore with the search term.
   Future<void> applySearchQuery(String query) async {
+    // これはトップの検索バー（ロケーション用）
     _searchQuery = query;
     await fetchInitialPosts();
   }
 
   Future<void> applyFilters(FilterOptions filters) async {
+    // これはフィルターパネル（家賃、性別、コンドミニアム名など）
     _filterOptions = filters;
     await fetchInitialPosts();
   }

@@ -203,9 +203,13 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
                   ),
                 ),
               const SizedBox(width: 8),
-              Text(
-                widget.otherUserName,
-                style: const TextStyle(color: Colors.white),
+              Expanded(
+                child: Text(
+                  widget.otherUserName,
+                  style: const TextStyle(color: Colors.white),
+                  overflow: TextOverflow.ellipsis, // Good practice
+                  maxLines: 1,                      // Good practice
+                ),
               ),
             ],
           ),

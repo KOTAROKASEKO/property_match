@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:chatrepo_interface/chatrepo_interface.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class AudioMessagePlayer extends StatefulWidget {
@@ -22,7 +23,6 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
   void initState() {
     super.initState();
     _audioPlayer.setReleaseMode(ReleaseMode.stop);
-    _initAudioPlayer();
 
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) setState(() => _isPlaying = state == PlayerState.playing);
@@ -46,20 +46,6 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
     });
   }
 
-  Future<void> _initAudioPlayer() async {
-    Source? source;
-    if (widget.message.localPath != null &&
-        File(widget.message.localPath!).existsSync()) {
-      source = DeviceFileSource(widget.message.localPath!);
-    } else if (widget.message.remoteUrl != null) {
-      source = UrlSource(widget.message.remoteUrl!);
-    }
-
-    if (source != null) {
-      await _audioPlayer.setSource(source);
-    }
-  }
-
   @override
   void dispose() {
     _audioPlayer.stop();
@@ -73,7 +59,6 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
     final color = isMe ? Colors.white : Colors.black87;
 
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
           icon: Icon(
@@ -82,17 +67,48 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
             size: 32,
           ),
           onPressed: () async {
-            if (_isPlaying) {
-              await _audioPlayer.pause();
-            } else {
-              if (_position > Duration.zero && _position < _duration) {
-                await _audioPlayer.resume();
+            try {
+              if (_isPlaying) {
+                await _audioPlayer.pause();
               } else {
-                await _audioPlayer.seek(Duration.zero);
-                await _audioPlayer.play(
-                  widget.message.localPath != null
-                      ? DeviceFileSource(widget.message.localPath!)
-                      : UrlSource(widget.message.remoteUrl!),
+                // Check if we are paused mid-way
+                if (_position > Duration.zero &&
+                    _position.inMilliseconds < _duration.inMilliseconds) {
+                  await _audioPlayer.resume();
+                } else {
+                  // We are at the start (0) or end (fully played)
+                  // We must set the source and play.
+                  Source? source;
+                  if (widget.message.localPath != null) {
+                    if (kIsWeb) {
+                      source = UrlSource(widget.message.localPath!);
+                    } else if (File(widget.message.localPath!).existsSync()) {
+                      source = DeviceFileSource(widget.message.localPath!);
+                    }
+                  }
+
+                  if (source == null && widget.message.remoteUrl != null) {
+                    source = UrlSource(widget.message.remoteUrl!);
+                  }
+
+                  if (source != null) {
+                    // This method sets the source AND starts playing
+                    // It will also trigger onDurationChanged
+                    await _audioPlayer.play(source);
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Audio not available.')),
+                      );
+                    }
+                  }
+                }
+              }
+            } catch (e) {
+              print("Error playing audio: $e");
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error playing audio: $e')),
                 );
               }
             }
@@ -106,7 +122,9 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
             ),
             child: Slider(
               min: 0,
-              max: _duration.inSeconds.toDouble(),
+              max: (_duration.inSeconds.toDouble() > 0)
+                  ? _duration.inSeconds.toDouble()
+                  : 1.0,
               value: _position.inSeconds.toDouble().clamp(
                 0.0,
                 _duration.inSeconds.toDouble(),

@@ -18,7 +18,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   late TextEditingController _condoNameController;
   RangeValues _rentRange = const RangeValues(0, 5000);
   DateTime? _durationStart;
-  DateTime? _durationEnd;
+  int? _durationMonth;
 
   final List<String> _genderOptions = ['Male', 'Female', 'Mix', 'Any'];
   final List<String> _roomTypeOptions = ['Single', 'Middle', 'Master'];
@@ -35,7 +35,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       widget.initialFilters.maxRent ?? 5000,
     );
     _durationStart = widget.initialFilters.durationStart;
-    _durationEnd = widget.initialFilters.durationEnd;
+    _durationMonth = widget.initialFilters.durationMonth;
   }
 
   void _clearAllFilters() {
@@ -45,7 +45,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       _condoNameController.clear();
       _rentRange = const RangeValues(0, 5000);
       _durationStart = null;
-      _durationEnd = null;
+      _durationMonth = null;
     });
     // Immediately apply the cleared filters by popping with new empty options
     Navigator.pop(context, FilterOptions());
@@ -62,7 +62,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       minRent: _rentRange.start == 0 ? null : _rentRange.start,
       maxRent: _rentRange.end == 5000 ? null : _rentRange.end,
       durationStart: _durationStart,
-      durationEnd: _durationEnd,
+      durationMonth: _durationMonth,
     );
     Navigator.of(context).pop(filters);
   }
@@ -131,61 +131,59 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       children: [
         Expanded(
           child: InkWell(
-            onTap: () async {
-              final pickedDate = await showDatePicker(
-                context: context,
-                initialDate: _durationStart ?? DateTime.now(),
-                firstDate: DateTime(2020),
-                lastDate: DateTime(2101),
-              );
-              if (pickedDate != null) {
-                setState(() {
-                  _durationStart = pickedDate;
-                });
-              }
-            },
-            child: InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'Available From',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-              ),
-              child: Text(
-                _durationStart != null
-                    ? DateFormat.yMMMd().format(_durationStart!)
-                    : 'Any',
-              ),
-            ),
+        onTap: () async {
+          final pickedDate = await showDatePicker(
+            context: context,
+            initialDate: _durationStart ?? DateTime.now(),
+            firstDate: DateTime(2020),
+            lastDate: DateTime(2101),
+          );
+          if (pickedDate != null) {
+            setState(() {
+          _durationStart = pickedDate;
+            });
+          }
+        },
+        child: InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Available From',
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          ),
+          child: Text(
+            _durationStart != null
+            ? DateFormat.yMMMd().format(_durationStart!)
+            : 'Any',
+          ),
+        ),
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: InkWell(
-            onTap: () async {
-              final pickedDate = await showDatePicker(
-                context: context,
-                initialDate: _durationEnd ?? _durationStart ?? DateTime.now(),
-                firstDate: _durationStart ?? DateTime(2020),
-                lastDate: DateTime(2101),
-              );
-              if (pickedDate != null) {
-                setState(() {
-                  _durationEnd = pickedDate;
-                });
-              }
-            },
-            child: InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'Available To',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-              ),
-              child: Text(
-                _durationEnd != null
-                    ? DateFormat.yMMMd().format(_durationEnd!)
-                    : 'Any',
-              ),
+          child: Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+          initialValue: _durationMonth?.toString(),
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Duration',
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          ),
+          onChanged: (value) {
+            setState(() {
+              _durationMonth = int.tryParse(value);
+            });
+          },
             ),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'months',
+            style: TextStyle(fontSize: 16),
+          ),
+        ],
           ),
         ),
       ],

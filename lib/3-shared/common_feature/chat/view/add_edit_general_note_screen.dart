@@ -1,7 +1,9 @@
 // lib/2_tenant_feature/4_chat/view/add_edit_general_note_screen.dart
 
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chatrepo_interface/chatrepo_interface.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../viewmodel/chat_service.dart';
@@ -9,10 +11,7 @@ import '../viewmodel/chat_service.dart';
 class AddEditGeneralNoteScreen extends StatefulWidget {
   final ChatThread thread;
 
-  const AddEditGeneralNoteScreen({
-    super.key,
-    required this.thread,
-  });
+  const AddEditGeneralNoteScreen({super.key, required this.thread});
 
   @override
   State<AddEditGeneralNoteScreen> createState() =>
@@ -29,15 +28,23 @@ class _AddEditGeneralNoteScreenState extends State<AddEditGeneralNoteScreen> {
   @override
   void initState() {
     super.initState();
-    _noteController = TextEditingController(text: widget.thread.generalNote ?? '');
+    _noteController = TextEditingController(
+      text: widget.thread.generalNote ?? '',
+    );
     _images.addAll(widget.thread.generalImageUrls);
   }
 
-  Future<void> _pickImages() async {
+Future<void> _pickImages() async {
     final pickedFiles = await _picker.pickMultiImage(imageQuality: 85);
     if (pickedFiles.isNotEmpty) {
       setState(() {
-        _images.addAll(pickedFiles.map((file) => File(file.path)));
+        if (kIsWeb) {
+          // On web, add the XFile objects directly
+          _images.addAll(pickedFiles);
+        } else {
+          // On mobile, convert to File objects
+          _images.addAll(pickedFiles.map((file) => File(file.path)));
+        }
       });
     }
   }
@@ -59,9 +66,9 @@ class _AddEditGeneralNoteScreenState extends State<AddEditGeneralNoteScreen> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save details: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save details: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -142,16 +149,65 @@ class _AddEditGeneralNoteScreenState extends State<AddEditGeneralNoteScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: image is String
-                  ? Image.network(image, fit: BoxFit.cover)
-                  : Image.file(image as File, fit: BoxFit.cover),
+                  ? CachedNetworkImage(
+                      imageUrl: image,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          Container(color: Colors.grey.shade300),
+                      errorWidget: (context, url, error) =>
+                          const Icon(Icons.error),
+                    )
+                  : kIsWeb
+                  ? FutureBuilder<Uint8List>(
+                      future: (image is XFile)
+                          ? image.readAsBytes()
+                          : Future.value(Uint8List(0)),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.done &&
+                            snapshot.hasData &&
+                            snapshot.data!.isNotEmpty) {
+                          return Image.memory(
+                            snapshot.data!,
+                            fit: BoxFit.cover,
+                          );
+                        } else if (snapshot.hasError ||
+                            (snapshot.connectionState == ConnectionState.done &&
+                                (snapshot.data == null ||
+                                    snapshot.data!.isEmpty))) {
+                          return Container(
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          );
+                        }
+                        return Container(
+                          color: Colors.grey.shade300,
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      },
+                    )
+                  : Image.file(
+                      image as File,
+                      fit: BoxFit.cover,
+                    ),
             ),
             Positioned(
-              top: 4, right: 4,
+              top: 4,
+              right: 4,
               child: GestureDetector(
                 onTap: () => _removeImage(index),
                 child: Container(
                   padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
                   child: const Icon(Icons.close, color: Colors.white, size: 16),
                 ),
               ),

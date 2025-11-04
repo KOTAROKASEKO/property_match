@@ -1,138 +1,192 @@
 // lib/features/2_tenant_feature/1_discover/viewmodel/post_service.dart
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:algoliasearch/algoliasearch_lite.dart';
+import 'package:geocoding/geocoding.dart' as geocoding;
+import 'package:http/http.dart' as http;
 import 'package:shared_data/shared_data.dart';
 import '../../../../core/model/PostModel.dart';
 import '../model/comment_model.dart';
-import '../model/filter_options.dart';
 import '../model/paginated_post.dart';
+import '../model/filter_options.dart';
 
 enum SortOrder { byDate, byPopularity }
 
 class PostService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _collectionPath = 'posts';
-  final CollectionReference _postsCollection =
-      FirebaseFirestore.instance.collection('posts');
-  final CollectionReference _usersCollection =
-      FirebaseFirestore.instance.collection('users');
+  final CollectionReference _postsCollection = FirebaseFirestore.instance
+      .collection('posts');
+  final CollectionReference _usersCollection = FirebaseFirestore.instance
+      .collection('users');
 
-  Future<PaginatedPosts> getPosts({
-    required SortOrder sortOrder,
-    FilterOptions? filters,
-    String? searchQuery,
-    DocumentSnapshot? lastDocument,
-    int limit = 10,
-  }) async {
-    CollectionReference<Map<String, dynamic>> collectionRef =
-        _firestore.collection(_collectionPath).withConverter<Map<String, dynamic>>(
-              fromFirestore: (snapshot, _) => snapshot.data()!,
-              toFirestore: (data, _) => data,
-            );
-            
-    Query query = collectionRef.where('status', isEqualTo: 'open');
-    List<String>? geoQueriedIds;
-
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      try {
-        List<Location> locations = await locationFromAddress(searchQuery);
-        if (locations.isNotEmpty) {
-          final center = GeoFirePoint(
-              GeoPoint(locations.first.latitude, locations.first.longitude));
-          const radiusInKm = 15.0; 
-
-          final geoQuery = GeoCollectionReference(collectionRef).fetchWithin(
-            center: center,
-            radiusInKm: radiusInKm,
-            field: 'position',
-            geopointFrom: (data) {
-              final position = (data)['position'] as Map<String, dynamic>;
-              return position['geopoint'] as GeoPoint;
-            },
-          );
-
-          final querySnapshot = await geoQuery.asStream().first;
-          geoQueriedIds = querySnapshot.map((doc) => doc.id).toList();
-
-          if (geoQueriedIds.isEmpty) {
-            return PaginatedPosts(posts: [], lastDocument: null);
-          }
+  Future<Map<String, double>?> getLatLng(String address) async {
+    try {
+      if (kIsWeb) {
+        final apiKey = dotenv.env['GEO_CODE_API_KEY'];
+        if (apiKey == null || apiKey.isEmpty) {
+          throw Exception('GEO_CODE_API_KEY not found in .env');
         }
-      } on Exception {
-        query = query
-            .where('condominiumName', isGreaterThanOrEqualTo: searchQuery)
-            .where('condominiumName',
-                isLessThanOrEqualTo: '$searchQuery\uf8ff');
-      }
-    }
-    
-    if (geoQueriedIds != null) {
-      if (geoQueriedIds.length > 10) {
-        query = query.where(FieldPath.documentId, whereIn: geoQueriedIds.sublist(0, 10));
+        final encodedAddress = Uri.encodeComponent(address);
+        final url =
+            'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';
+
+        final response = await http.get(Uri.parse(url));
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          pr('${response.body}');
+          if (data['status'] == 'OK') {
+            final location = data['results'][0]['geometry']['location'];
+            return {'lat': location['lat'], 'lng': location['lng']};
+          } else {
+            print('Google API Error: ${data}');
+          }
+        } else {
+          print('HTTP Error: ${response.statusCode}');
+        }
       } else {
-        query = query.where(FieldPath.documentId, whereIn: geoQueriedIds);
+        final locations = await geocoding.locationFromAddress(address);
+        if (locations.isNotEmpty) {
+          return {
+            'lat': locations.first.latitude,
+            'lng': locations.first.longitude,
+          };
+        }
       }
+    } catch (e) {
+      print('Geocoding failed: $e');
     }
-
-    if (filters != null) {
-      if (filters.gender != 'Any' && filters.gender != null) {
-        query = query.where('gender', isEqualTo: filters.gender);
-      }
-      if (filters.roomType != null && filters.roomType!.isNotEmpty) {
-        query = query.where('roomType', whereIn: filters.roomType);
-      }
-      if (filters.condoName != null && filters.condoName!.isNotEmpty) {
-        query = query.where('condominiumName', isEqualTo: filters.condoName);
-      }
-      if (filters.minRent != null) {
-        query = query.where('rent', isGreaterThanOrEqualTo: filters.minRent);
-      }
-      if (filters.maxRent != null && filters.maxRent! < 5000) {
-        query = query.where('rent', isLessThanOrEqualTo: filters.maxRent);
-      }
-      // Duration filter
-      if (filters.durationStart != null) {
-        query = query.where('durationStart', isGreaterThanOrEqualTo: Timestamp.fromDate(filters.durationStart!));
-      }
-      if (filters.durationEnd != null) {
-        query = query.where('durationStart', isLessThanOrEqualTo: Timestamp.fromDate(filters.durationEnd!));
-      }
-    }
-
-    // Apply sorting
-    bool hasDurationFilter = filters?.durationStart != null || filters?.durationEnd != null;
-    if (hasDurationFilter) {
-      // If filtering by duration, the first orderBy must be on the same field.
-      query = query.orderBy('durationStart');
-    } else if (sortOrder == SortOrder.byPopularity) {
-      query = query.orderBy('likeCount', descending: true);
-    } else if (geoQueriedIds == null) {
-      query = query.orderBy('timestamp', descending: true);
-    }
-
-
-    if (lastDocument != null) {
-      query = query.startAfterDocument(lastDocument);
-    }
-
-    query = query.limit(limit);
-
-    final snapshot = await query.get();
-
-    final posts = snapshot.docs
-        .map((doc) => PostModel.fromFirestore(
-            doc as DocumentSnapshot<Map<String, dynamic>>))
-        .toList();
-
-    final DocumentSnapshot? newLastDocument =
-        snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
-
-    return PaginatedPosts(posts: posts, lastDocument: newLastDocument);
+    return null;
   }
 
+  final SearchClient _algoliaClient = SearchClient(
+    appId: '86BOLZBS9Q', // ★ あなたのApp ID
+    apiKey: '5da01cabd95ead996a8c0002b09c4b63',
+  );
+
+  Future<PaginatedPosts> getPosts({
+    required String locationQuery, // discover_viewmodel の _searchQuery (ロケーション用)
+    required FilterOptions filters, // discover_viewmodel の _filterOptions (全フィルター)
+    int page = 0,
+    int limit = 10,
+  }) async {
+    const String indexName = 'bilik_match_index';
+
+    try {
+      // ================================
+      // 1️⃣ 住所→座標変換 (from locationQuery)
+      // ================================
+      String? aroundLatLng;
+      if (locationQuery.isNotEmpty) {
+        final coords = await getLatLng(locationQuery);
+        if (coords != null) {
+          aroundLatLng = '${coords['lat']},${coords['lng']}';
+          print('[DEBUG] Searching near $aroundLatLng (for "$locationQuery")');
+        } else {
+          print('[WARN] Geocoding failed for "$locationQuery". Proceeding without location bias.');
+        }
+      } else {
+        print('[DEBUG] No location query provided.');
+      }
+
+      // ================================
+      // 2️⃣ Algolia フィルター文字列構築 (from filters)
+      // ================================
+      final List<String> filterStrings = [];
+
+      // --- Rent Filter ---
+      if (filters.minRent != null && filters.minRent! > 0) {
+        filterStrings.add('rent >= ${filters.minRent}');
+      }
+      if (filters.maxRent != null && filters.maxRent! < 5000) {
+        filterStrings.add('rent <= ${filters.maxRent}');
+      }
+
+      if (filters.gender != null && filters.gender != 'Any') {
+        pr('added gender to query string list');
+        filterStrings.add('gender:${filters.gender}');
+      }
+
+      if (filters.roomType != null && filters.roomType!.isNotEmpty) {
+        final roomFilters = filters.roomType!.map((type) => 'roomType:$type').toList();
+        filterStrings.add('(${roomFilters.join(' OR ')})');
+      }
+
+      if (filters.durationStart != null) {
+        final startTimestamp = filters.durationStart!.millisecondsSinceEpoch ~/ 1000; 
+        filterStrings.add('availableFromTimestamp >= $startTimestamp');
+      }
+
+      if (filters.durationMonth != null && filters.durationMonth! > 0) {
+        filterStrings.add('durationMonths = ${filters.durationMonth}');
+      }
+      
+      final String algoliaFilters = filterStrings.join(' AND ');
+      if (algoliaFilters.isNotEmpty) {
+        pr('Algolia Filters:$algoliaFilters');
+      }
+      
+      // ================================
+      // 3️⃣ Algolia クエリ作成
+      // ================================
+      final query = SearchForHits(
+        indexName: indexName,
+        query: filters.condoName ?? '',
+        page: page,
+        hitsPerPage: limit,
+        aroundLatLng: aroundLatLng,
+        aroundRadius: aroundLatLng != null ? 20000 : null,
+        filters: algoliaFilters.isNotEmpty ? algoliaFilters : null,
+      );
+
+      // ================================
+      // 4️⃣ Algolia 検索実行
+      // ================================
+      final response = await _algoliaClient.searchIndex(request: query);
+
+      pr('[DEBUG ALGOLIA RESPONSE] Query: "${filters.condoName ?? ''}", Location: "${locationQuery}", Filters: "$algoliaFilters"');
+      pr('[DEBUG ALGOLIA RESPONSE] nbHits: ${response.nbHits}');
+      pr('[DEBUG ALGOLIA RESPONSE] page: ${response.page}/${response.nbPages}');
+
+      if (response.hits.isEmpty) {
+        response.facets?.forEach((key, value) {
+          print('[DEBUG ALGOLIA RESPONSE] Facet $key: $value');
+        });
+        print('[DEBUG ALGOLIA RESPONSE] No hits found.');
+      }
+
+      final posts = response.hits.map((hit) {
+        // 1. 'hit' オブジェクトは Map のように振る舞うため、
+        //    まずドキュメントのフィールドを新しいMapにコピーします。
+        final Map<String, dynamic> docData = Map<String, dynamic>.from(hit);
+
+        // 2. 'objectID' は 'hit' の直接のプロパティなので、
+        //    手動で 'objectID' キーとしてMapに追加します。
+        docData['objectID'] = hit.objectID;
+
+        // 3. すべてのデータ（objectID + ドキュメント）を含む
+        //    この新しい "フラットな" Map をファクトリに渡します。
+        return PostModel.fromAlgolia(docData);
+      }).toList();
+
+      posts.forEach((posts){
+        pr('post id in algolia search: ${posts}');
+      });
+
+      final bool hasMore = response.page! < (response.nbPages! - 1);
+
+      return PaginatedPosts(posts: posts, hasMore: hasMore);
+    } catch (e, st) {
+      print('[ERROR] Algolia location search failed: $e\n$st');
+      return PaginatedPosts(posts: [], hasMore: false);
+    }
+  }
+  
   Future<void> deletePost(String postId) async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
@@ -146,7 +200,6 @@ class PostService {
       throw Exception("Post does not exist.");
     }
     await postRef.delete();
-    
   }
 
   Future<void> reportPost(String postId) async {
@@ -155,20 +208,24 @@ class PostService {
       throw Exception("User is not logged in.");
     }
     await _postsCollection.doc(postId).update({
-      'reportedBy': FieldValue.arrayUnion([userId])
+      'reportedBy': FieldValue.arrayUnion([userId]),
     });
   }
 
-    Future<List<PostModel>> getSavedPosts(String userId) async {
+  Future<List<PostModel>> getSavedPosts(String userId) async {
     try {
-      final savedPostsSnapshot =
-          await _usersCollection.doc(userId).collection('savedPosts').get();
+      final savedPostsSnapshot = await _usersCollection
+          .doc(userId)
+          .collection('savedPosts')
+          .get();
 
       if (savedPostsSnapshot.docs.isEmpty) {
         return [];
       }
 
-      final savedPostIds = savedPostsSnapshot.docs.map((doc) => doc.id).toList();
+      final savedPostIds = savedPostsSnapshot.docs
+          .map((doc) => doc.id)
+          .toList();
 
       final postsSnapshot = await _postsCollection
           .where(FieldPath.documentId, whereIn: savedPostIds)
@@ -176,9 +233,12 @@ class PostService {
           .get();
 
       final savedPosts = postsSnapshot.docs
-          .map((doc) => PostModel.fromFirestore(
+          .map(
+            (doc) => PostModel.fromFirestore(
               doc as DocumentSnapshot<Map<String, dynamic>>,
-              isSaved: true))
+              isSaved: true,
+            ),
+          )
           .toList();
 
       return savedPosts;
@@ -190,6 +250,7 @@ class PostService {
 
   Future<void> toggleLike(String postId) async {
     final String userId = userData.userId;
+    pr('user id : $userId');
     final DocumentReference postRef = _postsCollection.doc(postId);
 
     return _firestore.runTransaction((transaction) async {
@@ -199,57 +260,65 @@ class PostService {
         throw Exception("Post does not exist!");
       }
 
-      final List<String> likedBy = List<String>.from(snapshot.get('likedBy') ?? []);
+      final List<String> likedBy = List<String>.from(
+        snapshot.get('likedBy') ?? [],
+      );
 
       if (likedBy.contains(userId)) {
         transaction.update(postRef, {
           'likeCount': FieldValue.increment(-1),
-          'likedBy': FieldValue.arrayRemove([userId])
+          'likedBy': FieldValue.arrayRemove([userId]),
         });
       } else {
         transaction.update(postRef, {
           'likeCount': FieldValue.increment(1),
-          'likedBy': FieldValue.arrayUnion([userId])
+          'likedBy': FieldValue.arrayUnion([userId]),
         });
       }
     });
   }
 
-Future<void> addComment({
-  required String postId,
-  required String text,
-  String? parentCommentId,
-}) async {
-  try {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception("User not logged in");
-    final userDoc = await _firestore.collection('users_prof').doc(user.uid).get();
-    final username = userDoc.data()?['displayName'] ?? 'Anonymous';
-    final userProfileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
+  Future<void> addComment({
+    required String postId,
+    required String text,
+    String? parentCommentId,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception("User not logged in");
+      final userDoc = await _firestore
+          .collection('users_prof')
+          .doc(user.uid)
+          .get();
+      final username = userDoc.data()?['displayName'] ?? 'Anonymous';
+      final userProfileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
 
-    final commentData = {
-      'text': text,
-      'userId': user.uid,
-      'username': username,
-      'userProfileImageUrl': userProfileImageUrl,
-      'timestamp': FieldValue.serverTimestamp(),
-    };
+      final commentData = {
+        'text': text,
+        'userId': user.uid,
+        'username': username,
+        'userProfileImageUrl': userProfileImageUrl,
+        'timestamp': FieldValue.serverTimestamp(),
+      };
 
-    if (parentCommentId != null) {
-      await _postsCollection
-          .doc(postId)
-          .collection('comments')
-          .doc(parentCommentId)
-          .collection('replies')
-          .add(commentData);
-    } else {
-      await _postsCollection.doc(postId).collection('comments').add(commentData);
+      if (parentCommentId != null) {
+        await _postsCollection
+            .doc(postId)
+            .collection('comments')
+            .doc(parentCommentId)
+            .collection('replies')
+            .add(commentData);
+      } else {
+        await _postsCollection
+            .doc(postId)
+            .collection('comments')
+            .add(commentData);
+      }
+    } catch (e) {
+      print("Error adding comment: $e");
+      rethrow;
     }
-  } catch (e) {
-    print("Error adding comment: $e");
-    rethrow;
   }
-}
 
   Stream<List<Comment>> getComments(String postId) {
     return _postsCollection
@@ -258,10 +327,14 @@ Future<void> addComment({
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Comment.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
-          .toList();
-    });
+          return snapshot.docs
+              .map(
+                (doc) => Comment.fromFirestore(
+                  doc as DocumentSnapshot<Map<String, dynamic>>,
+                ),
+              )
+              .toList();
+        });
   }
 
   Stream<List<Comment>> getReplies(String postId, String commentId) {
@@ -273,10 +346,14 @@ Future<void> addComment({
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Comment.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
-          .toList();
-    });
+          return snapshot.docs
+              .map(
+                (doc) => Comment.fromFirestore(
+                  doc as DocumentSnapshot<Map<String, dynamic>>,
+                ),
+              )
+              .toList();
+        });
   }
 
   Future<void> toggleSavePost(String postId) async {
@@ -286,8 +363,10 @@ Future<void> addComment({
         throw Exception("User is not logged in.");
       }
 
-      final savedPostRef =
-          _usersCollection.doc(userId).collection('savedPosts').doc(postId);
+      final savedPostRef = _usersCollection
+          .doc(userId)
+          .collection('savedPosts')
+          .doc(postId);
 
       final doc = await savedPostRef.get();
 
@@ -310,9 +389,13 @@ Future<void> addComment({
         .limit(1)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Comment.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
-          .toList();
-    });
+          return snapshot.docs
+              .map(
+                (doc) => Comment.fromFirestore(
+                  doc as DocumentSnapshot<Map<String, dynamic>>,
+                ),
+              )
+              .toList();
+        });
   }
 }

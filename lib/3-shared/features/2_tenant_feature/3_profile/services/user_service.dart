@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/profile_model.dart';
 
@@ -50,15 +51,28 @@ class UserService {
   }
 
   // Renamed method to upload profile image
-  Future<String> uploadProfileImage(String userId, XFile imageFile) async {
+Future<String> uploadProfileImage(String userId, XFile imageFile) async {
     try {
-      final ref = _storage.ref().child('profile_images').child('$userId.jpg'); // Changed folder name
-      final uploadTask = ref.putFile(File(imageFile.path));
-      final snapshot = await uploadTask.whenComplete(() {});
+      final ref = _storage.ref().child('profile_images').child('$userId.jpg'); // Path in Storage
+      UploadTask uploadTask;
+
+      // Conditional Upload Logic
+      if (kIsWeb) {
+        // For Web: Read bytes and use putData
+        final Uint8List data = await imageFile.readAsBytes();
+        uploadTask = ref.putData(data, SettableMetadata(contentType: imageFile.mimeType ?? 'image/jpeg'));
+      } else {
+        // For Mobile: Use putFile with dart:io File
+        uploadTask = ref.putFile(File(imageFile.path));
+      }
+
+      final snapshot = await uploadTask.whenComplete(() => {});
       final downloadUrl = await snapshot.ref.getDownloadURL();
       return downloadUrl;
     } catch (e) {
-      throw Exception('Failed to upload profile image: $e');
+      print("Error uploading profile image: $e"); // Log the specific error
+      throw Exception('Failed to upload profile image: ${e.toString()}');
     }
   }
+  
 }

@@ -204,14 +204,7 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
   }
 
   ChatThread _mapRowToChatThread(ChatThreadRow row) {
-    print('--- Mapping ChatThreadRow ---');
-    print('message: ${row.lastMessage}');
-    print('id: ${row.id} (Type: ${row.id.runtimeType})');
-    print('whoSent: ${row.whoSent} (Type: ${row.whoSent.runtimeType})');
-    print('whoReceived: ${row.whoReceived} (Type: ${row.whoReceived.runtimeType})');
-    print('timeStamp: ${row.timeStamp} (Type: ${row.timeStamp.runtimeType})');
-    // 必要に応じて他のフィールドも追加
-    print('-----------------------------');
+
     return ChatThread()
       ..id = row.id
       ..whoSent = row.whoSent
@@ -355,11 +348,13 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
 
   @override
   Future<void> clearDatabaseOnLogout() async {
+    print('Clearing Drift database on logout...');
     await transaction(() async {
       await delete(messages).go();
       await delete(chatThreads).go();
       await delete(blockedUsers).go();
     });
+    print('✅ Drift database cleared on logout');
   }
 
   @override
@@ -383,5 +378,5 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
     )..where((tbl) => tbl.userId.equals(blockedUser))).go();
   }
 
-  Future<void> clearAllTables() async {}
+
 }

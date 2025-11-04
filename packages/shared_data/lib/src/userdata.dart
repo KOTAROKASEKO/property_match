@@ -21,6 +21,7 @@ class UserData {
 
   void setUser(User? user) {
     _userId = user?.uid;
+    
   }
 
   //In case the user id is not set, it will set and return the userId.

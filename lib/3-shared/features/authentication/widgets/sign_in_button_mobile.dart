@@ -1,6 +1,4 @@
-// lib/3-shared/features/authentication/widgets/sign_in_button_mobile.dart
 import 'package:flutter/material.dart';
-// Add other necessary mobile imports
 
 class SignInButton extends StatelessWidget {
   final bool isSigningIn;

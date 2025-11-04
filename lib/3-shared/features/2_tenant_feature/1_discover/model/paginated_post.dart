@@ -1,12 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../../core/model/PostModel.dart';
 
 class PaginatedPosts {
   final List<PostModel> posts;
-  final DocumentSnapshot? lastDocument;
+  final bool hasMore; // ★ lastDocumentから変更
 
   PaginatedPosts({
     required this.posts,
-    this.lastDocument,
+    required this.hasMore, // ★ 変更
   });
 }

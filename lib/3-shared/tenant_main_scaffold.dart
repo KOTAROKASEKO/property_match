@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'common_feature/chat/view/chatThreadScreen.dart';
 import 'features/2_tenant_feature/1_discover/view/discover_screen.dart';
@@ -19,7 +20,7 @@ class _TenantMainScaffoldState extends State<TenantMainScaffold> {
   void initState() {
     super.initState();
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (user != null) {
+      if (user != null && !kIsWeb) {
         checkAndRequestNotificationPermission(context);
       }
     });
