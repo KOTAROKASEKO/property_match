@@ -1,9 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:re_conver/3-shared/core/responsive/responsive_layout.dart';
 import 'package:shared_data/shared_data.dart';
-import 'package:shared_data/src/database_path.dart';
-import '../../MainScaffold.dart';
 import '../2_tenant_feature/3_profile/models/profile_model.dart';
 import '../2_tenant_feature/3_profile/view/edit_profile_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -108,14 +107,17 @@ class RoleSelectionScreen extends StatelessWidget {
           displayName: user.displayName ?? 'New User',
         );
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => EditProfileScreen(userProfile: newUserProfile),
+        MaterialPageRoute(
+          builder: (context) => EditProfileScreen(
+            userProfile: newUserProfile,
+            isNewUser: true, // ★ ADDED: Indicate this is the first time
           ),
-        );
+        ),
+      );
       } else {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const MainScaffold(),
+            builder: (context) => const ResponsiveLayout(),
           ),
         );
       }

@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:re_conver/main.dart';
 import 'package:shared_data/shared_data.dart';
 import '../../MainScaffold.dart';
 import 'forgotpassword.dart';
@@ -52,33 +53,24 @@ class _SignInScreenState extends State<SignInScreen> {
           await saveTokenToDatabase();
 
           if (mounted) {
-            final userDoc = await FirebaseFirestore.instance.collection('users_prof').doc(userCredential.user!.uid).get();
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('checking your account data..')),
-              );
-
-            if (userDoc.exists && userDoc.data() != null && userDoc.data()!.containsKey('role')) {
-              final role = userDoc.data()!['role'] as String;
-              
-              // SharedPreferencesにロールを保存
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('storing role in local storage')),
-              );
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('role', role);
-
-              userData.setRole(role == 'agent' ? Roles.agent : Roles.tenant);
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const MainScaffold()),
-                (route) => false,
-              );
+            // The AuthWrapper will now handle role checking and navigation
+            if (navigatorKey.currentState != null) {
+                navigatorKey.currentState!.pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    // Navigate to the AuthWrapper to re-trigger auth logic
+                    builder: (context) => const AuthWrapper(), 
+                  ),
+                  (route) => false,
+                );
             } else {
+              // Fallback
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
-                (route) => false,
-              );
+                  MaterialPageRoute(builder: (context) => const AuthWrapper()),
+                  (route) => false,
+                );
             }
           }
+          // ========================================================
         }
       } on FirebaseAuthException catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(

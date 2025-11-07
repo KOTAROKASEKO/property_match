@@ -8,6 +8,7 @@ class FilterOptions {
   final double? maxRent;
   final DateTime? durationStart;
   final int? durationMonth;
+  final List<String>? hobbies;
 
   FilterOptions({
     this.gender,
@@ -17,6 +18,7 @@ class FilterOptions {
     this.maxRent,
     this.durationStart,
     this.durationMonth,
+    this.hobbies,
   });
 
   // Check if any filters are applied
@@ -27,5 +29,6 @@ class FilterOptions {
       minRent == null &&
       maxRent == null &&
       durationStart == null &&
-      durationMonth == null;
+      durationMonth == null &&
+      (hobbies == null || hobbies!.isEmpty);
 }

@@ -11,6 +11,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+deploy_command.txt
 
 # IntelliJ related
 *.iml

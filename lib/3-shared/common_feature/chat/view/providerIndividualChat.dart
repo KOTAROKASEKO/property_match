@@ -179,7 +179,7 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
   Widget build(BuildContext context) {
     final provider = context.watch<MessageListProvider>();
     final bool isUserBlocked = provider.isBlocked;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
@@ -301,7 +301,7 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
       color: Colors.grey[200],
       child: Center(
         child: Text(
-          "You have blocked this user.",
+          "The user is not available.",
           style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w500),
         ),
       ),

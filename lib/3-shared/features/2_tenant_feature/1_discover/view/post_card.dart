@@ -197,6 +197,8 @@ class _PostCardState extends State<PostCard> {
                   Icons.date_range_outlined,
                   '${DateFormat.yMd().format(widget.post.durationStart!)} - ${widget.post.durationMonths!} months',
                 ),
+                if (widget.post.hobbies.isNotEmpty)
+                ...widget.post.hobbies.map((hobby) => _buildInfoChip(Icons.interests_outlined, hobby)).toList(),
             ],
           ),
           const SizedBox(height: 12),

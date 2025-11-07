@@ -1,7 +1,7 @@
-// lib/common_feature/chat/data/local/web/drift_chat_repository.dart
+// packages/chatrepo_drift/lib/repo/drift_chat_repository.dart
+
 
 import 'package:chatrepo_interface/chatrepo_interface.dart';
-
 import '../src/data/drift_database.dart'; // 作成したファイルをインポート
 
 class DriftChatRepository implements ChatRepository {
@@ -62,7 +62,20 @@ class DriftChatRepository implements ChatRepository {
 
   @override
   Future<void> clearDatabaseOnLogout() async {
-    await _chatDao.clearDatabaseOnLogout();
+    print('🧹 Starting secure Drift database cleanup...');
+    
+    // 1. Clear all data within the database tables (論理的なクリア)
+    try {
+      await _chatDao.clearAllTables();
+      print('🧹 All tables cleared.');
+    } catch (e) {
+      print('⚠️ Failed to clear tables: $e');
+      // このエラーはログアウト処理の失敗を示すため、
+      // 可能であればここで例外を再スローして呼び出し元に知らせるべきです
+      rethrow; 
+    }
+    
+    print('✅ Database logically cleared. Connection remains open.');
   }
 
   @override
@@ -83,5 +96,12 @@ class DriftChatRepository implements ChatRepository {
   @override
   Stream<List<String>> watchBlockedUsers() {
     return _chatDao.watchBlockedUsers();
+  }
+
+  @override
+  Future<void> close() async {
+    print('🔒 Closing database connection from Repository.close()...');
+    await _db.close();
+    print('🔒 Database connection closed.');
   }
 }

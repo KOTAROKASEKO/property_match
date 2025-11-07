@@ -101,10 +101,13 @@ class MessageListProvider extends ChangeNotifier {
       if (kIsWeb) {
         // A案 (Web): 起動時にFirestoreから1回だけ取得
         await _checkBlockStatusFromFirestore();
-      } else {
+      } 
         // C案 (Mobile): ローカルDBの変更をリアルタイムで監視
-        _listenToBlockStatus();
-      }
+        if(!kIsWeb){
+          _listenToBlockStatus();
+        }
+      
+      
       await loadInitialMessages();
       listenToFirebaseMessages();
       markMessagesAsRead();
@@ -128,7 +131,11 @@ class MessageListProvider extends ChangeNotifier {
         final List<dynamic> myBlockedUsers =
             myBlockListDoc.data()!['blockedUsers'] ?? [];
         if (myBlockedUsers.contains(otherUserUid)) {
+          pr('I am blokcing him');
           currentlyBlocked = true;
+          await _chatRepository.addToBlockedUsers(otherUserUid);
+        }else{
+          pr('I am not blocking him');
         }
       }
 
@@ -143,7 +150,9 @@ class MessageListProvider extends ChangeNotifier {
           final List<dynamic> otherBlockedUsers =
               otherBlockListDoc.data()!['blockedUsers'] ?? [];
           if (otherBlockedUsers.contains(userData.userId)) {
+            pr('other user is blocking me');
             currentlyBlocked = true;
+            await _chatRepository.addToBlockedUsers(otherUserUid);
           }
         }
       }
@@ -173,13 +182,15 @@ class MessageListProvider extends ChangeNotifier {
       // つまり、このリストは「自分がブロックした人」と「自分をブロックした人」の
       // 両方が入るリストになっている。
       // よって、このロジックで正しい。
+      pr('current user id : ${userData.userId}');
+      pr('blockedUserIds from Local DB: $blockedUserIds');
+
       final bool currentlyBlocked = blockedUserIds.contains(otherUserUid);
       
-      // 状態が変化した場合のみUIに通知する
       if (_isBlocked != currentlyBlocked) {
         _isBlocked = currentlyBlocked;
         pr('[MessageListProvider] Block status changed (from Local DB): $_isBlocked');
-        notifyListeners(); // ★ UIに変更を通知
+        notifyListeners();
       }
     });
   }

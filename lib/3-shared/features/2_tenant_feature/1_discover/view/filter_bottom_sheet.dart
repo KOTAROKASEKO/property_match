@@ -19,6 +19,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   RangeValues _rentRange = const RangeValues(0, 5000);
   DateTime? _durationStart;
   int? _durationMonth;
+  final _hobbyController = TextEditingController();
+  late List<String> _hobbies;
 
   final List<String> _genderOptions = ['Male', 'Female', 'Mix', 'Any'];
   final List<String> _roomTypeOptions = ['Single', 'Middle', 'Master'];
@@ -36,6 +38,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
     _durationStart = widget.initialFilters.durationStart;
     _durationMonth = widget.initialFilters.durationMonth;
+    _hobbies = widget.initialFilters.hobbies ?? [];
   }
 
   void _clearAllFilters() {
@@ -46,6 +49,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       _rentRange = const RangeValues(0, 5000);
       _durationStart = null;
       _durationMonth = null;
+      _hobbies = []; // ★★★ ADDED ★★★
+      _hobbyController.clear();
     });
     // Immediately apply the cleared filters by popping with new empty options
     Navigator.pop(context, FilterOptions());
@@ -63,6 +68,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       maxRent: _rentRange.end == 5000 ? null : _rentRange.end,
       durationStart: _durationStart,
       durationMonth: _durationMonth,
+      hobbies: _hobbies.isEmpty ? null : _hobbies,
     );
     Navigator.of(context).pop(filters);
   }
@@ -111,6 +117,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   const SizedBox(height: 28),
                   _buildSectionTitle('Condominium Name'),
                   _buildCondoNameInput(),
+                  const SizedBox(height: 28), // ★★★ ADDED ★★★
+                  _buildSectionTitle('Hobbies & Lifestyle'), // ★★★ ADDED ★★★
+                  _buildHobbiesInput(),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -477,6 +486,56 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           ),
         ],
       ),
+    );
+  }
+  
+  Widget _buildHobbiesInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          onFieldSubmitted: (value) {
+            final hobby = value.trim().toLowerCase();
+            if (hobby.isNotEmpty) {
+              setState(() {
+                if (!_hobbies.contains(hobby)) {
+                  _hobbies.add(hobby);
+                }
+                _hobbyController.clear();
+              });
+            }
+          },
+          controller: _hobbyController,
+          decoration: InputDecoration(
+            labelText: 'Looking for hobbies',
+            hintText: 'e.g., Hiking, Cooking',
+            border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: () {
+                // ★★★ 修正: .toLowerCase() を追加 ★★★
+                final hobby = _hobbyController.text.trim().toLowerCase();
+                if (hobby.isNotEmpty) {
+                  setState(() {
+                    if (!_hobbies.contains(hobby)) { // ★ hobby を使用
+                      _hobbies.add(hobby); // ★ hobby を使用
+                    }
+                    _hobbyController.clear();
+                  });
+                }
+              },
+            ),
+          ),
+        ),
+        if (_hobbies.isNotEmpty) const SizedBox(height: 8),
+        Wrap(
+          spacing: 8.0,
+          children: _hobbies.map((hobby) => Chip(
+                label: Text(hobby),
+                onDeleted: () => setState(() => _hobbies.remove(hobby)),
+              )).toList(),
+        ),
+      ],
     );
   }
 }

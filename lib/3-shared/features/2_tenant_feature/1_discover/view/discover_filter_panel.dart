@@ -25,6 +25,9 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
 
   late DiscoverViewModel _viewModel; // ViewModel reference
 
+  final _hobbyController = TextEditingController();
+  late List<String> _hobbies;
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +53,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     );
     _durationStart = filters.durationStart;
     _durationMonth = filters.durationMonth;
+    _hobbies = filters.hobbies ?? [];
   }
 
   void _applyFilters() {
@@ -63,6 +67,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
       maxRent: _rentRange.end == 5000 ? null : _rentRange.end,
       durationStart: _durationStart,
       durationMonth: _durationMonth,
+      hobbies: _hobbies.isEmpty ? null : _hobbies,
     );
     _viewModel.applyFilters(filters);
   }
@@ -77,6 +82,8 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
       _rentRange = const RangeValues(0, 5000);
       _durationStart = null;
       _durationMonth = null;
+      _hobbies = []; // ★★★ ADDED ★★★
+      _hobbyController.clear();
     });
   }
 
@@ -107,6 +114,9 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
                 const SizedBox(height: 28),
                 _buildSectionTitle('Condominium Name'),
                 _buildCondoNameInput(),
+                const SizedBox(height: 28), // ★★★ ADDED ★★★
+                _buildSectionTitle('Hobbies & Lifestyle'), // ★★★ ADDED ★★★
+                _buildHobbiesInput(),
                 const SizedBox(height: 32),
               ],
             ),
@@ -114,6 +124,56 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
           _buildApplyButton(),
         ],
       ),
+    );
+  }
+
+  Widget _buildHobbiesInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          onFieldSubmitted: (value) {
+            final hobby = value.trim().toLowerCase();
+            if (hobby.isNotEmpty) {
+              setState(() {
+                if (!_hobbies.contains(hobby)) {
+                  _hobbies.add(hobby);
+                }
+                _hobbyController.clear();
+              });
+            }
+          },
+          controller: _hobbyController,
+          decoration: InputDecoration(
+            labelText: 'Looking for hobbies',
+            hintText: 'e.g., Hiking, Cooking',
+            border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: () {
+                // ★★★ 修正: .toLowerCase() を追加 ★★★
+                final hobby = _hobbyController.text.trim().toLowerCase();
+                if (hobby.isNotEmpty) {
+                  setState(() {
+                    if (!_hobbies.contains(hobby)) { // ★ hobby を使用
+                      _hobbies.add(hobby); // ★ hobby を使用
+                    }
+                    _hobbyController.clear();
+                  });
+                }
+              },
+            ),
+          ),
+        ),
+        if (_hobbies.isNotEmpty) const SizedBox(height: 8),
+        Wrap(
+          spacing: 8.0,
+          children: _hobbies.map((hobby) => Chip(
+                label: Text(hobby),
+                onDeleted: () => setState(() => _hobbies.remove(hobby)),
+              )).toList(),
+        ),
+      ],
     );
   }
 

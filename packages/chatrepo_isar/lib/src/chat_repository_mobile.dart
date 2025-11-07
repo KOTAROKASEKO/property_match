@@ -1,5 +1,7 @@
 // packages/chatrepo_isar/lib/src/chat_repository_mobile.dart
 
+import 'dart:async';
+
 import 'package:chatrepo_interface/chatrepo_interface.dart' as repo_interface;
 // Isar モデルのインポート (インターフェースモデルを隠す必要はありません)
 import 'package:chatrepo_isar/src/model/chat_thread.dart';
@@ -42,9 +44,6 @@ class IsarChatRepository implements repo_interface.ChatRepository {
     repo_interface.MessageModel interfaceMessage,
   ) {
     return MessageModel()
-      // 注意: Isar の ID は Isar が自動生成するため、ここでは設定しないことが多いです。
-      // 必要に応じてインターフェースモデルの id を Isar のインデックスフィールドにマッピングするなど検討してください。
-      // ..id = interfaceMessage.id
       ..messageId = interfaceMessage.messageId
       ..chatRoomId = interfaceMessage.chatRoomId
       ..whoSent = interfaceMessage.whoSent
@@ -66,13 +65,9 @@ class IsarChatRepository implements repo_interface.ChatRepository {
       ..repliedToMessageId = interfaceMessage.repliedToMessageId;
   }
 
-  // Isar モデル -> インターフェースモデル
   repo_interface.MessageModel _fromIsarMessageModel(MessageModel isarMessage) {
-    // インターフェースの MessageModel は Isar のアノテーションを持たないプレーンなクラスである必要があります。
-    // packages/chatrepo_interface/lib/src/models/message_model.dart を修正してください。
     return repo_interface.MessageModel()
-      ..id = isarMessage
-          .id // Isar が生成した ID を使用
+      ..id = isarMessage.id
       ..messageId = isarMessage.messageId
       ..chatRoomId = isarMessage.chatRoomId
       ..whoSent = isarMessage.whoSent
@@ -94,12 +89,9 @@ class IsarChatRepository implements repo_interface.ChatRepository {
       ..repliedToMessageId = isarMessage.repliedToMessageId;
   }
 
-  // --- ChatThread 変換ヘルパー (必要に応じて追加) ---
-
   ChatThread _toIsarChatThread(repo_interface.ChatThread interfaceThread) {
     return ChatThread()
-      ..id = interfaceThread
-          .id // Firestore ID を Isar の id フィールドに
+      ..id = interfaceThread.id
       ..whoSent = interfaceThread.whoSent
       ..whoReceived = interfaceThread.whoReceived
       ..hisName = interfaceThread.hisName
@@ -108,8 +100,7 @@ class IsarChatRepository implements repo_interface.ChatRepository {
       ..timeStamp = interfaceThread.timeStamp
       ..messageType = interfaceThread.messageType
       ..lastMessageId = interfaceThread.lastMessageId
-      ..unreadCountJson = interfaceThread
-          .unreadCountJson // Map は JSON 文字列として保存
+      ..unreadCountJson = interfaceThread.unreadCountJson
       ..generalNote = interfaceThread.generalNote
       ..generalImageUrls = interfaceThread.generalImageUrls
       ..viewingTimes = interfaceThread.viewingTimes
@@ -120,7 +111,6 @@ class IsarChatRepository implements repo_interface.ChatRepository {
   repo_interface.ChatThread _fromIsarChatThread(ChatThread isarThread) {
     return repo_interface.ChatThread()
       ..id = isarThread.id
-      // ..isarId はインターフェースモデルには不要
       ..whoSent = isarThread.whoSent
       ..whoReceived = isarThread.whoReceived
       ..hisName = isarThread.hisName
@@ -129,15 +119,13 @@ class IsarChatRepository implements repo_interface.ChatRepository {
       ..timeStamp = isarThread.timeStamp
       ..messageType = isarThread.messageType
       ..lastMessageId = isarThread.lastMessageId
-      ..unreadCountJson = isarThread
-          .unreadCountJson // JSON 文字列から Map へは getter で変換
+      ..unreadCountJson = isarThread.unreadCountJson
       ..generalNote = isarThread.generalNote
       ..generalImageUrls = isarThread.generalImageUrls
       ..viewingTimes = isarThread.viewingTimes
       ..viewingNotes = isarThread.viewingNotes
       ..viewingImageUrls = isarThread.viewingImageUrls;
   }
-
   // --- リポジトリメソッドの実装 ---
 
   @override
@@ -240,33 +228,61 @@ class IsarChatRepository implements repo_interface.ChatRepository {
 
   @override
   Stream<List<repo_interface.ChatThread>> watchChatThreads() async* {
-    // インターフェースモデルのリストを返すように修正
     final isar = await db;
-    // Isar の watch 結果をインターフェースモデルに変換して流す
-    await for (final isarThreads in isar.chatThreads.where().watch(
-      fireImmediately: true,
-    )) {
-      // ここでブロックユーザーによるフィルタリングを追加できます
-      final blocked = await getBlockedUsers();
-      final filteredThreads = isarThreads
-          .where(
-            (thread) =>
-                !blocked.contains(thread.whoSent) &&
-                !blocked.contains(thread.whoReceived),
-          )
-          .map(_fromIsarChatThread)
-          .toList();
-      yield filteredThreads;
+
+    final blockedStream = isar.blockedUsersModels.watchObject(1, fireImmediately: true);
+
+    final threadsStream = isar.chatThreads.where().watch(fireImmediately: true);
+
+    List<String> currentBlocked = [];
+    List<ChatThread> currentThreads = [];
+    bool blockedFired = false;
+    bool threadsFired = false;
+
+    final controller = StreamController<List<repo_interface.ChatThread>>();
+
+    void updateOutput() {
+      // 両方のストリームが少なくとも1回データを流したら、フィルタリングしてyieldする
+      if (blockedFired && threadsFired) {
+        final filteredThreads = currentThreads
+            .where(
+              (thread) =>
+                  !currentBlocked.contains(thread.whoSent) &&
+                  !currentBlocked.contains(thread.whoReceived),
+            )
+            .map(_fromIsarChatThread) // Isarモデル -> インターフェースモデル
+            .toList();
+        
+        // タイムスタンプで並び替え (Isarのwatchは順序を保証しない場合があるため)
+        filteredThreads.sort((a, b) => b.timeStamp.compareTo(a.timeStamp));
+
+        controller.add(filteredThreads);
+      }
     }
-  }
 
-  @override
-  Future<void> clearDatabaseOnLogout() async {
-    final isar = await db;
-    await isar.writeTxn(() => isar.clear());
-    pr("✅ Isar database has been cleared on logout.");
-  }
+    final blockedSub = blockedStream.listen((model) {
+      currentBlocked = model?.blockedUsers ?? [];
+      blockedFired = true;
+      updateOutput();
+    });
 
+    final threadsSub = threadsStream.listen((isarThreads) {
+      currentThreads = isarThreads;
+      threadsFired = true;
+      updateOutput();
+    });
+
+    // このStreamがキャンセルされたら、内部のStreamもキャンセルする
+    controller.onCancel = () {
+      blockedSub.cancel();
+      threadsSub.cancel();
+    };
+
+    // コントローラーのStreamをyield*する
+    yield* controller.stream;
+    // --- ▲▲▲ 修正完了 ▲▲▲ ---
+  }
+  
   @override
   Future<List<String>> getBlockedUsers() async {
     final isar = await db;
@@ -326,5 +342,40 @@ class IsarChatRepository implements repo_interface.ChatRepository {
         yield []; // ドキュメントが存在しない場合は空のリストを流します
       }
     }
+  }
+
+  @override
+  Future<void> clearDatabaseOnLogout() async {
+    print('🧹 Starting secure Isar database cleanup...');
+    final isar = await db;
+    
+    // Isarの全データを削除 (Raw SQLのDELETE FROM... と同じ効果)
+    await isar.writeTxn(() async {
+      // Isar 3.1以降をお使いの場合、これが最も簡単です
+      // await isar.clear();
+      
+      // Isar 3.1より前、または個別にクリアしたい場合
+      await isar.chatThreads.clear();
+      await isar.messageModels.clear();
+      await isar.blockedUsersModels.clear();
+      
+      print('🧹 All Isar collections cleared.');
+    });
+    
+    print('✅ Isar database logically cleared. Connection remains open.');
+  }
+
+  // ★★★ 2. close を実装 ★★★
+  @override
+  Future<void> close() async {
+    final isar = await db;
+    print('🔒 Closing Isar database connection from Repository.close()...');
+    
+    // Isarのインスタンスを閉じる
+    // deleteFromDisk: false にして、データファイル自体は残します
+    // (clearDatabaseOnLogoutで中身は空になっているため)
+    await isar.close(deleteFromDisk: false);
+    
+    print('🔒 Isar database connection closed.');
   }
 }

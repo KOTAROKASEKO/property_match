@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:algoliasearch/algoliasearch_lite.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:http/http.dart' as http;
@@ -25,44 +24,47 @@ class PostService {
       .collection('users');
 
   Future<Map<String, double>?> getLatLng(String address) async {
-    try {
-      if (kIsWeb) {
-        final apiKey = dotenv.env['GEO_CODE_API_KEY'];
-        if (apiKey == null || apiKey.isEmpty) {
-          throw Exception('GEO_CODE_API_KEY not found in .env');
-        }
-        final encodedAddress = Uri.encodeComponent(address);
-        final url =
-            'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';
+  try {
+    if (kIsWeb) {
+      const apiKey = String.fromEnvironment('GEO_CODE_API_KEY');
+      if (apiKey.isEmpty) {
+        throw Exception('GEO_CODE_API_KEY not found in .env');
+      }
 
-        final response = await http.get(Uri.parse(url));
+      pr('api key found : $apiKey');
+      final encodedAddress = Uri.encodeComponent(address);
+      final url =
+          'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';
 
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          pr('${response.body}');
-          if (data['status'] == 'OK') {
-            final location = data['results'][0]['geometry']['location'];
-            return {'lat': location['lat'], 'lng': location['lng']};
-          } else {
-            print('Google API Error: ${data}');
-          }
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        pr('${response.body}');
+        if (data['status'] == 'OK') {
+          final location = data['results'][0]['geometry']['location'];
+          return {'lat': location['lat'], 'lng': location['lng']};
         } else {
-          print('HTTP Error: ${response.statusCode}');
+          print('Google API Error: ${data}');
         }
       } else {
-        final locations = await geocoding.locationFromAddress(address);
-        if (locations.isNotEmpty) {
-          return {
-            'lat': locations.first.latitude,
-            'lng': locations.first.longitude,
-          };
-        }
+        print('HTTP Error: ${response.statusCode}');
       }
-    } catch (e) {
-      print('Geocoding failed: $e');
+    } else {
+      final locations = await geocoding.locationFromAddress(address);
+      if (locations.isNotEmpty) {
+        return {
+          'lat': locations.first.latitude,
+          'lng': locations.first.longitude,
+        };
+      }
     }
-    return null;
+  } catch (e) {
+    print('Geocoding failed: $e');
   }
+  return null;
+}
+
 
   final SearchClient _algoliaClient = SearchClient(
     appId: '86BOLZBS9Q', // ★ あなたのApp ID
@@ -86,18 +88,21 @@ class PostService {
         final coords = await getLatLng(locationQuery);
         if (coords != null) {
           aroundLatLng = '${coords['lat']},${coords['lng']}';
-          print('[DEBUG] Searching near $aroundLatLng (for "$locationQuery")');
+          pr('Searching near $aroundLatLng (for "$locationQuery")');
         } else {
-          print('[WARN] Geocoding failed for "$locationQuery". Proceeding without location bias.');
+          pr('[WARN] Geocoding failed for "$locationQuery". Proceeding without location bias.');
         }
       } else {
-        print('[DEBUG] No location query provided.');
+        pr('[DEBUG] No location query provided.');
       }
 
       // ================================
       // 2️⃣ Algolia フィルター文字列構築 (from filters)
       // ================================
       final List<String> filterStrings = [];
+      
+      // ★★★ 修正: facetFilters をここで初期化 ★★★
+      final List<List<String>> facetFilters = [];
 
       // --- Rent Filter ---
       if (filters.minRent != null && filters.minRent! > 0) {
@@ -125,6 +130,14 @@ class PostService {
       if (filters.durationMonth != null && filters.durationMonth! > 0) {
         filterStrings.add('durationMonths = ${filters.durationMonth}');
       }
+
+      // ★★★ 修正: hobbies を filterStrings ではなく facetFilters に追加 ★★★
+      if (filters.hobbies != null && filters.hobbies!.isNotEmpty) {
+        final hobbyFacets = filters.hobbies!
+            .map((hobby) => 'hobbies:${hobby.trim().toLowerCase()}')
+            .toList();
+        facetFilters.add(hobbyFacets); // OR条件で追加
+      }
       
       final String algoliaFilters = filterStrings.join(' AND ');
       if (algoliaFilters.isNotEmpty) {
@@ -142,6 +155,8 @@ class PostService {
         aroundLatLng: aroundLatLng,
         aroundRadius: aroundLatLng != null ? 20000 : null,
         filters: algoliaFilters.isNotEmpty ? algoliaFilters : null,
+        // ★★★ 修正: facetFilters をクエリに追加 ★★★
+        facetFilters: facetFilters.isNotEmpty ? facetFilters : null,
       );
 
       // ================================
@@ -150,6 +165,10 @@ class PostService {
       final response = await _algoliaClient.searchIndex(request: query);
 
       pr('[DEBUG ALGOLIA RESPONSE] Query: "${filters.condoName ?? ''}", Location: "${locationQuery}", Filters: "$algoliaFilters"');
+      // ★★★ デバッグログ追加 ★★★
+      if (facetFilters.isNotEmpty) {
+         pr('[DEBUG ALGOLIA RESPONSE] FacetFilters: ${facetFilters.toString()}');
+      }
       pr('[DEBUG ALGOLIA RESPONSE] nbHits: ${response.nbHits}');
       pr('[DEBUG ALGOLIA RESPONSE] page: ${response.page}/${response.nbPages}');
 
@@ -174,9 +193,11 @@ class PostService {
         return PostModel.fromAlgolia(docData);
       }).toList();
 
-      posts.forEach((posts){
-        pr('post id in algolia search: ${posts}');
+      // ★★★ FIX: PRINT THE POST ID, NOT THE OBJECT ★★★
+      posts.forEach((post){
+        pr('post id in algolia search: ${post.id}');
       });
+      // ★★★ END FIX ★★★
 
       final bool hasMore = response.page! < (response.nbPages! - 1);
 
@@ -243,7 +264,7 @@ class PostService {
 
       return savedPosts;
     } catch (e) {
-      print("Error fetching saved posts: $e");
+      pr("Error fetching saved posts: $e");
       return [];
     }
   }

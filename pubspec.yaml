@@ -47,7 +47,7 @@ dependencies:
   # --- Utilities ---
   image_picker: ^1.1.2
   flutter_image_compress: ^2.4.0
-  path_provider: ^2.0.0 # Needed by Isar/Drift implementations & others
+  path_provider: ^2.1.5 # Needed by Isar/Drift implementations & others
   url_launcher: ^6.3.2
   flutter_dotenv: ^5.2.1
   google_places_flutter: ^2.1.0

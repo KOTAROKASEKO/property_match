@@ -22,11 +22,12 @@ class PostModel {
   int likeCount;
   List<String> likedBy;
   bool isSaved;
-  final GeoPoint? position; // ★★★ 追加 ★★★
+  final GeoPoint? position;
   final String location;
   final DateTime? durationStart;
-  final DateTime? moveInDate; // 例: 入居希望日
+  final DateTime? moveInDate;
   final int? durationMonths;
+  final List<String> hobbies; // ★★★ ADDED ★★★
 
   PostModel({
     this.moveInDate,
@@ -52,6 +53,7 @@ class PostModel {
     this.condominiumName_searchKey = '',
     this.durationStart,
     this.durationMonths,
+    this.hobbies = const [], // ★★★ ADDED ★★★
   });
 
   bool get isLikedByCurrentUser {
@@ -71,12 +73,10 @@ class PostModel {
     final positionData = data['position'] as Map<String, dynamic>?;
     GeoPoint? postPosition;
     if (positionData != null) {
-      // 'geopoint' が存在し、null でないことを確認
       final geopoint = positionData['geopoint'] as GeoPoint?;
       if (geopoint != null) {
         postPosition = GeoPoint(geopoint.latitude, geopoint.longitude);
       }
-      // geopoint が null の場合、postPosition は null のまま (安全)
     }
 
     return PostModel(
@@ -84,7 +84,7 @@ class PostModel {
       userId: data['userId'] ?? '',
       username: data['username'] ?? 'Anonymous',
       userProfileImageUrl: data['userProfileImageUrl'] ?? '',
-      description: data['description'] ?? data['caption'] ?? '', // captionも考慮
+      description: data['description'] ?? data['caption'] ?? '',
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
       timestamp: data['timestamp'] ?? Timestamp.now(),
       likeCount: data['likeCount'] ?? 0,
@@ -102,11 +102,11 @@ class PostModel {
       location: data['location'] as String? ?? '',
       durationStart: (data['durationStart'] as Timestamp?)?.toDate(),
       durationMonths: data['durationMonths'] as int? ?? 12,
+      hobbies: List<String>.from(data['hobbies'] ?? []), // ★★★ ADDED ★★★
     );
   }
 
   factory PostModel.fromAlgolia(Map<String, dynamic> hit) {
-    // GeoPoint復元
     GeoPoint geoPoint = const GeoPoint(0, 0);
     if (hit['_geoloc'] != null &&
         hit['_geoloc']['lat'] != null &&
@@ -117,7 +117,6 @@ class PostModel {
       );
     }
 
-    // UnixタイムをTimestampに変換
     Timestamp safeTimestamp(dynamic ts) {
       if (ts is num) {
         return Timestamp.fromMillisecondsSinceEpoch((ts * 1000).toInt());
@@ -125,7 +124,6 @@ class PostModel {
       return Timestamp.now();
     }
 
-    // Algoliaからのデータを元にPostModelを生成
     return PostModel(
       id: hit['objectID'] ?? '',
       userId: hit['userId'] ?? '',
@@ -133,16 +131,10 @@ class PostModel {
       userProfileImageUrl: hit['userProfileImageUrl'] ?? '',
       description: hit['description'] ?? hit['caption'] ?? '',
       imageUrls: List<String>.from(hit['imageUrls'] ?? []),
-
-      // Firestore版に合わせたtimestamp構造
       timestamp: safeTimestamp(hit['timestamp']),
       likeCount: (hit['likeCount'] as num?)?.toInt() ?? 0,
       likedBy: List<String>.from(hit['likedBy'] ?? []),
-
-      // Algoliaには保存していない可能性が高いのでデフォルトfalse
       isSaved: false,
-
-      // 以下Firestore版に合わせて追加
       manualTags: List<String>.from(hit['manualTags'] ?? []),
       status: hit['status'] ?? 'open',
       reportedBy: List<String>.from(hit['reportedBy'] ?? []),
@@ -155,6 +147,7 @@ class PostModel {
       position: geoPoint,
       durationStart: safeTimestamp(hit['durationStart']).toDate(),
       durationMonths: hit['durationMonths'] as int?,
+      hobbies: List<String>.from(hit['hobbies'] ?? []), // ★★★ ADDED ★★★
     );
   }
 }

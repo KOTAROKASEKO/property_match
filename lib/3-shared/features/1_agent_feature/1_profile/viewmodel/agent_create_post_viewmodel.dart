@@ -11,7 +11,6 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:shared_data/shared_data.dart';
-import 'package:shared_data/src/database_path.dart'; // Import database_path.dart
 import 'package:template_hive/template_hive.dart';
 import '../../../../core/model/PostModel.dart';
 import '../repo/profile_repository.dart';
@@ -36,6 +35,7 @@ class CreatePostViewModel extends ChangeNotifier {
   int? _durationMonths;
   bool _isPosting = false;
   bool _hasUnsavedChanges = false;
+  List<String> _hobbies = [];
 
   CreatePostViewModel(this._editingPost) {
     if (_editingPost != null) {
@@ -46,19 +46,16 @@ class CreatePostViewModel extends ChangeNotifier {
       _gender = _editingPost.gender;
       _selectedImages = List.from(_editingPost.imageUrls);
       _location = _editingPost.location;
-      // Note: _position is not directly restored from PostModel, it needs geocoding
       _durationStart = _editingPost.durationStart;
       _durationMonths = _editingPost.durationMonths;
+      _hobbies = List.from(_editingPost.hobbies);
     }
   }
 
-  // Use Iterable<String> as returned by the repository method
   Future<Iterable<String>> getCondoSuggestions(String query) async {
     if (query.length < 2) {
-      // Don't search for less than 2 characters
       return const Iterable<String>.empty();
     }
-    // No need to cast if the repository method returns the correct type
     return await _postService.getCondoNameSuggestions(query);
   }
 
@@ -73,6 +70,7 @@ class CreatePostViewModel extends ChangeNotifier {
   int? get durationMonths => _durationMonths;
   bool get isPosting => _isPosting;
   bool get hasUnsavedChanges => _hasUnsavedChanges;
+  List<String> get hobbies => _hobbies;
   bool get isEditing => _editingPost != null;
 
   bool get canSubmit =>
@@ -134,13 +132,27 @@ class CreatePostViewModel extends ChangeNotifier {
     }
   }
 
+void addHobby(String hobby) {
+    final trimmedHobby = hobby.trim().toLowerCase(); 
+    if (trimmedHobby.isNotEmpty && !_hobbies.contains(trimmedHobby)) {
+      _hobbies.add(trimmedHobby);
+      _updateUnsavedChangesFlag();
+    }
+  }
+
+  void removeHobby(String hobby) {
+    final trimmedHobby = hobby.trim().toLowerCase();
+    if (_hobbies.contains(trimmedHobby)) {
+      _hobbies.remove(trimmedHobby);
+      _updateUnsavedChangesFlag();
+    }
+  }
+
   void _updateUnsavedChangesFlag() {
-    // Only set to true if it wasn't already true
     if (!_hasUnsavedChanges) {
       _hasUnsavedChanges = true;
-      notifyListeners(); // Notify only when the flag changes to true
+      notifyListeners();
     } else {
-      // If already true, still need to notify if visual state depends on the value itself
       notifyListeners();
     }
   }
@@ -174,7 +186,7 @@ class CreatePostViewModel extends ChangeNotifier {
         'description': _description,
         'imageUrls': imageUrls,
         'condominiumName': _condominiumName,
-        'condominiumName_searchKey': searchKey, // Add the search key
+        'condominiumName_searchKey': searchKey,
         'rent': _rent,
         'roomType': _roomType,
         'gender': _gender,
@@ -190,13 +202,12 @@ class CreatePostViewModel extends ChangeNotifier {
         'durationMonths': _durationMonths != null
             ? durationMonths!
             : null,
+        'hobbies': _hobbies,
       };
 
       pr('post data is null? : ${postData}');
 
-      // 5. Decide whether to create or update
       if (isEditing) {
-        // ★★★ FIX: Add null check for _editingPost before accessing id ★★★
         if (_editingPost == null) {
           throw Exception(
             "Attempting to update post, but editing post data is null.",
@@ -214,12 +225,10 @@ class CreatePostViewModel extends ChangeNotifier {
         await _saveAsPropertyTemplate(newPostId, imageUrls);
       }
 
-      _hasUnsavedChanges = false; // Reset flag on successful submission
+      _hasUnsavedChanges = false;
       return true;
     } catch (e) {
-      // Print the specific error causing "Unexpected null value" or other issues
-      print("Post submission failed: $e");
-      // Optionally capture stack trace: print(StackTrace.current);
+      pr("Post submission failed: $e");
       return false;
     } finally {
       _isPosting = false;
@@ -241,14 +250,14 @@ class CreatePostViewModel extends ChangeNotifier {
         roomType: _roomType,
         gender: _gender,
         photoUrls: imageUrls,
-        nationality: 'Any', // Default or fetch if available
+        nationality: 'Any',
       );
       // Use the imported constant for the box name
       final box = Hive.box<PropertyTemplate>(propertyTemplateBox);
       await box.add(template);
-      print("Successfully saved post as a property template.");
+      pr("Successfully saved post as a property template.");
     } catch (e) {
-      print("Failed to save property template: $e");
+      pr("Failed to save property template: $e");
       // Handle or log error appropriately
     }
   }
@@ -289,7 +298,7 @@ class CreatePostViewModel extends ChangeNotifier {
             "Successfully updated property template with key: $templateKey",
           );
         } else {
-          print(
+          pr(
             "Warning: Template key found but template data is null for key: $templateKey",
           );
           // Optionally handle this case, e.g., by creating a new template
@@ -297,39 +306,39 @@ class CreatePostViewModel extends ChangeNotifier {
         }
       } else {
         // If no existing template found, create a new one
-        print(
+        pr(
           "No existing template found for postId ${editedModel.id}, creating new.",
         );
         await _saveAsPropertyTemplate(editedModel.id, imageUrls);
       }
     } catch (e) {
-      print("Failed to update or save property template: $e");
+      pr("Failed to update or save property template: $e");
     }
   }
 
   Future<void> _geocodeLocation() async {
     if (_location.isEmpty) {
       _position = null;
-      print('🟡 Geocoding skipped: Location is empty.');
+      pr('🟡 Geocoding skipped: Location is empty.');
       return;
     }
 
     // 編集時に location が変更されていない、かつ _position が既に存在するならスキップ
     if (isEditing && _location == _editingPost?.location && _position != null) {
-      print(
+      pr(
         '🟡 Skipping geocoding: Location unchanged and position already exists.',
       );
       return;
     }
 
-    print('🔍 Attempting to geocode location: "$_location"');
+    pr('🔍 Attempting to geocode location: "$_location"');
 
     try {
       if (!(kIsWeb ||
           Platform.isAndroid ||
           Platform.isIOS ||
           Platform.isMacOS)) {
-        print('⚪ Geocoding skipped: Unsupported platform (e.g., Windows).');
+        pr('⚪ Geocoding skipped: Unsupported platform (e.g., Windows).');
         _position = null;
         return;
       }
@@ -343,7 +352,7 @@ class CreatePostViewModel extends ChangeNotifier {
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode != 200) {
-        print('❌ HTTP request failed with status: ${response.statusCode}');
+        pr('❌ HTTP request failed with status: ${response.statusCode}');
         _position = null;
         return;
       }
@@ -355,14 +364,14 @@ class CreatePostViewModel extends ChangeNotifier {
         final lat = location['lat'];
         final lng = location['lng'];
         _position = GeoPoint(lat, lng);
-        print('✅ Geocoding successful: $_position');
+        pr('✅ Geocoding successful: $_position');
       } else {
         final errorMessage = data['error_message'] ?? 'No results found';
-        print('⚠️ Geocoding failed: ${data['status']} ($errorMessage)');
+        pr('⚠️ Geocoding failed: ${data['status']} ($errorMessage)');
         _position = null;
       }
     } catch (e, stack) {
-      print('🚨 Exception during geocoding: $e');
+      pr('🚨 Exception during geocoding: $e');
       print(stack);
       _position = null;
     }
@@ -383,7 +392,7 @@ class CreatePostViewModel extends ChangeNotifier {
         _updateUnsavedChangesFlag();
       }
     } catch (e) {
-      print("Error picking images: $e");
+      pr("Error picking images: $e");
       // Optionally show an error message to the user
     }
   }
@@ -418,11 +427,9 @@ class CreatePostViewModel extends ChangeNotifier {
 
         try {
           if (kIsWeb && fileOrUrl is XFile) {
-            // Web Upload: Use putData with bytes from XFile
             final Uint8List data = await fileOrUrl.readAsBytes();
-            // Try to use webp, fallback to original mime type or jpeg
             final mimeType = fileOrUrl.mimeType;
-            String contentType = 'image/webp'; // Prefer webp
+            String contentType = 'image/webp';
             if (mimeType != null &&
                 (mimeType == 'image/jpeg' || mimeType == 'image/png')) {
               contentType =
@@ -449,19 +456,19 @@ class CreatePostViewModel extends ChangeNotifier {
               final webpRef = FirebaseStorage.instance.ref().child(
                 fileName.replaceAll(RegExp(r'\.\w+$'), '.webp'),
               );
-              print("Uploading compressed WebP to mobile: ${webpRef.fullPath}");
+              pr("Uploading compressed WebP to mobile: ${webpRef.fullPath}");
               uploadTask = webpRef.putFile(compressedFile);
             } catch (compressError) {
-              print(
+              pr(
                 "Image compression failed, uploading original: $compressError",
               );
               // Fallback to uploading the original file if compression fails
-              print("Uploading original file to mobile: ${ref.fullPath}");
+              pr("Uploading original file to mobile: ${ref.fullPath}");
               uploadTask = ref.putFile(fileToUpload);
             }
           } else {
             // Handle cases like Web with File input (shouldn't normally happen with picker)
-            print(
+            pr(
               "Warning: Unsupported file type or platform combination. Skipping upload for: $fileOrUrl",
             );
             continue; // Skip this file
@@ -470,13 +477,13 @@ class CreatePostViewModel extends ChangeNotifier {
           final snapshot = await uploadTask.whenComplete(() => {});
           final downloadUrl = await snapshot.ref.getDownloadURL();
           imageUrls.add(downloadUrl);
-          print("Upload successful: $downloadUrl");
+          pr("Upload successful: $downloadUrl");
         } catch (uploadError) {
-          print("Error uploading file ($fileName): $uploadError");
+          pr("Error uploading file ($fileName): $uploadError");
           // Optionally add error handling, like adding a placeholder URL or skipping
         }
       } else {
-        print(
+        pr(
           "Warning: Unknown item type in selectedImages list: ${fileOrUrl.runtimeType}",
         );
       }
@@ -484,25 +491,24 @@ class CreatePostViewModel extends ChangeNotifier {
     return imageUrls;
   }
 
-  // Keep compressAndConvertToWebP for mobile usage
+
   Future<File> compressAndConvertToWebP(File file) async {
-    // This function remains unchanged, but will only be called on mobile now
     final dir = await getTemporaryDirectory();
     final targetPath =
         '${dir.absolute.path}/${DateTime.now().millisecondsSinceEpoch}.webp';
 
-    print("Compressing ${file.path} to $targetPath");
+    pr("Compressing ${file.path} to $targetPath");
     final result = await FlutterImageCompress.compressAndGetFile(
       file.absolute.path,
       targetPath,
-      quality: 85, // Adjust quality as needed (85 is a good balance)
+      quality: 85,
       format: CompressFormat.webp,
     );
     if (result == null) {
       throw Exception("Image compression failed, result is null.");
     }
-    print("Compression successful, output: ${result.path}");
-    return File(result.path); // Return as File
+    pr("Compression successful, output: ${result.path}");
+    return File(result.path);
   }
 
   void clearDraft() {
@@ -510,14 +516,12 @@ class CreatePostViewModel extends ChangeNotifier {
     _description = '';
     _condominiumName = '';
     _rent = 0;
-    // Reset dropdowns to default if needed, e.g., _roomType = 'Master';
     _location = '';
-    _position = null; // Clear position
+    _position = null;
     _durationStart = null;
     _durationMonths = null;
-    _hasUnsavedChanges = false; // Reset flag
-    // Clear form fields if using controllers directly might be needed here too
-    // e.g., condoNameController.clear();
+    _hasUnsavedChanges = false;
+    _hobbies = [];
     notifyListeners();
   }
 }

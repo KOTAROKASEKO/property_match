@@ -5,14 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import '../models/profile_model.dart'
-    show UserProfile;
+import 'package:re_conver/3-shared/core/responsive/responsive_layout.dart';
+import '../models/profile_model.dart' show UserProfile;
 import '../services/user_service.dart';
-import '../../../../tenant_main_scaffold.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserProfile userProfile;
-  const EditProfileScreen({super.key, required this.userProfile});
+  final bool isNewUser;
+  const EditProfileScreen({
+    super.key,
+    required this.userProfile,
+    this.isNewUser = false,
+  });
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -60,12 +64,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _selfIntroduction = widget.userProfile.selfIntroduction; // Added
     _moveInDate = widget.userProfile.moveinDate;
     _gender = widget.userProfile.gender;
-    _hobbies = widget.userProfile.hobbies; // Added hobbies
+    _hobbies = List<String>.from(widget.userProfile.hobbies); // Added hobbies
   }
 
   Future<void> _pickImage() async {
-    final XFile? selectedImage =
-        await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? selectedImage = await _picker.pickImage(
+      source: ImageSource.gallery,
+    );
     if (selectedImage != null) {
       setState(() {
         _imageFile = selectedImage;
@@ -82,11 +87,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (_imageFile != null) {
         try {
           newProfileImageUrl = await _userService.uploadProfileImage(
-              widget.userProfile.uid, _imageFile!);
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to upload image: $e')),
+            widget.userProfile.uid,
+            _imageFile!,
           );
+        } catch (e) {
+          // ★ 修正: awaitの後にmountedチェック
+          if (!mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to upload image: $e')));
           setState(() => _isLoading = false);
           return;
         }
@@ -109,7 +118,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         selfIntroduction: _selfIntroduction,
         moveinDate: _moveInDate, // ★★★ 追加 ★★★
         gender: _gender,
-        hobbies: _hobbies, // Added hobbies
+        hobbies: _hobbies,
       );
 
       try {
@@ -117,14 +126,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const TenantMainScaffold()),
-          (Route<dynamic> route) => false,
-        );
+        if (widget.isNewUser) {
+          // 1. Initial creation: Navigate to MainScaffold (Tenant Main Screen) and clear the stack.
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const ResponsiveLayout()),
+              (route) => false,
+            );
+          }
+        } else {
+          // 2. Subsequent editing: Pop back to previous screen (ProfileScreen) with a result to trigger refresh.
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to update profile: $e')));
       } finally {
         setState(() => _isLoading = false);
       }
@@ -163,12 +182,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 3))
-                    : const Text('SAVE',
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
+                      )
+                    : const Text(
+                        'SAVE',
                         style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
-            )
+            ),
           ],
         ),
         body: Form(
@@ -184,10 +210,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       backgroundImage: _imageFile != null
                           ? FileImage(File(_imageFile!.path))
                           : (_profileImageUrl.isNotEmpty
-                                  ? NetworkImage(_profileImageUrl)
-                                  : const AssetImage(
-                                      'assets/default_avatar.png'))
-                              as ImageProvider,
+                                    ? NetworkImage(_profileImageUrl)
+                                    : const AssetImage(
+                                        'assets/default_avatar.png',
+                                      ))
+                                as ImageProvider,
                     ),
                     Positioned(
                       bottom: 0,
@@ -197,8 +224,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: const CircleAvatar(
                           radius: 18,
                           backgroundColor: Colors.deepPurple,
-                          child:
-                              Icon(Icons.edit, color: Colors.white, size: 20),
+                          child: Icon(
+                            Icons.edit,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
@@ -227,8 +257,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 initialValue: _selfIntroduction,
-                decoration:
-                    const InputDecoration(labelText: 'Self Introduction'),
+                decoration: const InputDecoration(
+                  labelText: 'Self Introduction',
+                ),
                 onSaved: (value) => _selfIntroduction = value!,
                 maxLines: 3,
               ),
@@ -255,8 +286,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 initialValue: _location,
-                decoration:
-                    const InputDecoration(labelText: 'Work/Study Location'),
+                decoration: const InputDecoration(
+                  labelText: 'Work/Study Location',
+                ),
                 onSaved: (value) => _location = value!,
                 validator: (value) =>
                     value!.isEmpty ? 'Please enter a location' : null,
@@ -322,11 +354,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: const InputDecoration(labelText: 'Property Type'),
                 items: ['Condominium', 'Apartment', 'Landed House', 'Studio']
                     .map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    })
+                    .toList(),
                 onChanged: (newValue) =>
                     setState(() => _propertyType = newValue!),
               ),
@@ -342,15 +375,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextFormField(
+          onFieldSubmitted: (value) {
+            final hobby = value.trim().toLowerCase();
+            if (hobby.isNotEmpty && !_hobbies.contains(hobby)) {
+              setState(() {
+                _hobbies.add(hobby);
+                _hobbyController.clear();
+              });
+            }
+          },
           controller: _hobbyController,
           decoration: InputDecoration(
             labelText: 'Tag of you (add one by one)',
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
-                if (_hobbyController.text.isNotEmpty) {
+                // ★★★ 修正: .toLowerCase() を追加 ★★★
+                final hobby = _hobbyController.text.trim().toLowerCase();
+                if (hobby.isNotEmpty && !_hobbies.contains(hobby)) {
+                  // ★ hobby を使用
                   setState(() {
-                    _hobbies.add(_hobbyController.text);
+                    _hobbies.add(hobby); // ★ hobby を使用
                     _hobbyController.clear();
                   });
                 }
@@ -362,14 +407,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         Wrap(
           spacing: 8.0,
           children: _hobbies
-              .map((hobby) => Chip(
-                    label: Text(hobby),
-                    onDeleted: () {
-                      setState(() {
-                        _hobbies.remove(hobby);
-                      });
-                    },
-                  ))
+              .map(
+                (hobby) => Chip(
+                  label: Text(hobby),
+                  onDeleted: () {
+                    setState(() {
+                      _hobbies.remove(hobby);
+                    });
+                  },
+                ),
+              )
               .toList(),
         ),
       ],

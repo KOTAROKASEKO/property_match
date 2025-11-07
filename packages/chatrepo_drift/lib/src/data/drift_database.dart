@@ -45,7 +45,6 @@ class JsonDateTimeListConverter extends TypeConverter<List<DateTime>, String> {
 
 @DataClassName('MessageRow')
 class Messages extends Table {
-  // IsarのId autoIncrementの代わり
   IntColumn get id => integer().autoIncrement()();
 
   @override
@@ -73,18 +72,15 @@ class Messages extends Table {
   TextColumn get repliedToMessageId => text().nullable()(); // String
 
   List<Index> get indexes => [
-    Index('idx_messages_chatroom', 'chat_room_id'), // カラム名をStringで渡す
-    Index('idx_messages_timestamp', 'timestamp'), // カラム名をStringで渡す
+    Index('idx_messages_chatroom', 'chat_room_id'), 
+    Index('idx_messages_timestamp', 'timestamp'), 
   ];
 }
 
 @DataClassName('ChatThreadRow')
 class ChatThreads extends Table {
-  // IsarのisarId (fastHash) の代わり
-
   @override
   Set<Column> get primaryKey => {id};
-
 
   @override
   String get tableName => 'chat_threads';
@@ -115,8 +111,8 @@ class ChatThreads extends Table {
       .withDefault(const Constant('[]'))();
 
   List<Index> get indexes => [
-    Index('idx_threads_whosent', 'who_sent'), // カラム名をStringで渡す
-    Index('idx_threads_whoreceived', 'who_received'), // カラム名をStringで渡す
+    Index('idx_threads_whosent', 'who_sent'), 
+    Index('idx_threads_whoreceived', 'who_received'), 
   ];
 }
 
@@ -125,7 +121,6 @@ class BlockedUsers extends Table {
   @override
   String get tableName => 'blocked_users';
 
-  // IsarのBlockedUsersModel (Id=1) の代わり。userIdを主キーにする。
   TextColumn get userId => text()();
   @override
   Set<Column> get primaryKey => {userId};
@@ -136,8 +131,6 @@ class BlockedUsers extends Table {
 @DriftDatabase(tables: [Messages, ChatThreads, BlockedUsers], daos: [ChatDao])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
-
-  // AppDatabase(super.e); // for Drift 5+
 
   @override
   int get schemaVersion => 1;
@@ -151,11 +144,11 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
     implements ChatRepository {
   ChatDao(AppDatabase db) : super(db);
 
-  // --- Model <-> DriftRow Converters ---
+  // --- Model <-> DriftRow Converters (省略) ---
 
   MessageModel _mapRowToMessageModel(MessageRow row) {
     return MessageModel()
-      ..id = row.id // DriftのAutoIncrement ID
+      ..id = row.id 
       ..messageId = row.messageId
       ..chatRoomId = row.chatRoomId
       ..whoSent = row.whoSent
@@ -179,8 +172,6 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
 
   MessagesCompanion _mapMessageModelToCompanion(MessageModel message) {
     return MessagesCompanion(
-      // message.id (Drift ID) はInsert時には指定しない (autoIncrement)
-      // Update時には Value(message.id) を含めるか、messageIdでWhereする
       messageId: Value(message.messageId),
       chatRoomId: Value(message.chatRoomId),
       whoSent: Value(message.whoSent),
@@ -204,7 +195,6 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
   }
 
   ChatThread _mapRowToChatThread(ChatThreadRow row) {
-
     return ChatThread()
       ..id = row.id
       ..whoSent = row.whoSent
@@ -221,12 +211,11 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
       ..viewingTimes = row.viewingTimes
       ..viewingNotes = row.viewingNotes
       ..viewingImageUrls = row.viewingImageUrls;
-    // isarIdはDriftのRowにマッピングしない
   }
 
   ChatThreadsCompanion _mapChatThreadToCompanion(ChatThread thread) {
     return ChatThreadsCompanion(
-      id: Value(thread.id), // firestore ID (PK)
+      id: Value(thread.id), 
       whoSent: Value(thread.whoSent),
       whoReceived: Value(thread.whoReceived),
       hisName: Value(thread.hisName),
@@ -248,13 +237,11 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
 
   @override
   Future<void> init() async {
-    // DriftはDBインスタンス作成時に初期化されるため、ここでは不要
     return Future.value();
   }
 
   @override
   Future<void> createMessage(MessageModel message) async {
-    // createOrUpdateMessage で Upsert する
     await createOrUpdateMessage(message);
   }
 
@@ -266,16 +253,15 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
 
   @override
   Future<void> deleteMessageForEveryone(MessageModel message) async {
-    // IsarChatRepository と同じ論理削除
     await (update(
       messages,
     )..where((tbl) => tbl.messageId.equals(message.messageId))).write(
       const MessagesCompanion(
         status: Value('deleted_for_everyone'),
-        operation: Value('deleted'), // messageList.dart のロジックに合わせる
+        operation: Value('deleted'), 
         messageText: Value('This message was deleted'),
-        remoteUrl: Value(null), // messageList.dart のロジックに合わせる
-        localPath: Value(null), // messageList.dart のロジックに合わせる
+        remoteUrl: Value(null), 
+        localPath: Value(null), 
       ),
     );
   }
@@ -301,40 +287,18 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
   @override
   Future<void> saveChatThread(ChatThread thread) async {
     final companion = _mapChatThreadToCompanion(thread);
-    // id (Firestore ID) を主キーとして Upsert
     await into(chatThreads).insertOnConflictUpdate(companion);
   }
 
   @override
   Stream<List<ChatThread>> watchChatThreads() {
     print('watchChatThreads called in DriftChatRepository');
-    // Isarと違い、Driftではリアクティブに結合(join)するのが難しい場合がある
-    // ここではまず全スレッドをwatchし、
-    // ViewModel層 (例: UnreadMessagesViewModel) でブロックユーザーを
-    // フィルタリングする方が簡単な場合があります。
-
-    // もしDAOでフィルタリングする場合:
-    // final blockedUsersStream = watchBlockedUsersList();
-    // return blockedUsersStream.switchMap((blockedIds) {
-    //   final query = select(chatThreads)
-    //     ..where((t) => t.whoSent.isNotIn(blockedIds) & t.whoReceived.isNotIn(blockedIds))
-    //     ..orderBy([(t) => OrderingTerm(expression: t.timeStamp, mode: OrderingMode.desc)]);
-    //   return query.watch().map((rows) => rows.map(_mapRowToChatThread).toList());
-    // });
-
-    // IsarChatRepository の実装 (フィルタリングなし) に合わせる
-    // Inside ChatDao watchChatThreads
-  final query = select(chatThreads)
+    final query = select(chatThreads)
       ..orderBy([
         (t) => OrderingTerm(expression: t.timeStamp, mode: OrderingMode.desc),
       ]);
     return query.watch().map((rows) => rows.map(_mapRowToChatThread).toList());
   }
-
-  // watchChatThreadsで使うための補助Stream (もしDAOでフィルタリングする場合)
-  // Stream<List<String>> watchBlockedUsersList() {
-  //   return select(blockedUsers).watch().map((rows) => rows.map((r) => r.userId).toList());
-  // }
 
   @override
   Future<void> deleteChatThreadAndMessages(String threadId) async {
@@ -345,16 +309,30 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
       await (delete(chatThreads)..where((tbl) => tbl.id.equals(threadId))).go();
     });
   }
+  
+  // ★★★ 修正箇所 1: すべてのテーブルのデータをクリアするヘルパーメソッドを追加 ★★★
+  Future<void> clearAllTables() async {
+      return db.transaction(() async {
+      // 子テーブル (Messages) から先に削除するのが安全です
+      // (もし外部キー制約で ON DELETE CASCADE を設定していない場合)
+      print('🧹 DAO: Deleting all from "messages" table...');
+      await db.customStatement('DELETE FROM messages');
+      
+      print('🧹 DAO: Deleting all from "chat_threads" table...');
+      await db.customStatement('DELETE FROM chat_threads');
+      
+      print('🧹 DAO: Deleting all from "blocked_users" table...');
+      await db.customStatement('DELETE FROM blocked_users');
+      
+      print('🧹 DAO: All tables cleared via Raw SQL.');
+    
+    });
+  }
 
   @override
   Future<void> clearDatabaseOnLogout() async {
-    print('Clearing Drift database on logout...');
-    await transaction(() async {
-      await delete(messages).go();
-      await delete(chatThreads).go();
-      await delete(blockedUsers).go();
-    });
-    print('✅ Drift database cleared on logout');
+    // データベース接続を閉じる前に、全てのデータをクリアする
+    await clearAllTables(); 
   }
 
   @override
@@ -365,7 +343,6 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
 
   @override
   Future<void> addToBlockedUsers(String blockedUser) async {
-    // userId を主キーとして Upsert
     await into(
       blockedUsers,
     ).insertOnConflictUpdate(BlockedUserRow(userId: blockedUser));
@@ -380,12 +357,8 @@ class ChatDao extends DatabaseAccessor<AppDatabase>
   
   @override
   Stream<List<String>> watchBlockedUsers() {
-    // blockedUsers テーブルの変更を監視し、
-    // 変更があるたびに全行を取得して List<String> に変換します
     return select(blockedUsers)
         .watch()
         .map((rows) => rows.map((row) => row.userId).toList());
   }
-
-
 }

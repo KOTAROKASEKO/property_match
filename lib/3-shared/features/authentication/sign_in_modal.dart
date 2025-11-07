@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:re_conver/3-shared/features/authentication/login_placeholder.dart';
 
 class SignInModal extends StatefulWidget {
   const SignInModal({super.key});
@@ -16,10 +16,10 @@ class _SignInModalState extends State<SignInModal> {
   Future<UserCredential?> _signInWithGoogle() async {
     try {
       // Ensure you added `import 'package:flutter_dotenv/flutter_dotenv.dart';` at the top
-      final serverClientId = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
-      if (serverClientId == null || serverClientId.isEmpty) {
-        throw 'Missing google_client_server_id in .env';
-      }
+      const serverClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
+        if (serverClientId.isEmpty) {
+          throw Exception('GOOGLE_SERVER_CLIENT_ID not found in .env');
+        }
 
       await GoogleSignIn.instance.initialize(
         serverClientId: serverClientId,
@@ -62,7 +62,7 @@ class _SignInModalState extends State<SignInModal> {
     }
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
@@ -81,21 +81,48 @@ class _SignInModalState extends State<SignInModal> {
                 child: CircularProgressIndicator(),
               )
             else
-              ElevatedButton.icon(
-                onPressed: () async {
-                  setState(() {
-                    _isSigningIn = true;
-                  });
-                  final userCredential = await _signInWithGoogle();
-                  if (mounted) {
-                    Navigator.pop(context, userCredential != null);
-                  }
-                },
-                icon: const Icon(Icons.login),
-                label: const Text('Sign in with Google'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                ),
+              // ★ 2. Wrap buttons in a Column
+              Column(
+                children: [
+                  // --- Google Sign In Button (Existing) ---
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      setState(() {
+                        _isSigningIn = true;
+                      });
+                      final userCredential = await _signInWithGoogle();
+                      if (mounted) {
+                        Navigator.pop(context, userCredential != null);
+                      }
+                    },
+                    icon: const Icon(Icons.login),
+                    label: const Text('Sign in with Google'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // ★ 3. Add Email Sign In Button ---
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // Pop this modal
+                      Navigator.pop(context);
+                      // Navigate to the LoginPlaceholderScreen
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPlaceholderScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.email_outlined),
+                    label: const Text('Sign in with Email'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      backgroundColor: Colors.deepPurple, // Differentiate style
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             const SizedBox(height: 10),
           ],

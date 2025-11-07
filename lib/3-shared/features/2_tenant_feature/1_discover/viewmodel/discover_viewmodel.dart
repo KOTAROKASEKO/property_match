@@ -26,14 +26,24 @@ class DiscoverViewModel extends PostActionsViewModel  {
 
   String _searchQuery = ''; // ★ トップの検索バー（ロケーション用）
   List<String> _blockedUserIds = [];
+  bool _isDisposed = false;
   
   DiscoverViewModel() {
     _fetchBlockedUsersAndThenPosts();
   }
 
-  Future<void> _fetchBlockedUsersAndThenPosts() async {
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+Future<void> _fetchBlockedUsersAndThenPosts() async {
     await _fetchBlockedUsers();
-    fetchInitialPosts();
+    // ★★★ 3. 破棄されていない場合のみ実行 ★★★
+    if (!_isDisposed) {
+      fetchInitialPosts();
+    }
   }
 
   Future<void> _fetchBlockedUsers() async {
@@ -76,8 +86,13 @@ class DiscoverViewModel extends PostActionsViewModel  {
       _hasMorePosts = false; 
     } finally {
       _isLoading = false;
-      notifyListeners();
+      // ★★★ FIX: REMOVE REDUNDANT CALL AND WRAP IN SAFETY CHECK ★★★
+      if (!_isDisposed) {
+        notifyListeners();
+      }
+      // ★★★ END FIX ★★★
     }
+    
   }
 
   Future<void> fetchMorePosts() async {
@@ -105,7 +120,9 @@ class DiscoverViewModel extends PostActionsViewModel  {
       _hasMorePosts = false; 
     } finally {
       _isLoadingMore = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
   
@@ -129,7 +146,9 @@ class DiscoverViewModel extends PostActionsViewModel  {
     try {
       _posts.removeWhere((post) => post.id == postId);
       await _postService.deletePost(postId);
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     } catch (e) {
       print("Error deleting post: $e");
     }
@@ -192,7 +211,9 @@ class DiscoverViewModel extends PostActionsViewModel  {
         post.likeCount--;
         post.likedBy.remove(userData.userId);
       }
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
       print("Error toggling like: $e");
     });
   }

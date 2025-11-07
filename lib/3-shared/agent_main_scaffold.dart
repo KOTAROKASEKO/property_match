@@ -1,15 +1,16 @@
-// lib/agent_main_scaffold.dart
+// lib/3-shared/agent_main_scaffold.dart
 
+import 'dart:async'; // <-- 1. Import this
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // 追加
+import 'package:provider/provider.dart';
 import 'features/1_agent_feature/1_profile/view/agent_profile_view.dart';
 import 'features/1_agent_feature/2_tenant_list/view/tenant_list_view.dart';
 import 'common_feature/chat/view/chatThreadScreen.dart';
-import 'common_feature/chat/viewmodel/unread_messages_viewmodel.dart'; // 追加
+import 'common_feature/chat/viewmodel/unread_messages_viewmodel.dart';
 import 'features/authentication/login_placeholder.dart';
-import 'features/notifications/view/notification_screen.dart';
+import 'features/notifications/view/notification_screen.dart'; // Make sure this import exists
 
 class AgentMainScaffold extends StatefulWidget {
   const AgentMainScaffold({super.key});
@@ -21,13 +22,20 @@ class _AgentMainScaffoldState extends State<AgentMainScaffold> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
   late final List<Widget> _pages;
+  
+  // <-- 2. Store the subscription
+  StreamSubscription<User?>? _authSubscription;
+
 
   @override
   void initState() {
     super.initState();
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (user != null && !kIsWeb) {
+
+    // <-- 3. Assign the listener to the variable
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      // <-- 4. Add a 'mounted' check before using context
+      if (mounted && user != null && !kIsWeb) {
         checkAndRequestNotificationPermission(context);
       }
     });
@@ -64,6 +72,7 @@ class _AgentMainScaffoldState extends State<AgentMainScaffold> {
   @override
   void dispose() {
     _pageController.dispose();
+    _authSubscription?.cancel(); // <-- 5. Cancel the subscription
     super.dispose();
   }
 

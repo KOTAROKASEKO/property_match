@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:re_conver/app/localDB_Manager.dart';
+import 'package:re_conver/main.dart';
 import 'package:shared_data/shared_data.dart';
 
 class SignOutModal extends StatefulWidget {
@@ -39,10 +40,8 @@ class _SignOutModalState extends State<SignOutModal> {
                   if (!kIsWeb) {
                     await GoogleSignIn.instance.disconnect();
                   }
-
                   
                   pr('break point3: FirebaseAuth.signOut() complete');
-
                   // 3. Clear local data and update UI
                   if (mounted) {
                     userData.clearUser();
@@ -52,7 +51,22 @@ class _SignOutModalState extends State<SignOutModal> {
                         backgroundColor: Colors.green,
                       ),
                     );
-                    Navigator.pop(context, true);
+                    
+                    // ★★★ FIX: Navigate to AuthWrapper, not LoginPlaceholderScreen ★★★
+                    // This allows AuthWrapper to detect the null user
+                    // and correctly show the GuestLandingScaffold.
+                    if (navigatorKey.currentState != null) {
+                        navigatorKey.currentState!.pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            // Navigate to the AuthWrapper to re-trigger auth logic
+                            builder: (context) => const AuthWrapper(), 
+                          ),
+                          (route) => false,
+                        );
+                    } else {
+                      // Fallback
+                      Navigator.pop(context, true);
+                    }
                   }
                 } catch (error) {
                   pr('Error in logging out : $error');

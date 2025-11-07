@@ -1,4 +1,13 @@
 // lib/main.dart
+import 'package:re_conver/3-shared/features/3_guest_feature/guest_landing_scaffold.dart';
+import 'package:template_hive/template_hive.dart';
+// ★ 修正: このパスは元々正しかった
+// ★ 修正: このパスは元々正しかった
+import '3-shared/features/authentication/role_selection_screen.dart';
+import '3-shared/features/notifications/viewmodel/notification_viewmodel.dart';
+// ★ 修正: このパスは元々正しかった
+import '3-shared/firebase_options.dart';
+import '3-shared/core/responsive/responsive_layout.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -14,16 +23,12 @@ import '3-shared/features/1_agent_feature/1_profile/repo/profile_repository.dart
 import '3-shared/features/1_agent_feature/1_profile/view/agent_post_detail_screen.dart';
 import '3-shared/features/1_agent_feature/1_profile/viewmodel/agent_profile_viewmodel.dart';
 import '3-shared/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart';
-import 'package:template_hive/template_hive.dart';
-import '3-shared/features/authentication/login_placeholder.dart';
-import '3-shared/features/authentication/role_selection_screen.dart';
-import '3-shared/features/notifications/viewmodel/notification_viewmodel.dart';
-import '3-shared/firebase_options.dart';
-import '3-shared/core/responsive/responsive_layout.dart';
 import 'package:rive/rive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '3-shared/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
+
+// ★★★ IMPORT THE NEW GUEST SCAFFOLD ★★★
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -36,7 +41,7 @@ void main() async {
 
   // ★ アプリがフォアグラウンド（起動中）の時も
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    print('Got a message whilst in the foreground!');
+    pr('Got a message whilst in the foreground!');
     if (message.data['type'] == 'block_update') {
       // バックグラウンドハンドラと同じ処理を実行
       _firebaseMessagingBackgroundHandler(message);
@@ -74,24 +79,45 @@ void main() async {
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-
   pr("Handling a background message: ${message.messageId}");
 
-  // Cloud Function から送られてきたデータを解析
   final Map<String, dynamic> data = message.data;
-
   if (data['type'] == 'block_update') {
-    // リポジトリを取得
     final chatRepo = getChatRepository();
+
+    // 自分のUIDを (FirebaseAuth.instance からではなく) shared_data から取得
+    // 注: バックグラウンド実行のため、userData.userId が初期化されている必要があります。
+    // もし初期化されていない場合は、ここで User? user = FirebaseAuth.instance.currentUser; を
+    // 使う必要がありますが、グローバルシングルトンが使える前提で進めます。
+    final currentUserId = userData.userId;
+    if (currentUserId.isEmpty) {
+      pr('Background handler: Could not get current user ID. Aborting.');
+      return;
+    }
 
     if (data['action'] == 'blocked_by') {
       final String blockerUid = data['blockerUid'];
-      pr('Received silent notification: BLOCKED by $blockerUid');
-      await chatRepo.addToBlockedUsers(blockerUid);
+      
+      // ★★★ 修正点 ★★★
+      // ブロックしたのが自分自身ではない場合のみ、ローカルDBに追加する
+      if (blockerUid != currentUserId) {
+        pr('Received silent notification: BLOCKED by $blockerUid');
+        await chatRepo.addToBlockedUsers(blockerUid);
+      } else {
+        pr('Ignoring own "blocked_by" notification.');
+      }
+
     } else if (data['action'] == 'unblocked_by') {
       final String unblockerUid = data['unblockerUid'];
-      pr('Received silent notification: UNBLOCKED by $unblockerUid');
-      await chatRepo.removeFromBlockedUsers(unblockerUid);
+
+      // ★★★ 修正点 ★★★
+      // ブロック解除したのが自分自身ではない場合のみ、ローカルDBから削除する
+      if (unblockerUid != currentUserId) {
+        pr('Received silent notification: UNBLOCKED by $unblockerUid');
+        await chatRepo.removeFromBlockedUsers(unblockerUid);
+      } else {
+        pr('Ignoring own "unblocked_by" notification.');
+      }
     }
   }
 }
@@ -105,7 +131,6 @@ void setupAuthListener() {
       await TemplateRepo().initializeUserDatabases();
       await saveTokenToDatabase();
     } else {
-      // ログアウトした！
       pr('Auth state changed: User is logged out.');
     }
   });
@@ -170,9 +195,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
     if (role == null) {
       try {
         FirebaseFirestore firestore = FirebaseFirestore.instance;
+        
+        // This check prevents the error if userId is still empty
+        if (userData.userId.isEmpty) {
+          pr('AuthWrapper: userId is empty, cannot fetch role from Firestore yet.');
+          return null;
+        }
+
         await firestore
             .collection('users_prof')
-            .doc(userData.userId)
+            .doc(userData.userId) // Now this is guaranteed to be non-empty
             .get()
             .then((doc) {
               if (doc.exists) {
@@ -210,8 +242,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
 
         if (snapshot.hasData) {
+          userData.setUser(snapshot.data!);
           return FutureBuilder<String?>(
-            future: _getRoleFromPrefs(),
+            future: _getRoleFromPrefs(), // Now this function can safely use userData.userId
             builder: (context, prefsSnapshot) {
               if (prefsSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
@@ -219,11 +252,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 );
               }
               if (prefsSnapshot.data == null) {
-                return RoleSelectionScreen();
+                pr('Role not in prefs, checking Firestore or navigating to RoleSelection...');
               }
+              
               if (prefsSnapshot.hasData && prefsSnapshot.data != null) {
                 final role = prefsSnapshot.data!;
-                pr('role is ${role}');
+                pr('main.dart role is ${role}');
                 userData.setRole(role == 'agent' ? Roles.agent : Roles.tenant);
                 return const ResponsiveLayout();
               } else {
@@ -231,7 +265,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 return FutureBuilder<DocumentSnapshot>(
                   future: FirebaseFirestore.instance
                       .collection('users_prof')
-                      .doc(userData.userId)
+                      .doc(userData.userId) // This is now safe
                       .get(),
                   builder: (context, userDocSnapshot) {
                     if (userDocSnapshot.connectionState ==
@@ -255,10 +289,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       }
                     }
 
-                    print(
+                    pr(
                       'main.dart// Navigate to the role selection because userdocnapshot : ${userDocSnapshot.hasData} userdocdata existance : ${userDocSnapshot.data!.exists}',
                     );
-                    print('the uid is ${userData.userId}');
+                    pr('the uid is ${userData.userId}');
                     return const RoleSelectionScreen();
                   },
                 );
@@ -266,7 +300,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
             },
           );
         }
-        return const LoginPlaceholderScreen();
+        
+        // ★★★ START OF MODIFICATION ★★★
+        // If snapshot.hasData is false, user is logged out.
+        userData.clearUser(); // Clear any stale user data
+        // Show the new guest landing page instead of the old logic
+        return const GuestLandingScaffold();
+        // ★★★ END OF MODIFICATION ★★★
+        
       },
     );
   }

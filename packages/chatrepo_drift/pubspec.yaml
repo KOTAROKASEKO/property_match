@@ -15,6 +15,7 @@ dependencies:
   drift: ^2.29.0
   # sqlite3_flutter_libs: ^0.5.40 # Web では不要
   path: ^1.9.1 # drift が内部で使う可能性あり
+  path_provider: ^2.1.5
   
   # ✅ drift_dev は dev_dependencies へ移動
   # drift_dev: ^2.29.0 

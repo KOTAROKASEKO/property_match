@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chatrepo_interface/chatrepo_interface.dart';
+import 'package:flutter/foundation.dart'; // <-- Import kIsWeb
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -288,13 +289,48 @@ class _MessageListViewState extends State<MessageListView> {
         ],
       );
     } else if (message.messageType == 'image') {
+      
+      // --- START FIX ---
+      Widget imageWidget;
+      if (message.remoteUrl != null && message.remoteUrl!.isNotEmpty) {
+        // 1. Final state: Use remote URL
+        imageWidget = CachedNetworkImage(
+          imageUrl: message.remoteUrl!,
+          placeholder: (context, url) =>
+              const Center(child: CircularProgressIndicator()),
+          errorWidget: (context, url, error) =>
+              const Icon(Icons.image_not_supported),
+        );
+      } else if (message.localPath != null && message.localPath!.isNotEmpty) {
+        // 2. Optimistic state: Use local path based on platform
+        if (kIsWeb) {
+          // WEB: localPath is a blob: URL, use Image.network
+          imageWidget = Image.network(message.localPath!);
+        } else {
+          // MOBILE: localPath is a file path, use Image.file
+          // Check for existence *only* on mobile
+          if (File(message.localPath!).existsSync()) { // This is now safe
+            imageWidget = Image.file(File(message.localPath!));
+          } else {
+            // Local file was deleted or path is bad, show loading
+            imageWidget = const Center(child: CircularProgressIndicator()); 
+          }
+        }
+      } else {
+        // 3. No image available
+        imageWidget = const Icon(Icons.image_not_supported);
+      }
+      // --- END FIX ---
+
       messageContent = GestureDetector(
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => FullScreenImageView(
-                imageUrl: message.remoteUrl!,
-                localPath: message.localPath,
+                // ★ Pass remoteUrl if it exists, otherwise pass the localPath
+                imageUrl: message.remoteUrl ?? message.localPath!, 
+                // ★ Only pass localPath if on mobile AND it's not uploaded yet
+                localPath: (kIsWeb || message.remoteUrl != null) ? null : message.localPath, 
               ),
             ),
           );
@@ -303,18 +339,7 @@ class _MessageListViewState extends State<MessageListView> {
           tag: message.remoteUrl ?? message.localPath ?? message.messageId,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8.0),
-            child: (message.localPath != null &&
-                    File(message.localPath!).existsSync())
-                ? Image.file(File(message.localPath!))
-                : (message.remoteUrl != null)
-                    ? CachedNetworkImage(
-                        imageUrl: message.remoteUrl!,
-                        placeholder: (context, url) => const Center(
-                            child: CircularProgressIndicator()),
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.image_not_supported),
-                      )
-                    : const Icon(Icons.image_not_supported),
+            child: imageWidget, // <-- Use the new platform-aware widget
           ),
         ),
       );
@@ -348,9 +373,7 @@ class _MessageListViewState extends State<MessageListView> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // ▼▼▼ 修正箇所 ▼▼▼
-          Flexible(child: messageContent), // ★ FIX: Wrap with Flexible
-          // ▲▲▲ 修正箇所 ▲▲▲
+          Flexible(child: messageContent), 
           const SizedBox(height: 4),
           timeStampAndStatus,
         ],
@@ -362,7 +385,6 @@ class _MessageListViewState extends State<MessageListView> {
       builder: (context, constraints) {
         final messageBubble = ConstrainedBox(
           constraints: BoxConstraints(
-            // ★ 3. MediaQuery ではなく、LayoutBuilderの「constraints.maxWidth」を使う
             maxWidth: constraints.maxWidth * 0.75,
           ),
           child: Column(
@@ -392,7 +414,6 @@ class _MessageListViewState extends State<MessageListView> {
           ),
         );
 
-        // ★ 4. Dismissible以下を LayoutBuilder の builder の中で返す
         return Dismissible(
           key: ValueKey('dismiss_${message.messageId}'),
           direction: message.status != 'deleted_for_everyone'
@@ -429,7 +450,7 @@ class _MessageListViewState extends State<MessageListView> {
                         ),
                       ),
                     ),
-                  messageBubble, // ★ 5. 正しく幅が制約された bubble を配置
+                  messageBubble,
                 ],
               ),
             ),
@@ -466,7 +487,7 @@ class _MessageListViewState extends State<MessageListView> {
           ),
           const SizedBox(height: 2),
           Text(
-            message.repliedToMessageText ?? '[Unsupported message]',
+            message.repliedToMessageText ?? (message.messageType == 'image' ? '[Image]' : '[Voice Message]'),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),

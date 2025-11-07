@@ -24,4 +24,27 @@ ChatRepository getChatRepository() {
 
   print('[Repository Provider] Returning repository instance.');
   return _cachedRepository!;
+
+
+}
+
+Future<void> disposeChatRepository() async {
+  print('[Repository Provider] Disposing repository...');
+  if (_cachedRepository != null) {
+    try {
+      // 1. リポジトリのDB接続を閉じる
+      // (前提: ChatRepository インターフェースに close() メソッドが定義されている)
+      await _cachedRepository!.close();
+      print('[Repository Provider] Repository connection closed.');
+    } catch (e) {
+      print('[Repository Provider] Error closing repository. May leak connection: $e');
+      // エラーが発生してもキャッシュのクリアは試みる
+    }
+
+    // 2. キャッシュを破棄する
+    _cachedRepository = null;
+    print('[Repository Provider] Repository cache cleared.');
+  } else {
+    print('[Repository Provider] Repository cache was already null.');
+  }
 }

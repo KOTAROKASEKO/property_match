@@ -1,6 +1,5 @@
 // lib/app/localDB_Manager.dart
 import 'package:chatrepo_interface/chatrepo_interface.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:template_hive/template_hive.dart';
 import '../3-shared/common_feature/repository_provider.dart';

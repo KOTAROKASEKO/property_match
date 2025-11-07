@@ -149,11 +149,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 24),
         ElevatedButton.icon(
           onPressed: () async {
-            // Navigate to Edit screen and wait for a result
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => EditProfileScreen(userProfile: userProfile),
+                builder: (context) => EditProfileScreen(userProfile: userProfile,isNewUser: false,),
               ),
             );
             // If the profile was updated, refresh the data

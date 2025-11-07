@@ -98,6 +98,30 @@ class ChatService {
     }
   }
 
+  Future<List<String>> getMyBlockedUsersFromFirestore() async {
+    try {
+      if (userData.userId.isEmpty) {
+        pr('getMyBlockedUsersFromFirestore: ユーザーIDが空です。');
+        return [];
+      }
+      
+      final docRef = _firestore.collection('blockedList').doc(userData.userId);
+      final snapshot = await docRef.get();
+
+      if (!snapshot.exists || snapshot.data() == null) {
+        pr('getMyBlockedUsersFromFirestore: Firestoreにドキュメントが存在しません。');
+        return [];
+      }
+
+      final List<dynamic> blockedList = snapshot.data()?['blockedUsers'] ?? [];
+      pr('getMyBlockedUsersFromFirestore: Firestoreから ${blockedList.length} 件のブロックリストを取得しました。');
+      return List<String>.from(blockedList);
+    } catch (e) {
+      pr('Error fetching block list from Firestore: $e');
+      return []; // エラー時は空のリストを返す
+    }
+  }
+
   Future<void> unblockUser(String blockedUserId) async {
     final docRef = _firestore.collection('blockedList').doc(userData.userId);
 

@@ -8,11 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:lottie/lottie.dart';
+import 'package:re_conver/3-shared/core/responsive/responsive_layout.dart';
 import 'package:re_conver/3-shared/features/authentication/forgotpassword.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'sign_in_button_stub.dart';
 import 'package:shared_data/shared_data.dart';
-import '../../MainScaffold.dart';
 // import 'register_screen.dart'; // このファイルは不要になります
 import 'role_selection_screen.dart';
 import '../../service/FirebaseApi.dart';
@@ -252,6 +252,7 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
   // --- ここまで register_screen.dart のロジック ---
 
   Future<void> _navigateAfterSignIn(User user) async {
+    pr('login_placeholder.dart: _navigateAfterSignIn called');
     if (!mounted) return;
 
     userData.setUser(user);
@@ -266,13 +267,14 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
     if (userDoc.exists &&
         userDoc.data() != null &&
         userDoc.data()!.containsKey('role')) {
+          pr('login_placeholder.dart : ${ userDoc.data()!['role'] as String}');
       final role = userDoc.data()!['role'] as String;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('role', role);
 
       userData.setRole(role == 'agent' ? Roles.agent : Roles.tenant);
       navigator.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const MainScaffold()),
+        MaterialPageRoute(builder: (context) => const ResponsiveLayout()),
         (route) => false,
       );
     } else {

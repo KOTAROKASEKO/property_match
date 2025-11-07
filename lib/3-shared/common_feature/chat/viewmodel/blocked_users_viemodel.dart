@@ -1,6 +1,7 @@
 // common_feature/chat/viewmodel/blocked_users_viewmodel.dart
 import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_data/shared_data.dart';
 import '../../repository_provider.dart';
 import 'chat_service.dart';
 
@@ -26,13 +27,14 @@ class BlockedUsersViewModel extends ChangeNotifier {
   Future<void> fetchBlockedUsers() async {
     _isLoading = true;
     notifyListeners();
-    _blockedUsers = await chatRepo.getBlockedUsers();
+    _blockedUsers = await _chatService.getMyBlockedUsersFromFirestore();
     _isLoading = false;
     notifyListeners();
   }
 
   Future<void> unblockUser(String userId) async {
     try {
+      pr('[blocked_users_screen.dart] unblocking user: $userId');
       _isUnblocking  = true;
       notifyListeners();
       // Unblock on the backend and local DB

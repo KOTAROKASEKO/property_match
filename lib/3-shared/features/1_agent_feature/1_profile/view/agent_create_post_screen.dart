@@ -3,7 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // Explicitly import kIsWeb
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // Explicitly import kIsWeb
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -17,7 +18,9 @@ class CreatePostScreen extends StatelessWidget {
   const CreatePostScreen({super.key, this.post});
 
   Future<bool> _onWillPop(
-      BuildContext context, CreatePostViewModel viewModel) async {
+    BuildContext context,
+    CreatePostViewModel viewModel,
+  ) async {
     if (!viewModel.hasUnsavedChanges || viewModel.isPosting) {
       return true;
     }
@@ -56,7 +59,9 @@ class CreatePostScreen extends StatelessWidget {
             child: Scaffold(
               backgroundColor: Colors.grey[100],
               appBar: AppBar(
-                title: Text(viewModel.isEditing ? 'Edit Listing' : 'Create New Listing'),
+                title: Text(
+                  viewModel.isEditing ? 'Edit Listing' : 'Create New Listing',
+                ),
                 leading: IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () async {
@@ -81,9 +86,9 @@ class CreatePostScreen extends StatelessWidget {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
-                                          'Failed to save listing. Please try again.'
-                                          ),
-                                        ),
+                                        'Failed to save listing. Please try again.',
+                                      ),
+                                    ),
                                   );
                                 }
                               }
@@ -101,11 +106,13 @@ class CreatePostScreen extends StatelessWidget {
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : Text(viewModel.isEditing ? 'Save' : 'Post'),
                     ),
-                  )
+                  ),
                 ],
               ),
               body: SingleChildScrollView(
@@ -119,61 +126,78 @@ class CreatePostScreen extends StatelessWidget {
                         title: 'Property Details',
                         children: [
                           Autocomplete<String>(
-                            optionsBuilder: (TextEditingValue textEditingValue) {
-                              return viewModel.getCondoSuggestions(textEditingValue.text);
-                            },
+                            optionsBuilder:
+                                (TextEditingValue textEditingValue) {
+                                  return viewModel.getCondoSuggestions(
+                                    textEditingValue.text,
+                                  );
+                                },
                             onSelected: (String selection) {
                               // Let the fieldViewBuilder's controller listener handle the update
                               // viewModel.condominiumName = selection;
                             },
-                            fieldViewBuilder: (BuildContext context,
-                                TextEditingController fieldTextEditingController,
-                                FocusNode fieldFocusNode,
-                                VoidCallback onFieldSubmitted) {
-                              // Sync initial value from view model
-                              if (viewModel.condominiumName.isNotEmpty && fieldTextEditingController.text.isEmpty) {
-                                  fieldTextEditingController.text = viewModel.condominiumName;
-                              }
-                              // Use a listener to keep the view model updated
-                              // Remove previous listener if exists to avoid duplicates
-                              fieldTextEditingController.removeListener(() {
-                                 viewModel.condominiumName = fieldTextEditingController.text;
-                              });
-                              fieldTextEditingController.addListener(() {
-                                 viewModel.condominiumName = fieldTextEditingController.text;
-                              });
+                            fieldViewBuilder:
+                                (
+                                  BuildContext context,
+                                  TextEditingController
+                                  fieldTextEditingController,
+                                  FocusNode fieldFocusNode,
+                                  VoidCallback onFieldSubmitted,
+                                ) {
+                                  // Sync initial value from view model
+                                  if (viewModel.condominiumName.isNotEmpty &&
+                                      fieldTextEditingController.text.isEmpty) {
+                                    fieldTextEditingController.text =
+                                        viewModel.condominiumName;
+                                  }
+                                  // Use a listener to keep the view model updated
+                                  // Remove previous listener if exists to avoid duplicates
+                                  fieldTextEditingController.removeListener(() {
+                                    viewModel.condominiumName =
+                                        fieldTextEditingController.text;
+                                  });
+                                  fieldTextEditingController.addListener(() {
+                                    viewModel.condominiumName =
+                                        fieldTextEditingController.text;
+                                  });
 
-                              return TextFormField(
-                                controller: fieldTextEditingController,
-                                focusNode: fieldFocusNode,
-                                decoration: const InputDecoration(
-                                    labelText: 'Condominium Name'),
-                                // onChanged is handled by the listener
-                                validator: (value) =>
-                                    value!.isEmpty ? 'Please enter a name' : null,
-                              );
-                            },
+                                  return TextFormField(
+                                    controller: fieldTextEditingController,
+                                    focusNode: fieldFocusNode,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Condominium Name',
+                                    ),
+                                    // onChanged is handled by the listener
+                                    validator: (value) => value!.isEmpty
+                                        ? 'Please enter a name'
+                                        : null,
+                                  );
+                                },
                             optionsViewBuilder: (context, onSelected, options) {
                               return Align(
                                 alignment: Alignment.topLeft,
                                 child: Material(
                                   elevation: 4.0,
                                   child: ConstrainedBox(
-                                    constraints: const BoxConstraints(maxHeight: 200),
+                                    constraints: const BoxConstraints(
+                                      maxHeight: 200,
+                                    ),
                                     child: ListView.builder(
                                       padding: EdgeInsets.zero,
                                       itemCount: options.length,
-                                      itemBuilder: (BuildContext context, int index) {
-                                        final String option = options.elementAt(index);
-                                        return InkWell(
-                                          onTap: () {
-                                            onSelected(option);
+                                      itemBuilder:
+                                          (BuildContext context, int index) {
+                                            final String option = options
+                                                .elementAt(index);
+                                            return InkWell(
+                                              onTap: () {
+                                                onSelected(option);
+                                              },
+                                              child: ListTile(
+                                                title: Text(option),
+                                              ),
+                                            );
                                           },
-                                          child: ListTile(
-                                            title: Text(option),
-                                          ),
-                                        );
-                                      },
                                     ),
                                   ),
                                 ),
@@ -181,18 +205,24 @@ class CreatePostScreen extends StatelessWidget {
                             },
                           ),
                           const SizedBox(height: 16),
-                              TextFormField(
-                                initialValue: viewModel.location,
-                                decoration: const InputDecoration(labelText: 'Location / Address'),
-                                onChanged: (value) => viewModel.location = value,
-                                validator: (value) =>
-                                    value!.isEmpty ? 'Please enter a location' : null,
-                              ),
+                          TextFormField(
+                            initialValue: viewModel.location,
+                            decoration: const InputDecoration(
+                              labelText: 'Location / Address',
+                            ),
+                            onChanged: (value) => viewModel.location = value,
+                            validator: (value) => value!.isEmpty
+                                ? 'Please enter a location'
+                                : null,
+                          ),
                           const SizedBox(height: 16),
                           TextFormField(
-                            initialValue: viewModel.rent > 0 ? viewModel.rent.toStringAsFixed(0) : '',
+                            initialValue: viewModel.rent > 0
+                                ? viewModel.rent.toStringAsFixed(0)
+                                : '',
                             decoration: const InputDecoration(
-                                labelText: 'Monthly Rent (RM)'),
+                              labelText: 'Monthly Rent (RM)',
+                            ),
                             keyboardType: TextInputType.number,
                             onChanged: (value) =>
                                 viewModel.rent = double.tryParse(value) ?? 0,
@@ -213,30 +243,43 @@ class CreatePostScreen extends StatelessWidget {
                         title: 'Room & Tenant Details',
                         children: [
                           DropdownButtonFormField<String>(
-                            decoration:
-                                const InputDecoration(labelText: 'Room Type'),
+                            decoration: const InputDecoration(
+                              labelText: 'Room Type',
+                            ),
                             value: viewModel.roomType,
-                            items:
-                                ['Master', 'Middle', 'Single'].map((String value) {
+                            items: ['Master', 'Middle', 'Single'].map((
+                              String value,
+                            ) {
                               return DropdownMenuItem<String>(
-                                  value: value, child: Text(value));
+                                value: value,
+                                child: Text(value),
+                              );
                             }).toList(),
                             onChanged: (value) => viewModel.roomType = value!,
                           ),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
                             decoration: const InputDecoration(
-                                labelText: 'Preferred Gender'),
+                              labelText: 'Preferred Gender',
+                            ),
                             value: viewModel.gender,
-                            items:
-                                ['Male', 'Female', 'Mix'].map((String value) {
+                            items: ['Male', 'Female', 'Mix'].map((
+                              String value,
+                            ) {
                               return DropdownMenuItem<String>(
-                                  value: value, child: Text(value));
+                                value: value,
+                                child: Text(value),
+                              );
                             }).toList(),
                             onChanged: (value) => viewModel.gender = value!,
                           ),
                         ],
                       ),
+                      _buildSectionCard(
+                        title: 'Hobbies & Lifestyle Tags',
+                        children: [_buildHobbiesInput(context, viewModel)],
+                      ),
+                      //
                       _buildSectionCard(
                         title: 'Description',
                         children: [
@@ -257,9 +300,7 @@ class CreatePostScreen extends StatelessWidget {
                       ),
                       _buildSectionCard(
                         title: 'Photos',
-                        children: [
-                          _buildImageGrid(context, viewModel),
-                        ],
+                        children: [_buildImageGrid(context, viewModel)],
                       ),
                     ],
                   ),
@@ -272,7 +313,10 @@ class CreatePostScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDateRangePicker(BuildContext context, CreatePostViewModel viewModel) {
+  Widget _buildDateRangePicker(
+    BuildContext context,
+    CreatePostViewModel viewModel,
+  ) {
     return Row(
       children: [
         Expanded(
@@ -293,8 +337,10 @@ class CreatePostScreen extends StatelessWidget {
               decoration: const InputDecoration(
                 labelText: 'Available From',
                 border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 16,
+                ),
               ),
               child: Text(
                 viewModel.durationStart != null
@@ -314,32 +360,36 @@ class CreatePostScreen extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: TextFormField(
-        initialValue: viewModel.durationMonths != null
-            ? viewModel.durationMonths.toString()
-            : '',
-        decoration: const InputDecoration(
-          labelText: 'Duration (months)',
-          border: OutlineInputBorder(),
-          contentPadding:
-          EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-        ),
-        keyboardType: TextInputType.number,
-        onChanged: (value) {
-          viewModel.durationMonths = int.tryParse(value);
-        },
-        validator: (value) {
-          final v = int.tryParse(value ?? '');
-          if (v == null || v <= 0) return 'Please enter duration in months';
-          return null;
-        },
+            initialValue: viewModel.durationMonths != null
+                ? viewModel.durationMonths.toString()
+                : '',
+            decoration: const InputDecoration(
+              labelText: 'Duration (months)',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 16,
+              ),
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              viewModel.durationMonths = int.tryParse(value);
+            },
+            validator: (value) {
+              final v = int.tryParse(value ?? '');
+              if (v == null || v <= 0) return 'Please enter duration in months';
+              return null;
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSectionCard(
-      {required String title, required List<Widget> children}) {
+  Widget _buildSectionCard({
+    required String title,
+    required List<Widget> children,
+  }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -349,9 +399,10 @@ class CreatePostScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             ...children,
           ],
@@ -360,8 +411,8 @@ class CreatePostScreen extends StatelessWidget {
     );
   }
 
- // ★ 修正された Image Grid Widget
- Widget _buildImageGrid(BuildContext context, CreatePostViewModel viewModel) {
+  // ★ 修正された Image Grid Widget
+  Widget _buildImageGrid(BuildContext context, CreatePostViewModel viewModel) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -403,40 +454,58 @@ class CreatePostScreen extends StatelessWidget {
           imageWidget = CachedNetworkImage(
             imageUrl: imageItem,
             fit: BoxFit.cover,
-            placeholder: (context, url) => Container(color: Colors.grey.shade300),
+            placeholder: (context, url) =>
+                Container(color: Colors.grey.shade300),
             errorWidget: (context, url, error) => const Icon(Icons.error),
           );
         } else if (kIsWeb && imageItem is XFile) {
-           // Web: Picked file (XFile) -> Use Image.memory
-           imageWidget = FutureBuilder<Uint8List>(
-             future: imageItem.readAsBytes(),
-             builder: (context, snapshot) {
-               if (snapshot.connectionState == ConnectionState.done && snapshot.hasData && snapshot.data!.isNotEmpty) {
-                 return Image.memory(snapshot.data!, fit: BoxFit.cover);
-               } else if (snapshot.hasError || (snapshot.connectionState == ConnectionState.done && (snapshot.data == null || snapshot.data!.isEmpty))) {
-                 return Container(
-                   color: Colors.grey.shade200,
-                   child: const Center(child: Icon(Icons.broken_image_outlined, color: Colors.grey)),
-                 );
-               }
-               return Container(
-                 color: Colors.grey.shade300,
-                 child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-               );
-             },
-           );
-         } else if (!kIsWeb && (imageItem is File || imageItem is XFile)) {
-           // Mobile: Picked file (File or XFile) -> Use Image.file
-           // The assertion error points here, ensure this branch is ONLY hit on mobile
-           // The error stack trace indicates line 398 caused the issue, let's assume imageWidget = Image.file(...) is roughly there.
-           final filePath = (imageItem is File) ? imageItem.path : (imageItem as XFile).path;
-           imageWidget = Image.file(File(filePath), fit: BoxFit.cover); // This line must only run if !kIsWeb
-         }
-        else {
+          // Web: Picked file (XFile) -> Use Image.memory
+          imageWidget = FutureBuilder<Uint8List>(
+            future: imageItem.readAsBytes(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done &&
+                  snapshot.hasData &&
+                  snapshot.data!.isNotEmpty) {
+                return Image.memory(snapshot.data!, fit: BoxFit.cover);
+              } else if (snapshot.hasError ||
+                  (snapshot.connectionState == ConnectionState.done &&
+                      (snapshot.data == null || snapshot.data!.isEmpty))) {
+                return Container(
+                  color: Colors.grey.shade200,
+                  child: const Center(
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.grey,
+                    ),
+                  ),
+                );
+              }
+              return Container(
+                color: Colors.grey.shade300,
+                child: const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              );
+            },
+          );
+        } else if (!kIsWeb && (imageItem is File || imageItem is XFile)) {
+          // Mobile: Picked file (File or XFile) -> Use Image.file
+          // The assertion error points here, ensure this branch is ONLY hit on mobile
+          // The error stack trace indicates line 398 caused the issue, let's assume imageWidget = Image.file(...) is roughly there.
+          final filePath = (imageItem is File)
+              ? imageItem.path
+              : (imageItem as XFile).path;
+          imageWidget = Image.file(
+            File(filePath),
+            fit: BoxFit.cover,
+          ); // This line must only run if !kIsWeb
+        } else {
           // Fallback for unexpected type
           imageWidget = Container(
             color: Colors.grey.shade200,
-            child: const Center(child: Icon(Icons.help_outline, color: Colors.grey)),
+            child: const Center(
+              child: Icon(Icons.help_outline, color: Colors.grey),
+            ),
           );
         }
 
@@ -466,6 +535,55 @@ class CreatePostScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildHobbiesInput(
+    BuildContext context,
+    CreatePostViewModel viewModel,
+  ) {
+    // A local controller is fine here as its state is temporary for input.
+    final _hobbyController = TextEditingController();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _hobbyController,
+          decoration: InputDecoration(
+            labelText: 'Add a tag (e.g., foodie, badminton)',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: () {
+                if (_hobbyController.text.isNotEmpty) {
+                  viewModel.addHobby(_hobbyController.text);
+                  _hobbyController.clear();
+                }
+              },
+            ),
+          ),
+          onFieldSubmitted: (value) {
+            if (value.isNotEmpty) {
+              viewModel.addHobby(value);
+              _hobbyController.clear();
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 4.0,
+          children: viewModel.hobbies
+              .map(
+                (hobby) => Chip(
+                  label: Text(hobby),
+                  onDeleted: () {
+                    viewModel.removeHobby(hobby);
+                  },
+                ),
+              )
+              .toList(),
+        ),
+      ],
     );
   }
 }

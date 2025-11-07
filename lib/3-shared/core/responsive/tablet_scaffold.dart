@@ -72,7 +72,6 @@ class _TabletScaffoldState extends State<TabletScaffold> {
       ),
       // ★ エージェントなら TenantListView、テナントなら DiscoverScreen を表示
       isAgent ? const TenantListView() : const DiscoverScreen(),
-      // プロフィール画面は既存のロジックのまま
       isAgent ? MyProfilePage() : const ProfileScreen(),
     ];
 
@@ -115,7 +114,6 @@ class _TabletScaffoldState extends State<TabletScaffold> {
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(
-            // ★ Key を追加してページの切り替えを正しく処理
             child: IndexedStack(
               key: ValueKey(_selectedIndex),
               index: _selectedIndex,
