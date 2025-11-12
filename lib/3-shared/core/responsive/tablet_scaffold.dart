@@ -33,12 +33,16 @@ class _TabletScaffoldState extends State<TabletScaffold> {
         : thread.whoSent;
   }
 
+
+
   @override
   Widget build(BuildContext context) {
+    pr('build method in tablet scaffold was called');
     final isAgent = userData.role == Roles.agent;
 
+    var pages;
     // ★★★ 変更点: isAgent に応じて2番目のページとラベルを切り替える ★★★
-    final List<Widget> pages = [
+    final List<Widget> Agentpages = [
       Row(
         children: [
           SizedBox(
@@ -71,9 +75,48 @@ class _TabletScaffoldState extends State<TabletScaffold> {
         ],
       ),
       // ★ エージェントなら TenantListView、テナントなら DiscoverScreen を表示
-      isAgent ? const TenantListView() : const DiscoverScreen(),
-      isAgent ? MyProfilePage() : const ProfileScreen(),
+      TenantListView(),
+      MyProfilePage(),
     ];
+
+    final List<Widget> TenantPages = [
+      Row(
+        children: [
+          SizedBox(
+            width: 350,
+            child: ChatThreadsScreen(onThreadSelected: _onThreadSelected),
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: _selectedThread != null
+                ? IndividualChatScreenWithProvider(
+                    key: ValueKey(_selectedThread!.id), // ★ Keyを追加
+                    chatThreadId: _selectedThread!.id,
+                    otherUserUid:
+                        _getOtherParticipantId(_selectedThread!, userData.userId),
+                    otherUserName: _selectedThread!.hisName ?? 'Chat User',
+                    otherUserPhotoUrl: _selectedThread!.hisPhotoUrl,
+                  )
+                : const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.chat, size: 100, color: Colors.grey),
+                        SizedBox(height: 20),
+                        Text('Select a chat to start messaging',
+                            style: TextStyle(fontSize: 18, color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+      // ★ エージェントなら TenantListView、テナントなら DiscoverScreen を表示
+      DiscoverScreen(),
+      ProfileScreen(),
+    ];
+
+    pages= isAgent?Agentpages:TenantPages;
 
     final List<NavigationRailDestination> destinations = [
       const NavigationRailDestination(
@@ -110,7 +153,7 @@ class _TabletScaffoldState extends State<TabletScaffold> {
               });
             },
             labelType: NavigationRailLabelType.all,
-            destinations: destinations, // ★ 更新された destinations を使用
+            destinations: destinations,
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(

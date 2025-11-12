@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   final String? displayName;
-  const RoleSelectionScreen({super.key, this.displayName,});
+  const RoleSelectionScreen({super.key, this.displayName});
 
   /// Displays a confirmation dialog before setting the user's role.
   Future<void> _confirmAndSelectRole(BuildContext context, Roles role) async {
@@ -70,7 +70,7 @@ class RoleSelectionScreen extends StatelessWidget {
 
   /// Sets the user role in Firestore and SharedPreferences.
   Future<void> _selectRole(BuildContext context, Roles role) async {
-    pr('role_selection_scren.dart / updating user role');
+    pr('role_selection_scren.dart updating user role');
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return;
@@ -107,13 +107,13 @@ class RoleSelectionScreen extends StatelessWidget {
           displayName: user.displayName ?? 'New User',
         );
         Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => EditProfileScreen(
-            userProfile: newUserProfile,
-            isNewUser: true, // ★ ADDED: Indicate this is the first time
+          MaterialPageRoute(
+            builder: (context) => EditProfileScreen(
+              userProfile: newUserProfile,
+              isNewUser: true, // ★ ADDED: Indicate this is the first time
+            ),
           ),
-        ),
-      );
+        );
       } else {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -162,17 +162,31 @@ class RoleSelectionScreen extends StatelessWidget {
               const SizedBox(height: 48),
               _buildRoleCard(
                 context,
-                icon: Icons.person_outline,
+                // Pass a Row of icons as the display widget
+                iconDisplay: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.door_back_door_outlined, size: 40, color: Colors.deepPurple),
+                    SizedBox(width: 16),
+                    Icon(Icons.bed, size: 40, color: Colors.deepPurple),
+                  ],
+                ),
                 label: "I want room",
-                // Updated to call the confirmation dialog
                 onPressed: () => _confirmAndSelectRole(context, Roles.tenant),
               ),
               const SizedBox(height: 16),
               _buildRoleCard(
                 context,
-                icon: Icons.real_estate_agent_outlined,
+                // Pass a Row of icons as the display widget
+                iconDisplay: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.add_business_sharp, size: 40, color: Colors.deepPurple),
+                    SizedBox(width: 16),
+                    Icon(Icons.people, size: 40, color: Colors.deepPurple),
+                  ],
+                ),
                 label: "I want roommate",
-                // Updated to call the confirmation dialog
                 onPressed: () => _confirmAndSelectRole(context, Roles.agent),
               ),
             ],
@@ -182,14 +196,17 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
+  /// ★ NEW: Refactored _buildRoleCard
+  /// This widget is now more icon-centric, using a Column layout.
   Widget _buildRoleCard(
     BuildContext context, {
-    required IconData icon,
+    required Widget iconDisplay, // Changed from IconData to Widget
     required String label,
     required VoidCallback onPressed,
   }) {
     return Card(
       elevation: 4,
+      clipBehavior: Clip.antiAlias, // Ensures InkWell ripple respects border
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -198,20 +215,22 @@ class RoleSelectionScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
-          child: Row(
+          // Changed to a Column to make icons the primary focus
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(icon, size: 40, color: Colors.deepPurple),
-              const SizedBox(width: 24),
+              // Your custom icon Widget (e.g., the Row) goes here
+              iconDisplay,
+              const SizedBox(height: 16),
               Text(
                 label,
+                textAlign: TextAlign.center, // Centered text
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                   color: Colors.black87,
                 ),
               ),
-              const Spacer(),
-              const Icon(Icons.arrow_forward_ios, color: Colors.grey),
             ],
           ),
         ),

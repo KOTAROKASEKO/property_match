@@ -1,8 +1,11 @@
+// lib/features/2_tenant_feature/1_discover/view/discover_filter_panel.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_screen.dart';
 import '../model/filter_options.dart';
 import '../viewmodel/discover_viewmodel.dart';
+// import 'your_ai_chat_screen.dart'; // ★ AIチャット画面をインポート
 
 class DiscoverFilterPanel extends StatefulWidget {
   const DiscoverFilterPanel({super.key});
@@ -15,7 +18,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   // State variables from FilterBottomSheet
   late String? _gender;
   late List<String> _selectedRoomTypes;
-  late TextEditingController _condoNameController;
+  late TextEditingController _semanticQueryController;
   RangeValues _rentRange = const RangeValues(0, 5000);
   DateTime? _durationStart;
   int? _durationMonth;
@@ -46,7 +49,8 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   void _initializeFilters(FilterOptions filters) {
     _gender = filters.gender ?? 'Any'; // Default to 'Any' if null
     _selectedRoomTypes = filters.roomType ?? [];
-    _condoNameController = TextEditingController(text: filters.condoName);
+    _semanticQueryController =
+        TextEditingController(text: filters.semanticQuery);
     _rentRange = RangeValues(
       filters.minRent ?? 0,
       filters.maxRent ?? 5000,
@@ -60,9 +64,9 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     final filters = FilterOptions(
       gender: _gender == 'Any' ? null : _gender, // Send null if 'Any'
       roomType: _selectedRoomTypes.isEmpty ? null : _selectedRoomTypes,
-      condoName: _condoNameController.text.trim().isEmpty
+      semanticQuery: _semanticQueryController.text.trim().isEmpty
           ? null
-          : _condoNameController.text.trim(),
+          : _semanticQueryController.text.trim(),
       minRent: _rentRange.start == 0 ? null : _rentRange.start,
       maxRent: _rentRange.end == 5000 ? null : _rentRange.end,
       durationStart: _durationStart,
@@ -73,16 +77,15 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   }
 
   void _clearAllFilters() {
-    _viewModel.applyFilters(FilterOptions()); // Apply empty filters
-    // Reset local state (will also be reset by didChangeDependencies)
+    _viewModel.applyFilters(FilterOptions());
     setState(() {
-       _gender = 'Any';
+      _gender = 'Any';
       _selectedRoomTypes = [];
-      _condoNameController.clear();
+      _semanticQueryController.clear();
       _rentRange = const RangeValues(0, 5000);
       _durationStart = null;
       _durationMonth = null;
-      _hobbies = []; // ★★★ ADDED ★★★
+      _hobbies = [];
       _hobbyController.clear();
     });
   }
@@ -98,25 +101,59 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
           _buildHeader(),
           const Divider(height: 24),
           Expanded(
+            // ★★★ 変更点: ListView の子を _buildSectionCard に変更 ★★★
             child: ListView(
               children: [
-                _buildSectionTitle('Available between'),
-                _buildDateRangePicker(context),
-                const SizedBox(height: 28),
-                _buildSectionTitle('Gender'),
-                _buildGenderChips(),
-                const SizedBox(height: 28),
-                _buildSectionTitle('Room Type'),
-                _buildRoomTypeToggle(),
-                const SizedBox(height: 28),
-                _buildSectionTitle('Rent Range (RM)'),
-                _buildRentSlider(),
-                const SizedBox(height: 28),
-                _buildSectionTitle('Condominium Name'),
-                _buildCondoNameInput(),
-                const SizedBox(height: 28), // ★★★ ADDED ★★★
-                _buildSectionTitle('Hobbies & Lifestyle'), // ★★★ ADDED ★★★
-                _buildHobbiesInput(),
+                _buildSectionCard(
+                  icon: Icons.auto_awesome, // ★ アイコン
+                  title: 'AI Search Assistant', // ★ タイトル
+                  children: [
+                    _buildAIChatButton(context), // ★ AIチャットボタン
+                  ],
+                ),
+                _buildSectionCard(
+                  icon: Icons.calendar_today_outlined, // ★ アイコン
+                  title: 'Availability', // ★ タイトル
+                  children: [
+                    _buildDateRangePicker(context),
+                  ],
+                ),
+                _buildSectionCard(
+                  icon: Icons.home_outlined, // ★ アイコン
+                  title: 'Property Details', // ★ タイトル
+                  children: [
+                    const Text("Gender",
+                        style: TextStyle(fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    _buildGenderChips(),
+                    const SizedBox(height: 16),
+                    const Text("Room Type",
+                        style: TextStyle(fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    _buildRoomTypeToggle(),
+                  ],
+                ),
+                _buildSectionCard(
+                  icon: Icons.attach_money_outlined, // ★ アイコン
+                  title: 'Rent Range (RM)', // ★ タイトル
+                  children: [
+                    _buildRentSlider(),
+                  ],
+                ),
+                _buildSectionCard(
+                  icon: Icons.lightbulb_outline, // ★ アイコン
+                  title: 'Atmosphere / Keywords', // ★ タイトル
+                  children: [
+                    _buildSemanticQueryInput(),
+                  ],
+                ),
+                _buildSectionCard(
+                  icon: Icons.pool_outlined, // ★ アイコン
+                  title: 'Hobbies & Lifestyle', // ★ タイトル
+                  children: [
+                    _buildHobbiesInput(),
+                  ],
+                ),
                 const SizedBox(height: 32),
               ],
             ),
@@ -126,6 +163,114 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
       ),
     );
   }
+
+  // --- Header ---
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text('Filters',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        TextButton(
+          onPressed: _clearAllFilters,
+          child: const Text('Clear All'),
+        ),
+      ],
+    );
+  }
+
+  // --- Apply Button ---
+  Widget _buildApplyButton() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size(double.infinity, 52),
+          backgroundColor: Colors.deepPurple,
+          foregroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        onPressed: _applyFilters,
+        child: const Text('Apply Filters',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  // ★★★ 新しいヘルパーウィジェット: AIチャットボタン ★★★
+  Widget _buildAIChatButton(BuildContext context) {
+    return ElevatedButton.icon(
+      icon: const Icon(Icons.chat_outlined, size: 18),
+      label: const Text('Chat with AI to Find Your Room'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.deepPurple.shade50,
+        foregroundColor: Colors.deepPurple.shade700,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      onPressed: () async {
+        // ★★★ 遷移ロジックを追加 ★★★
+        final aiFilters = await Navigator.push<FilterOptions>(
+          context,
+          MaterialPageRoute(builder: (_) => const AIChatScreen()),
+        );
+        // AIチャットからフィルターが返ってきたら適用する
+        if (aiFilters != null) {
+          _viewModel.applyFilters(aiFilters);
+        }
+      },
+    );
+  }
+
+  // ★★★ 新しいヘルパーウィジェット: セクションカード ★★★
+  Widget _buildSectionCard({
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // アイコンとタイトル
+            Row(
+              children: [
+                Icon(icon, color: Colors.deepPurple, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            // 子ウィジェット
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- 既存のヘルパーウィジェット (変更なし) ---
+  // ( _buildHobbiesInput, _buildDateRangePicker, _buildGenderChips,
+  //   _buildRoomTypeToggle, _getBorderRadius, _buildRentSlider,
+  //   _buildSemanticQueryInput )
 
   Widget _buildHobbiesInput() {
     return Column(
@@ -151,12 +296,11 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
             suffixIcon: IconButton(
               icon: const Icon(Icons.add_circle_outline),
               onPressed: () {
-                // ★★★ 修正: .toLowerCase() を追加 ★★★
                 final hobby = _hobbyController.text.trim().toLowerCase();
                 if (hobby.isNotEmpty) {
                   setState(() {
-                    if (!_hobbies.contains(hobby)) { // ★ hobby を使用
-                      _hobbies.add(hobby); // ★ hobby を使用
+                    if (!_hobbies.contains(hobby)) {
+                      _hobbies.add(hobby);
                     }
                     _hobbyController.clear();
                   });
@@ -168,61 +312,14 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
         if (_hobbies.isNotEmpty) const SizedBox(height: 8),
         Wrap(
           spacing: 8.0,
-          children: _hobbies.map((hobby) => Chip(
-                label: Text(hobby),
-                onDeleted: () => setState(() => _hobbies.remove(hobby)),
-              )).toList(),
+          children: _hobbies
+              .map((hobby) => Chip(
+                    label: Text(hobby),
+                    onDeleted: () => setState(() => _hobbies.remove(hobby)),
+                  ))
+              .toList(),
         ),
       ],
-    );
-  }
-
-  // --- Header ---
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text('Filters', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        TextButton(
-          onPressed: _clearAllFilters,
-          child: const Text('Clear All'),
-        ),
-      ],
-    );
-  }
-
-  // --- Apply Button ---
-   Widget _buildApplyButton() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16.0),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 52),
-          backgroundColor: Colors.deepPurple,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        onPressed: _applyFilters,
-        child: const Text('Apply Filters', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-
-  // --- Helper Widgets (Copied and adjusted from FilterBottomSheet) ---
-
-  Widget _buildSectionTitle(String title) {
-     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: Colors.black87,
-          letterSpacing: -0.3,
-        ),
-      ),
     );
   }
 
@@ -248,7 +345,8 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
               decoration: const InputDecoration(
                 labelText: 'From', // Simplified label
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               ),
               child: Text(
                 _durationStart != null
@@ -261,16 +359,18 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
         const SizedBox(width: 16),
         Expanded(
           child: TextFormField(
+            initialValue: _durationMonth?.toString(), // ★ 修正: initialValue を設定
             decoration: InputDecoration(
               labelText: 'Duration (Months)', // Simplified label
               border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               suffixText: 'months',
             ),
             keyboardType: TextInputType.number,
             onChanged: (value) {
               setState(() {
-          _durationMonth = int.tryParse(value);
+                _durationMonth = int.tryParse(value);
               });
             },
           ),
@@ -279,7 +379,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     );
   }
 
-   Widget _buildGenderChips() {
+  Widget _buildGenderChips() {
     return Wrap(
       spacing: 12.0,
       runSpacing: 12.0,
@@ -318,12 +418,11 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
 
   Widget _buildRoomTypeToggle() {
     // This UI works well in a panel too
-     return Container(
+    return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[300]!)
-      ),
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[300]!)),
       child: Row(
         children: List.generate(_roomTypeOptions.length, (index) {
           final type = _roomTypeOptions[index];
@@ -364,7 +463,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   }
 
   BorderRadius _getBorderRadius(int index) {
-     const radius = Radius.circular(15); // Adjust for inner rounding
+    const radius = Radius.circular(15); // Adjust for inner rounding
     if (index == 0) {
       return const BorderRadius.horizontal(left: radius);
     } else if (index == _roomTypeOptions.length - 1) {
@@ -386,7 +485,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
           inactiveColor: Colors.deepPurple[100],
           labels: RangeLabels(
             'RM ${_rentRange.start.round()}',
-             'RM ${_rentRange.end.round() == 5000 ? "5000+" : _rentRange.end.round()}',
+            'RM ${_rentRange.end.round() == 5000 ? "5000+" : _rentRange.end.round()}',
           ),
           onChanged: (values) {
             setState(() {
@@ -398,20 +497,22 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-             Text('RM ${_rentRange.start.round()}'),
-             Text(_rentRange.end.round() == 5000 ? "RM 5000+" : 'RM ${_rentRange.end.round()}'),
+            Text('RM ${_rentRange.start.round()}'),
+            Text(_rentRange.end.round() == 5000
+                ? "RM 5000+"
+                : 'RM ${_rentRange.end.round()}'),
           ],
         )
       ],
     );
   }
 
-  Widget _buildCondoNameInput() {
+  Widget _buildSemanticQueryInput() {
     // This UI works well in a panel
     return TextFormField(
-      controller: _condoNameController,
+      controller: _semanticQueryController, // ★ 変更
       decoration: InputDecoration(
-        hintText: 'Enter condominium name...',
+        hintText: 'e.g., "sunny", "stylish furniture"', // ★ 変更
         hintStyle: TextStyle(color: Colors.grey[500]),
         filled: true,
         fillColor: Colors.white, // Or Colors.grey[50]
@@ -427,11 +528,13 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
         ),
-        prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        prefixIcon:
+            Icon(Icons.auto_awesome_outlined, color: Colors.grey[500]), // ★ 変更
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       style: const TextStyle(fontSize: 16),
-       onChanged: (value) {
+      onChanged: (value) {
         // No immediate action needed, applied via button
       },
     );

@@ -1,7 +1,9 @@
 // lib/features/2_tenant_feature/1_discover/view/filter_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_screen.dart';
 import '../model/filter_options.dart';
+// import 'your_ai_chat_screen.dart'; // ★ AIチャット画面をインポート
 
 class FilterBottomSheet extends StatefulWidget {
   final FilterOptions initialFilters;
@@ -15,7 +17,7 @@ class FilterBottomSheet extends StatefulWidget {
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
   late String? _gender;
   late List<String> _selectedRoomTypes;
-  late TextEditingController _condoNameController;
+  late TextEditingController _semanticQueryController;
   RangeValues _rentRange = const RangeValues(0, 5000);
   DateTime? _durationStart;
   int? _durationMonth;
@@ -30,8 +32,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     super.initState();
     _gender = widget.initialFilters.gender;
     _selectedRoomTypes = widget.initialFilters.roomType ?? [];
-    _condoNameController =
-        TextEditingController(text: widget.initialFilters.condoName);
+    _semanticQueryController =
+        TextEditingController(text: widget.initialFilters.semanticQuery);
     _rentRange = RangeValues(
       widget.initialFilters.minRent ?? 0,
       widget.initialFilters.maxRent ?? 5000,
@@ -45,25 +47,23 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     setState(() {
       _gender = null;
       _selectedRoomTypes = [];
-      _condoNameController.clear();
+      _semanticQueryController.clear();
       _rentRange = const RangeValues(0, 5000);
       _durationStart = null;
       _durationMonth = null;
-      _hobbies = []; // ★★★ ADDED ★★★
+      _hobbies = [];
       _hobbyController.clear();
     });
-    // Immediately apply the cleared filters by popping with new empty options
     Navigator.pop(context, FilterOptions());
   }
-
 
   void _applyFilters() {
     final filters = FilterOptions(
       gender: _gender,
       roomType: _selectedRoomTypes,
-      condoName: _condoNameController.text.trim().isEmpty
+      semanticQuery: _semanticQueryController.text.trim().isEmpty
           ? null
-          : _condoNameController.text.trim(),
+          : _semanticQueryController.text.trim(),
       minRent: _rentRange.start == 0 ? null : _rentRange.start,
       maxRent: _rentRange.end == 5000 ? null : _rentRange.end,
       durationStart: _durationStart,
@@ -92,40 +92,73 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           // ヘッダー
           _buildHeader(),
-          
-          // コンテンツ
+
+          // ★★★ 変更点: Expanded の子を SingleChildScrollView に変更 ★★★
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionTitle('Available between'),
-                  _buildDateRangePicker(context),
-                  const SizedBox(height: 28),
-                  _buildSectionTitle('Gender'),
-                  _buildGenderChips(),
-                  const SizedBox(height: 28),
-                  _buildSectionTitle('Room Type'),
-                  _buildRoomTypeToggle(),
-                  const SizedBox(height: 28),
-                  _buildSectionTitle('Rent Range (RM)'),
-                  _buildRentSlider(),
-                  const SizedBox(height: 28),
-                  _buildSectionTitle('Condominium Name'),
-                  _buildCondoNameInput(),
-                  const SizedBox(height: 28), // ★★★ ADDED ★★★
-                  _buildSectionTitle('Hobbies & Lifestyle'), // ★★★ ADDED ★★★
-                  _buildHobbiesInput(),
+                  _buildSectionCard(
+                    icon: Icons.auto_awesome, // ★ アイコン
+                    title: 'AI Search Assistant', // ★ タイトル
+                    children: [
+                      _buildAIChatButton(context), // ★ AIチャットボタン
+                    ],
+                  ),
+                  _buildSectionCard(
+                    icon: Icons.calendar_today_outlined, // ★ アイコン
+                    title: 'Availability', // ★ タイトル
+                    children: [
+                      _buildDateRangePicker(context),
+                    ],
+                  ),
+                  _buildSectionCard(
+                    icon: Icons.home_outlined, // ★ アイコン
+                    title: 'Property Details', // ★ タイトル
+                    children: [
+                      const Text("Gender",
+                          style: TextStyle(fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      _buildGenderChips(),
+                      const SizedBox(height: 16),
+                      const Text("Room Type",
+                          style: TextStyle(fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      _buildRoomTypeToggle(),
+                    ],
+                  ),
+                  _buildSectionCard(
+                    icon: Icons.attach_money_outlined, // ★ アイコン
+                    title: 'Rent Range (RM)', // ★ タイトル
+                    children: [
+                      _buildRentSlider(),
+                    ],
+                  ),
+                  _buildSectionCard(
+                    icon: Icons.lightbulb_outline, // ★ アイコン
+                    title: 'Atmosphere / Keywords', // ★ タイトル
+                    children: [
+                      _buildSemanticQueryInput(),
+                    ],
+                  ),
+                  _buildSectionCard(
+                    icon: Icons.pool_outlined, // ★ アイコン
+                    title: 'Hobbies & Lifestyle', // ★ タイトル
+                    children: [
+                      _buildHobbiesInput(),
+                    ],
+                  ),
                   const SizedBox(height: 32),
                 ],
               ),
             ),
           ),
-          
+
           // ボタンエリア
           _buildButtonArea(),
         ],
@@ -135,64 +168,136 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   // --- Widgets Builder ---
 
+  // ★★★ 新しいヘルパーウィジェット: AIチャットボタン (ボトムシート用) ★★★
+  Widget _buildAIChatButton(BuildContext context) {
+    return ElevatedButton.icon(
+      icon: const Icon(Icons.chat_outlined, size: 18),
+      label: const Text('Chat with AI to Find Your Room'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.deepPurple.shade50,
+        foregroundColor: Colors.deepPurple.shade700,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      onPressed: () async {
+        // ★★★ 遷移ロジックを追加 ★★★
+        final aiFilters = await Navigator.push<FilterOptions>(
+          context,
+          MaterialPageRoute(builder: (_) => const AIChatScreen()),
+        );
+        // AIチャットからフィルターが返ってきたら、
+        // ボトムシートを閉じてそれを適用する
+        if (aiFilters != null && context.mounted) {
+          Navigator.of(context).pop(aiFilters);
+        }
+      },
+    );
+  }
+
+  // ★★★ 新しいヘルパーウィジェット: セクションカード ★★★
+  Widget _buildSectionCard({
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // アイコンとタイトル
+            Row(
+              children: [
+                Icon(icon, color: Colors.deepPurple, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            // 子ウィジェット
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDateRangePicker(BuildContext context) {
     return Row(
       children: [
         Expanded(
           child: InkWell(
-        onTap: () async {
-          final pickedDate = await showDatePicker(
-            context: context,
-            initialDate: _durationStart ?? DateTime.now(),
-            firstDate: DateTime(2020),
-            lastDate: DateTime(2101),
-          );
-          if (pickedDate != null) {
-            setState(() {
-          _durationStart = pickedDate;
-            });
-          }
-        },
-        child: InputDecorator(
-          decoration: const InputDecoration(
-            labelText: 'Available From',
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-          ),
-          child: Text(
-            _durationStart != null
-            ? DateFormat.yMMMd().format(_durationStart!)
-            : 'Any',
-          ),
-        ),
+            onTap: () async {
+              final pickedDate = await showDatePicker(
+                context: context,
+                initialDate: _durationStart ?? DateTime.now(),
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2101),
+              );
+              if (pickedDate != null) {
+                setState(() {
+                  _durationStart = pickedDate;
+                });
+              }
+            },
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Available From',
+                border: OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              ),
+              child: Text(
+                _durationStart != null
+                    ? DateFormat.yMMMd().format(_durationStart!)
+                    : 'Any',
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
           child: Row(
-        children: [
-          Expanded(
-            child: TextFormField(
-          initialValue: _durationMonth?.toString(),
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Duration',
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-          ),
-          onChanged: (value) {
-            setState(() {
-              _durationMonth = int.tryParse(value);
-            });
-          },
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'months',
-            style: TextStyle(fontSize: 16),
-          ),
-        ],
+            children: [
+              Expanded(
+                child: TextFormField(
+                  initialValue: _durationMonth?.toString(),
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Duration',
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _durationMonth = int.tryParse(value);
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'months',
+                style: TextStyle(fontSize: 16),
+              ),
+            ],
           ),
         ),
       ],
@@ -230,21 +335,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: Colors.black87,
-          letterSpacing: -0.3,
-        ),
       ),
     );
   }
@@ -295,7 +385,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         children: List.generate(_roomTypeOptions.length, (index) {
           final type = _roomTypeOptions[index];
           final isSelected = _selectedRoomTypes.contains(type);
-          
+
           return Expanded(
             child: Container(
               margin: EdgeInsets.only(
@@ -403,11 +493,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
   }
 
-  Widget _buildCondoNameInput() {
+  Widget _buildSemanticQueryInput() {
     return TextFormField(
-      controller: _condoNameController,
+      controller: _semanticQueryController,
       decoration: InputDecoration(
-        hintText: 'Enter condominium name...',
+        hintText: 'e.g., "sunny", "stylish furniture"',
         hintStyle: TextStyle(color: Colors.grey[500]),
         filled: true,
         fillColor: Colors.white,
@@ -423,8 +513,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
         ),
-        prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        prefixIcon:
+            Icon(Icons.auto_awesome_outlined, color: Colors.grey[500]),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       style: const TextStyle(fontSize: 16),
     );
@@ -488,7 +580,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       ),
     );
   }
-  
+
   Widget _buildHobbiesInput() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -513,12 +605,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             suffixIcon: IconButton(
               icon: const Icon(Icons.add_circle_outline),
               onPressed: () {
-                // ★★★ 修正: .toLowerCase() を追加 ★★★
                 final hobby = _hobbyController.text.trim().toLowerCase();
                 if (hobby.isNotEmpty) {
                   setState(() {
-                    if (!_hobbies.contains(hobby)) { // ★ hobby を使用
-                      _hobbies.add(hobby); // ★ hobby を使用
+                    if (!_hobbies.contains(hobby)) {
+                      _hobbies.add(hobby);
                     }
                     _hobbyController.clear();
                   });
@@ -530,10 +621,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         if (_hobbies.isNotEmpty) const SizedBox(height: 8),
         Wrap(
           spacing: 8.0,
-          children: _hobbies.map((hobby) => Chip(
-                label: Text(hobby),
-                onDeleted: () => setState(() => _hobbies.remove(hobby)),
-              )).toList(),
+          children: _hobbies
+              .map((hobby) => Chip(
+                    label: Text(hobby),
+                    onDeleted: () => setState(() => _hobbies.remove(hobby)),
+                  ))
+              .toList(),
         ),
       ],
     );

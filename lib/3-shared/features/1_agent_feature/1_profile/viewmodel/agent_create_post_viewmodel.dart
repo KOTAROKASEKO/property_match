@@ -15,10 +15,10 @@ import 'package:template_hive/template_hive.dart';
 import '../../../../core/model/PostModel.dart';
 import '../repo/profile_repository.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
+import 'package:mime/mime.dart'; // mime パッケージ
 
 class CreatePostViewModel extends ChangeNotifier {
   final formKey = GlobalKey<FormState>();
-  // Use the concrete type FirestoreProfileRepository if getCondoSuggestions is specific to it
   final FirestoreProfileRepository _postService = FirestoreProfileRepository();
   final ImagePicker _picker = ImagePicker();
   final PostModel? _editingPost;
@@ -52,6 +52,7 @@ class CreatePostViewModel extends ChangeNotifier {
     }
   }
 
+  // --- (getCondoSuggestions とゲッター/セッターは変更なし) ---
   Future<Iterable<String>> getCondoSuggestions(String query) async {
     if (query.length < 2) {
       return const Iterable<String>.empty();
@@ -132,8 +133,8 @@ class CreatePostViewModel extends ChangeNotifier {
     }
   }
 
-void addHobby(String hobby) {
-    final trimmedHobby = hobby.trim().toLowerCase(); 
+  void addHobby(String hobby) {
+    final trimmedHobby = hobby.trim().toLowerCase();
     if (trimmedHobby.isNotEmpty && !_hobbies.contains(trimmedHobby)) {
       _hobbies.add(trimmedHobby);
       _updateUnsavedChangesFlag();
@@ -157,6 +158,7 @@ void addHobby(String hobby) {
     }
   }
 
+  // ★★★ submitPost ロジックを大幅に修正 ★★★
   Future<bool> submitPost() async {
     if (!formKey.currentState!.validate()) {
       return false;
@@ -165,26 +167,16 @@ void addHobby(String hobby) {
     notifyListeners();
 
     try {
-      pr('breakpoint1');
-      // 1. Geocode the location to get coordinates
-      await _geocodeLocation(); // This might set _position to null
+      pr('breakpoint1: Geocoding location...');
+      await _geocodeLocation(); // 1. 座標を取得
 
-      pr('breakpoint2');
-
-      // 2. Upload images and get their URLs
-      final imageUrls = await uploadFiles(_selectedImages);
-
-      pr('breakpoint3');
-
-      // 3. Create the search key
+      pr('breakpoint2: Creating search key...');
       final searchKey = _condominiumName.replaceAll(' ', '').toLowerCase();
 
-      pr('breakpoint3');
-
-      // 4. Create a single, consistent data map for both create and update
+      // 4. すべてのデータをpostDataにまとめる (この時点ではimageUrlsは空か既存のもの)
       final postData = {
         'description': _description,
-        'imageUrls': imageUrls,
+        'imageUrls': _editingPost?.imageUrls ?? [], // ★ 編集時は既存のURL、新規は空
         'condominiumName': _condominiumName,
         'condominiumName_searchKey': searchKey,
         'rent': _rent,
@@ -199,30 +191,48 @@ void addHobby(String hobby) {
         'durationStart': _durationStart != null
             ? Timestamp.fromDate(_durationStart!)
             : null,
-        'durationMonths': _durationMonths != null
-            ? durationMonths!
-            : null,
+        'durationMonths': _durationMonths != null ? durationMonths! : null,
         'hobbies': _hobbies,
       };
 
-      pr('post data is null? : ${postData}');
+      String postId;
 
       if (isEditing) {
+        // --- 編集の場合 ---
         if (_editingPost == null) {
-          throw Exception(
-            "Attempting to update post, but editing post data is null.",
-          );
+          throw Exception("Editing post data is null.");
         }
+        postId = _editingPost.id;
+        pr('breakpoint3 (Edit): Updating post document $postId...');
+        // (imageUrls はまだ更新しない)
         await _postService.updatePost(
-          postId: _editingPost.id, // Safe now due to check above
+          postId: postId,
           data: postData,
         );
-        // Pass _editingPost directly, null check already happened
-        await _updatePropertyTemplate(_editingPost, imageUrls);
       } else {
-        // createPost now correctly receives the full postData map
-        final newPostId = await _postService.createPost(postData: postData);
-        await _saveAsPropertyTemplate(newPostId, imageUrls);
+        // --- 新規作成の場合 ---
+        pr('breakpoint3 (New): Creating new post document...');
+        // (imageUrlsは空のまま)
+        postId = await _postService.createPost(postData: postData);
+        pr('breakpoint4 (New): Created post with ID: $postId');
+      }
+
+      // 5. Post ID を使って画像をアップロード
+      pr('breakpoint5: Uploading images for post ID: $postId...');
+      final imageUrls = await uploadFiles(_selectedImages, postId); // ★ postId を渡す
+
+      // 6. 取得した image URLs でドキュメントを「更新」
+      pr('breakpoint6: Updating post $postId with new image URLs...');
+      await _postService.updatePost(
+        postId: postId,
+        data: {'imageUrls': imageUrls}, // ★ 画像URLだけを更新
+      );
+
+      // 7. Hiveテンプレートの保存/更新
+      if (isEditing) {
+        await _updatePropertyTemplate(_editingPost!, imageUrls);
+      } else {
+        await _saveAsPropertyTemplate(postId, imageUrls);
       }
 
       _hasUnsavedChanges = false;
@@ -236,6 +246,7 @@ void addHobby(String hobby) {
     }
   }
 
+  // --- (_saveAsPropertyTemplate, _updatePropertyTemplate, _geocodeLocation は変更なし) ---
   Future<void> _saveAsPropertyTemplate(
     String postId,
     List<String> imageUrls,
@@ -252,13 +263,11 @@ void addHobby(String hobby) {
         photoUrls: imageUrls,
         nationality: 'Any',
       );
-      // Use the imported constant for the box name
       final box = Hive.box<PropertyTemplate>(propertyTemplateBox);
       await box.add(template);
       pr("Successfully saved post as a property template.");
     } catch (e) {
       pr("Failed to save property template: $e");
-      // Handle or log error appropriately
     }
   }
 
@@ -267,12 +276,9 @@ void addHobby(String hobby) {
     List<String> imageUrls,
   ) async {
     try {
-      // Use the imported constant for the box name
       final box = Hive.box<PropertyTemplate>(propertyTemplateBox);
-      // Find the key associated with the postId
       final keys = box.keys;
-      dynamic
-      templateKey; // Use dynamic as key type isn't specified (int or String)
+      dynamic templateKey;
       for (var key in keys) {
         final template = box.get(key);
         if (template?.postId == editedModel.id) {
@@ -284,7 +290,6 @@ void addHobby(String hobby) {
       if (templateKey != null) {
         final template = box.get(templateKey);
         if (template != null) {
-          // Update fields
           template.name = _condominiumName;
           template.rent = _rent;
           template.location = _location;
@@ -292,8 +297,7 @@ void addHobby(String hobby) {
           template.roomType = _roomType;
           template.gender = _gender;
           template.photoUrls = imageUrls;
-          // template.nationality remains 'Any' or update if available
-          await template.save(); // Save the updated template back to Hive
+          await template.save();
           print(
             "Successfully updated property template with key: $templateKey",
           );
@@ -301,11 +305,9 @@ void addHobby(String hobby) {
           pr(
             "Warning: Template key found but template data is null for key: $templateKey",
           );
-          // Optionally handle this case, e.g., by creating a new template
           await _saveAsPropertyTemplate(editedModel.id, imageUrls);
         }
       } else {
-        // If no existing template found, create a new one
         pr(
           "No existing template found for postId ${editedModel.id}, creating new.",
         );
@@ -322,17 +324,13 @@ void addHobby(String hobby) {
       pr('🟡 Geocoding skipped: Location is empty.');
       return;
     }
-
-    // 編集時に location が変更されていない、かつ _position が既に存在するならスキップ
     if (isEditing && _location == _editingPost?.location && _position != null) {
       pr(
         '🟡 Skipping geocoding: Location unchanged and position already exists.',
       );
       return;
     }
-
     pr('🔍 Attempting to geocode location: "$_location"');
-
     try {
       if (!(kIsWeb ||
           Platform.isAndroid ||
@@ -342,23 +340,17 @@ void addHobby(String hobby) {
         _position = null;
         return;
       }
-
-      const apiKey =
-          'AIzaSyBSrv_NciH-II4WVLSoAdWVXSAFxHpS9jU';
+      const apiKey = 'AIzaSyBSrv_NciH-II4WVLSoAdWVXSAFxHpS9jU';
       final encodedAddress = Uri.encodeComponent(_location);
       final url =
           'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';
-
       final response = await http.get(Uri.parse(url));
-
       if (response.statusCode != 200) {
         pr('❌ HTTP request failed with status: ${response.statusCode}');
         _position = null;
         return;
       }
-
       final data = json.decode(response.body);
-
       if (data['status'] == 'OK' && data['results'].isNotEmpty) {
         final location = data['results'][0]['geometry']['location'];
         final lat = location['lat'];
@@ -377,23 +369,22 @@ void addHobby(String hobby) {
     }
   }
 
+  // --- (pickImages, removeImage は変更なし) ---
   Future<void> pickImages() async {
     try {
       final List<XFile> images = await _picker.pickMultiImage(imageQuality: 85);
       if (images.isNotEmpty) {
-        // Add newly picked images. Decide whether to use File or XFile based on platform.
         if (kIsWeb) {
-          _selectedImages.addAll(images); // Keep as XFile for web
+          _selectedImages.addAll(images);
         } else {
           _selectedImages.addAll(
             images.map((xfile) => File(xfile.path)),
-          ); // Convert to File for mobile
+          );
         }
         _updateUnsavedChangesFlag();
       }
     } catch (e) {
       pr("Error picking images: $e");
-      // Optionally show an error message to the user
     }
   }
 
@@ -404,24 +395,28 @@ void addHobby(String hobby) {
     }
   }
 
-  Future<List<String>> uploadFiles(List<dynamic> files) async {
+
+  // ★★★ uploadFiles ロジックを修正 ★★★
+  Future<List<String>> uploadFiles(List<dynamic> files, String postId) async {
     List<String> imageUrls = [];
-    int imageIndex = 0; // To create unique file names
+    int imageIndex = 0;
 
     for (var fileOrUrl in files) {
       if (fileOrUrl is String) {
-        // It's an existing URL, just add it
+        // 1. 既存のURL (編集時) はそのまま追加
         imageUrls.add(fileOrUrl);
       } else if (fileOrUrl is XFile || fileOrUrl is File) {
-        // It's a new file to upload
-        // Create a unique file name using timestamp and index
+        // 2. 新しいファイル (XFile または File)
+        
+        // ★ 修正点 1: ファイルパスを変更
+        // 'posts/POST_ID/image_INDEX.extension'
         final String fileExtension = fileOrUrl is XFile
-            ? (fileOrUrl.mimeType?.split('/').last ??
-                  'jpg') // Get extension from mime type for XFile
-            : (fileOrUrl.path.split('.').last ??
-                  'jpg'); // Get extension from path for File
+            ? (fileOrUrl.mimeType?.split('/').last ?? 'jpg')
+            : (fileOrUrl.path.split('.').last ?? 'jpg');
+        
         final String fileName =
-            'posts/${DateTime.now().millisecondsSinceEpoch}_${imageIndex++}.$fileExtension'; // Use original extension initially
+            'posts/$postId/image_${imageIndex++}.$fileExtension'; // ★ Post ID をパスに含める
+            
         final ref = FirebaseStorage.instance.ref().child(fileName);
         UploadTask uploadTask;
 
@@ -429,15 +424,15 @@ void addHobby(String hobby) {
           if (kIsWeb && fileOrUrl is XFile) {
             final Uint8List data = await fileOrUrl.readAsBytes();
             final mimeType = fileOrUrl.mimeType;
+            // (contentTypeのロジックは変更なし)
             String contentType = 'image/webp';
             if (mimeType != null &&
                 (mimeType == 'image/jpeg' || mimeType == 'image/png')) {
-              contentType =
-                  mimeType;
+              contentType = mimeType;
             } else if (mimeType != null) {
               contentType = mimeType;
             }
-            pr("Uploading to web with Content-Type: $contentType");
+            pr("Uploading to web with Content-Type: $contentType (Path: $fileName)");
             uploadTask = ref.putData(
               data,
               SettableMetadata(contentType: contentType),
@@ -446,32 +441,40 @@ void addHobby(String hobby) {
             File fileToUpload = (fileOrUrl is File)
                 ? fileOrUrl
                 : File(fileOrUrl.path);
+                
+            // (contentTypeの取得ロジックは変更なし)
+            final String? mimeType = lookupMimeType(fileToUpload.path);
+            final contentType = mimeType ?? 'image/jpeg';
+            pr("Uploading from mobile with Content-Type: $contentType (Path: $fileName)");
 
             try {
-              // Attempt compression to WebP only on mobile
+              // (圧縮ロジックは変更なし)
               final compressedFile = await compressAndConvertToWebP(
                 fileToUpload,
               );
-              // Update ref to use .webp extension if compression is successful
               final webpRef = FirebaseStorage.instance.ref().child(
                 fileName.replaceAll(RegExp(r'\.\w+$'), '.webp'),
               );
               pr("Uploading compressed WebP to mobile: ${webpRef.fullPath}");
-              uploadTask = webpRef.putFile(compressedFile);
+              uploadTask = webpRef.putFile(
+                compressedFile,
+                SettableMetadata(contentType: 'image/webp'),
+              );
             } catch (compressError) {
               pr(
                 "Image compression failed, uploading original: $compressError",
               );
-              // Fallback to uploading the original file if compression fails
               pr("Uploading original file to mobile: ${ref.fullPath}");
-              uploadTask = ref.putFile(fileToUpload);
+              uploadTask = ref.putFile(
+                fileToUpload,
+                SettableMetadata(contentType: contentType),
+              );
             }
           } else {
-            // Handle cases like Web with File input (shouldn't normally happen with picker)
             pr(
               "Warning: Unsupported file type or platform combination. Skipping upload for: $fileOrUrl",
             );
-            continue; // Skip this file
+            continue;
           }
 
           final snapshot = await uploadTask.whenComplete(() => {});
@@ -480,7 +483,6 @@ void addHobby(String hobby) {
           pr("Upload successful: $downloadUrl");
         } catch (uploadError) {
           pr("Error uploading file ($fileName): $uploadError");
-          // Optionally add error handling, like adding a placeholder URL or skipping
         }
       } else {
         pr(
@@ -488,10 +490,10 @@ void addHobby(String hobby) {
         );
       }
     }
-    return imageUrls;
+    return imageUrls; // 最終的なURLのリスト（既存URL + 新規URL）
   }
 
-
+  // --- (compressAndConvertToWebP, clearDraft は変更なし) ---
   Future<File> compressAndConvertToWebP(File file) async {
     final dir = await getTemporaryDirectory();
     final targetPath =

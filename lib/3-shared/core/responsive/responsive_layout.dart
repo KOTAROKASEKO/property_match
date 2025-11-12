@@ -9,9 +9,11 @@ class ResponsiveLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    pr('responsive layout was called');
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth > 700) {
+          pr('tablet scaffold was called');
           return const TabletScaffold();
         } else {
           if (userData.role == Roles.agent) {

@@ -2,6 +2,7 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
 import 'package:shared_data/shared_data.dart';
 import '../../../../common_feature/chat/view/providerIndividualChat.dart';
 import '../../../2_tenant_feature/3_profile/models/profile_model.dart';
@@ -87,24 +88,26 @@ class TenantDetailSheetContent extends StatelessWidget {
                     textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
                   ),
                   onPressed: () {
-                    final chatThreadId =
-                        _generateChatThreadId(userData.userId, tenant.uid);
-                    
-                    // ★ ボトムシートを閉じてからチャット画面に遷移する
-                    if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                    }
-                    
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => IndividualChatScreenWithProvider(
-                          otherUserUid: tenant.uid,
-                          otherUserName: tenant.displayName,
-                          otherUserPhotoUrl: tenant.profileImageUrl,
-                          chatThreadId: chatThreadId,
+                    if(userData.userId==''){
+                      showSignInModal(context);
+                    }else{
+                      final chatThreadId = _generateChatThreadId(userData.userId, tenant.uid);
+                      
+                      if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                      }
+                      
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => IndividualChatScreenWithProvider(
+                            otherUserUid: tenant.uid,
+                            otherUserName: tenant.displayName,
+                            otherUserPhotoUrl: tenant.profileImageUrl,
+                            chatThreadId: chatThreadId,
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    }
                   },
                 )
               ],

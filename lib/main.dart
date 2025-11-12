@@ -35,7 +35,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -189,34 +189,31 @@ class _AuthWrapperState extends State<AuthWrapper> {
     super.initState();
   }
 
-  Future<String?> _getRoleFromPrefs() async {
+  // ★ 1. _getRoleFromPrefs が User オブジェクトを引数に取るように変更
+  Future<String?> _getRoleFromPrefs(User user) async {
     final prefs = await SharedPreferences.getInstance();
     String? role = prefs.getString('role');
     if (role == null) {
       try {
         FirebaseFirestore firestore = FirebaseFirestore.instance;
         
-        // This check prevents the error if userId is still empty
-        if (userData.userId.isEmpty) {
-          pr('AuthWrapper: userId is empty, cannot fetch role from Firestore yet.');
+        // ★ 2. userData.userId.isEmpty チェックを削除
+        //    代わりに引数の user.uid を使用
+
+        final doc = await firestore
+            .collection('users_prof')
+            .doc(user.uid) // ★ 3. user.uid を使用
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (data['role'] != null) {
+            _saveRoleToPrefs(data['role']);
+            role = data['role'];
+            return role;
+          }
           return null;
         }
-
-        await firestore
-            .collection('users_prof')
-            .doc(userData.userId) // Now this is guaranteed to be non-empty
-            .get()
-            .then((doc) {
-              if (doc.exists) {
-                final data = doc.data() as Map<String, dynamic>;
-                if (data['role'] != null) {
-                  _saveRoleToPrefs(data['role']);
-                  role = data['role'];
-                  return role;
-                }
-                return null;
-              }
-            });
       } catch (e) {
         pr('error during getting role from firestore : ${e}');
       }
@@ -242,9 +239,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
 
         if (snapshot.hasData) {
-          userData.setUser(snapshot.data!);
+          final user = snapshot.data!; // ★ 4. user オブジェクトを取得
+          userData.setUser(user); // userData のセットは引き続き行う
+          
           return FutureBuilder<String?>(
-            future: _getRoleFromPrefs(), // Now this function can safely use userData.userId
+            future: _getRoleFromPrefs(user), // ★ 5. user オブジェクトを渡す
             builder: (context, prefsSnapshot) {
               if (prefsSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
@@ -261,11 +260,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 userData.setRole(role == 'agent' ? Roles.agent : Roles.tenant);
                 return const ResponsiveLayout();
               } else {
-                pr('user id is : ${userData.userId}');
+                pr('user id is : ${user.uid}'); // ★ 6. ログも user.uid を使用
                 return FutureBuilder<DocumentSnapshot>(
                   future: FirebaseFirestore.instance
                       .collection('users_prof')
-                      .doc(userData.userId) // This is now safe
+                      .doc(user.uid) // ★ 7. user.uid を使用
                       .get(),
                   builder: (context, userDocSnapshot) {
                     if (userDocSnapshot.connectionState ==
@@ -292,7 +291,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                     pr(
                       'main.dart// Navigate to the role selection because userdocnapshot : ${userDocSnapshot.hasData} userdocdata existance : ${userDocSnapshot.data!.exists}',
                     );
-                    pr('the uid is ${userData.userId}');
+                    pr('the uid is ${user.uid}'); // ★ 8. user.uid を使用
                     return const RoleSelectionScreen();
                   },
                 );

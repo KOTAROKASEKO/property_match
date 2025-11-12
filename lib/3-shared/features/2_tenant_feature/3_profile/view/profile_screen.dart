@@ -32,36 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                child: const Text(
-                  'Menu',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                  ),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: const Text('Log out'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await showSignOutModal(context);
-                  
-                },
-              ),
-            ],
-          ),
-        ),
-        
+    return Scaffold( 
       appBar: AppBar(
         title: const Row(
           children: [
@@ -235,6 +206,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Property Preference',
               value: userProfile.propertyType,
               isLast: true,
+            ),
+            const Divider(indent: 16, endIndent: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: TextButton.icon(
+              onPressed: () async {
+                await showSignOutModal(context);
+              },
+              icon: const Icon(Icons.logout, color: Colors.red),
+              label: const Padding(
+                padding: EdgeInsetsGeometry.fromLTRB(10,5,10,5),
+                child:Text(
+                'Logout',
+                style: TextStyle(
+                color: Colors.red,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                ),
+              ),),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: Colors.red.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              ),
             ),
           ],
         ),

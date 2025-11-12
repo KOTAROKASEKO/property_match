@@ -7,9 +7,21 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class PropertyMessageBubble extends StatelessWidget {
+// 1. StatefulWidgetに変更
+class PropertyMessageBubble extends StatefulWidget {
   final MessageModel message;
   const PropertyMessageBubble({super.key, required this.message});
+
+  @override
+  State<PropertyMessageBubble> createState() => _PropertyMessageBubbleState();
+}
+
+// 2. Stateクラスを作成
+class _PropertyMessageBubbleState extends State<PropertyMessageBubble> {
+  // 3. 説明文の展開状態を管理する変数
+  bool _isExpanded = false;
+  // 4. 「続きをみる」を表示する文字数のしきい値（お好みで調整してください）
+  static const int _maxChars = 100;
 
   Future<void> _launchMaps(BuildContext context, String location) async {
     if (location.isEmpty || location == 'No Location') {
@@ -39,14 +51,20 @@ class PropertyMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (message.messageText == null) {
+    // 5. Stateクラスから `widget.message` でアクセスするように変更
+    if (widget.message.messageText == null) {
       return const SizedBox.shrink();
     }
 
-    final Map<String, dynamic> data = jsonDecode(message.messageText!);
+    final Map<String, dynamic> data = jsonDecode(widget.message.messageText!);
     final List<String> photoUrls = List<String>.from(data['photoUrls'] ?? []);
-    final bool isMe = message.isOutgoing;
+    final bool isMe = widget.message.isOutgoing;
     final String location = data['location'] ?? 'No Location';
+
+    // ▽▽▽ 説明文のロジック変更 ▽▽▽
+    final String description = data['description'] ?? '';
+    final bool isLongDescription = description.length > _maxChars;
+    // △△△ 説明文のロジック変更 △△△
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -138,23 +156,54 @@ class PropertyMessageBubble extends StatelessWidget {
                     '${data['gender'] ?? 'N/A'} Unit',
                     isMe,
                   ),
-                  if (data['description'] != null &&
-                      data['description'].isNotEmpty) ...[
+
+                  // ▽▽▽ 説明文の表示ロジック ▽▽▽
+                  if (description.isNotEmpty) ...[
                     const Divider(height: 20),
                     Text(
-                      data['description'],
+                      description,
                       style: TextStyle(
                         color: isMe
                             ? Colors.white.withOpacity(0.9)
                             : Colors.black87,
                       ),
+                      // 6. maxLinesとoverflowを設定
+                      maxLines: isLongDescription && !_isExpanded ? 3 : null,
+                      overflow: isLongDescription && !_isExpanded
+                          ? TextOverflow.ellipsis
+                          : TextOverflow.visible,
                     ),
+                    // 7. 長い説明文の場合のみ「続きをみる/隠す」ボタンを表示
+                    if (isLongDescription)
+                      GestureDetector(
+                        onTap: () {
+                          // 8. タップで状態を更新
+                          setState(() {
+                            _isExpanded = !_isExpanded;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            _isExpanded ? 'hide' : 'read all',
+                            style: TextStyle(
+                              color:
+                                  isMe ? Colors.white : Colors.deepPurple[700],
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
+                  // △△△ 説明文の表示ロジック △△△
+
                   const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.bottomRight,
                     child: Text(
-                      DateFormat.jm().format(message.timestamp),
+                      // 9. `widget.message` を使うように変更
+                      DateFormat.jm().format(widget.message.timestamp),
                       style: TextStyle(
                         color: isMe
                             ? Colors.white.withOpacity(0.8)
@@ -172,6 +221,7 @@ class PropertyMessageBubble extends StatelessWidget {
     );
   }
 
+  // 10. `_buildDetailRow` も Stateクラス内に移動
   Widget _buildDetailRow(IconData icon, String text, bool isMe,
       {Widget? trailing}) {
     final color = isMe ? Colors.white.withOpacity(0.9) : Colors.black87;

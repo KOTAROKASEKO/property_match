@@ -1,8 +1,10 @@
 // lib/features/2_tenant_feature/1_discover/view/discover_screen.dart
 
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart'; // ★★★ ADDED ★★★
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/features/authentication/auth_service.dart'; // ★★★ ADDED ★★★
 import 'package:shared_data/shared_data.dart';
 import 'package:template_hive/template_hive.dart';
 import '../../../../common_feature/chat/view/providerIndividualChat.dart';
@@ -14,6 +16,7 @@ import '../model/filter_options.dart';
 import 'discover_filter_panel.dart'; // 左側フィルターパネル
 import 'filter_bottom_sheet.dart';   // ボトムシート
 import '../../../../core/model/PostModel.dart'; // PostModel のインポートを追加
+import 'post_detail_bottomsheet.dart'; // ★★★ IMPORT THE NEW BOTTOM SHEET ★★★
 // ★★★ ------------- ★★★
 
 
@@ -55,6 +58,9 @@ class _DiscoverViewState extends State<_DiscoverView>
     // ★ initState で ViewModel を取得
     _viewModel = context.read<DiscoverViewModel>();
 
+    // ★★★ ADDED onStartChat to viewModel ★★★
+    // This allows the bottom sheet to call _startChat
+    _viewModel.onStartChat = _startChat;
 
 
     _scrollController.addListener(() {
@@ -82,7 +88,7 @@ class _DiscoverViewState extends State<_DiscoverView>
     return uids.join('_');
   }
 
-  // ★★★ ボトムシート表示用のメソッドを追加 ★★★
+  // ★★★ ボトムシート表示用のメソッド (Filter) ★★★
   void _showFilterSheet() async {
     // ViewModel は initState で取得済み
     final newFilters = await showModalBottomSheet<FilterOptions>(
@@ -110,7 +116,38 @@ class _DiscoverViewState extends State<_DiscoverView>
       _viewModel.applyFilters(newFilters);
     }
   }
-  // ★★★ ------------- ★★★
+  
+  // ★★★ NEW METHOD TO SHOW POST DETAILS ★★★
+  void _showPostDetails(PostModel post) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        // Provide the ViewModel to the bottom sheet
+        return ChangeNotifierProvider.value(
+          value: _viewModel,
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.9,
+            maxChildSize: 0.9,
+            expand: false,
+            builder: (context, scrollController) {
+              return Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                // Pass the post to the new bottom sheet widget
+                child: PostDetailBottomSheet(post: post),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+  // ★★★ ---------------------------------- ★★★
 
 
   @override
@@ -324,6 +361,7 @@ class _DiscoverViewState extends State<_DiscoverView>
               onToggleLike: viewModel.toggleLike,
               onToggleSave: viewModel.savePost,
               onStartChat: _startChat, // ★ チャット開始メソッドを渡す
+              onTap: () => _showPostDetails(post), // ★★★ PASS THE ONTAP HANDLER ★★★
             );
           },
           childCount: viewModel.posts.length,
@@ -345,6 +383,7 @@ class _DiscoverViewState extends State<_DiscoverView>
               onToggleLike: viewModel.toggleLike,
               onToggleSave: viewModel.savePost,
               onStartChat: _startChat, // ★ チャット開始メソッドを渡す
+              onTap: () => _showPostDetails(post), // ★★★ PASS THE ONTAP HANDLER ★★★
             ),
           );
         },
@@ -355,6 +394,12 @@ class _DiscoverViewState extends State<_DiscoverView>
 
   // --- ★ チャット開始のロジックをメソッド化 ---
   void _startChat(PostModel post) {
+    // ★★★ ADDED AUTH CHECK ★★★
+    if (FirebaseAuth.instance.currentUser == null) {
+      showSignInModal(context);
+      return;
+    }
+    
     final chatThreadId = _generateChatThreadId(userData.userId, post.userId);
     final propertyTemplate = PropertyTemplate(
       postId: post.id,
@@ -367,6 +412,12 @@ class _DiscoverViewState extends State<_DiscoverView>
       photoUrls: post.imageUrls,
       nationality: 'Any', // Consider adding nationality to PostModel if needed
     );
+
+    // ★★★ Close bottom sheet if it's open ★★★
+    // (It's safe to call pop even if it's not open,
+    //  but this ensures it closes if chat is started from the sheet)
+    Navigator.of(context).pop(); 
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => IndividualChatScreenWithProvider(
@@ -383,6 +434,3 @@ class _DiscoverViewState extends State<_DiscoverView>
   // --- ( Shimmer Widget は変更なし ) ---
   // ... _ShimmerPostCard ...
 }
-
-
-

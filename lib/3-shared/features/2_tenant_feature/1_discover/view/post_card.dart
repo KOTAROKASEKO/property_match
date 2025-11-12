@@ -21,6 +21,7 @@ class PostCard extends StatefulWidget {
   final Function(String) onToggleLike;
   final Function(String) onToggleSave;
   final Function(PostModel)? onStartChat; // ★ 追加
+  final VoidCallback? onTap; // ★★★ ADDED THIS ★★★
 
   const PostCard({
     super.key,
@@ -28,6 +29,7 @@ class PostCard extends StatefulWidget {
     required this.onToggleLike,
     required this.onToggleSave,
     this.onStartChat, // ★ 追加
+    this.onTap, // ★★★ ADDED THIS ★★★
   });
 
   @override
@@ -79,18 +81,23 @@ class _PostCardState extends State<PostCard> {
   Widget build(BuildContext context) {
     _isLikedInput?.value = widget.post.isLikedByCurrentUser;
 
-    return Card(
-      color: Colors.white,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildImageCarousel(context),
-          _buildContent(context),
-        ],
+    // ★★★ WRAPPED Card IN InkWell ★★★
+    return InkWell(
+      onTap: widget.onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Card(
+        color: Colors.white,
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildImageCarousel(context),
+            _buildContent(context),
+          ],
+        ),
       ),
     );
   }
@@ -117,14 +124,20 @@ class _PostCardState extends State<PostCard> {
                   tag: item, // Heroアニメーションのためのタグ
                   child: GestureDetector(
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => FullScreenImageView(
-                            imageUrl: item,
+                      // ★★★ ALSO ALLOW TAP-TO-ZOOM FROM HERE ★★★
+                      if (widget.onTap != null) {
+                        widget.onTap!();
+                      } else {
+                        // Fallback for screens without onTap (like SavedPosts)
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => FullScreenImageView(
+                              imageUrl: item,
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      }
                     },
                     child: CachedNetworkImage(
                       imageUrl: item,
@@ -168,7 +181,27 @@ class _PostCardState extends State<PostCard> {
   }
 
   // FIXED: Changed parameter type from DiscoverViewModel to PostActionsViewModel
-   Widget _buildContent(BuildContext context) {
+  Widget _buildContent(BuildContext context) {
+    // ★ 1. 先にチップのWidgetリストを作成します
+    final List<Widget> chips = [
+      _buildInfoChip(Icons.meeting_room_outlined, widget.post.roomType),
+      _buildInfoChip(Icons.person_outline, '${widget.post.gender} Unit'),
+    ];
+
+    if (widget.post.durationStart != null &&
+        widget.post.durationMonths != null) {
+      chips.add(_buildInfoChip(
+        Icons.date_range_outlined,
+        '${DateFormat.yMd().format(widget.post.durationStart!)} - ${widget.post.durationMonths!} months',
+      ));
+    }
+
+    if (widget.post.hobbies.isNotEmpty) {
+      chips.addAll(widget.post.hobbies
+          .map((hobby) => _buildInfoChip(Icons.interests_outlined, hobby))
+          .toList());
+    }
+
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
@@ -186,21 +219,23 @@ class _PostCardState extends State<PostCard> {
                 color: Colors.black, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8.0,
-            runSpacing: 8.0,
-            children: [
-              _buildInfoChip(Icons.meeting_room_outlined, widget.post.roomType),
-              _buildInfoChip(Icons.person_outline, '${widget.post.gender} Unit'),
-              if (widget.post.durationStart != null && widget.post.durationMonths != null)
-                _buildInfoChip(
-                  Icons.date_range_outlined,
-                  '${DateFormat.yMd().format(widget.post.durationStart!)} - ${widget.post.durationMonths!} months',
-                ),
-                if (widget.post.hobbies.isNotEmpty)
-                ...widget.post.hobbies.map((hobby) => _buildInfoChip(Icons.interests_outlined, hobby)).toList(),
-            ],
+
+          // ★ 2. Wrapの代わりにSizedBoxとListView.separatedを使用
+          SizedBox(
+            height: 36, // チップの高さ（必要に応じて調整してください）
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal, // 横スクロール
+              itemCount: chips.length,
+              itemBuilder: (context, index) {
+                return chips[index]; // リストからチップを表示
+              },
+              separatorBuilder: (context, index) {
+                return const SizedBox(width: 8.0); // チップ間のスペース
+              },
+            ),
           ),
+          // ★ ------------------------------------------------
+
           const SizedBox(height: 12),
           Text(
             widget.post.description,
@@ -212,7 +247,9 @@ class _PostCardState extends State<PostCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildUserHeader(context),
+              Expanded(
+                child: _buildUserHeader(context),
+              ),
               _buildActionButtons(context),
             ],
           ),
@@ -226,7 +263,7 @@ class _PostCardState extends State<PostCard> {
                 if (FirebaseAuth.instance.currentUser == null) {
                   showSignInModal(context);
                 } else {
-                  widget.onStartChat!(widget.post);
+                  widget.onStartChat?.call(widget.post);
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -242,7 +279,7 @@ class _PostCardState extends State<PostCard> {
       ),
     );
   }
-
+  
   Widget _buildInfoChip(IconData icon, String label) {
     return Chip(
       avatar: Icon(icon, size: 16, color: Colors.deepPurple),
@@ -281,18 +318,24 @@ class _PostCardState extends State<PostCard> {
                 : null,
           ),
           const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.post.username,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                timeago.format(widget.post.timestamp.toDate()),
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-            ],
+          // ★ 2. Column を Expanded でラップ
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.post.username,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  // ★ 3. オーバーフロー処理を追加
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  timeago.format(widget.post.timestamp.toDate()),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -18,53 +18,52 @@ enum SortOrder { byDate, byPopularity }
 class PostService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final CollectionReference _postsCollection = FirebaseFirestore.instance
-      .collection('posts');
-  final CollectionReference _usersCollection = FirebaseFirestore.instance
-      .collection('users');
+  final CollectionReference _postsCollection =
+      FirebaseFirestore.instance.collection('posts');
+  final CollectionReference _usersCollection =
+      FirebaseFirestore.instance.collection('users');
 
   Future<Map<String, double>?> getLatLng(String address) async {
-  try {
-    if (kIsWeb) {
-      const apiKey = String.fromEnvironment('GEO_CODE_API_KEY');
-      if (apiKey.isEmpty) {
-        throw Exception('GEO_CODE_API_KEY not found in .env');
-      }
+    try {
+      if (kIsWeb) {
+        const apiKey = String.fromEnvironment('GEO_CODE_API_KEY');
+        if (apiKey.isEmpty) {
+          throw Exception('GEO_CODE_API_KEY not found in .env');
+        }
 
-      pr('api key found : $apiKey');
-      final encodedAddress = Uri.encodeComponent(address);
-      final url =
-          'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';
+        pr('api key found : $apiKey');
+        final encodedAddress = Uri.encodeComponent(address);
+        final url =
+            'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';
 
-      final response = await http.get(Uri.parse(url));
+        final response = await http.get(Uri.parse(url));
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        pr('${response.body}');
-        if (data['status'] == 'OK') {
-          final location = data['results'][0]['geometry']['location'];
-          return {'lat': location['lat'], 'lng': location['lng']};
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          pr('${response.body}');
+          if (data['status'] == 'OK') {
+            final location = data['results'][0]['geometry']['location'];
+            return {'lat': location['lat'], 'lng': location['lng']};
+          } else {
+            print('Google API Error: ${data}');
+          }
         } else {
-          print('Google API Error: ${data}');
+          print('HTTP Error: ${response.statusCode}');
         }
       } else {
-        print('HTTP Error: ${response.statusCode}');
+        final locations = await geocoding.locationFromAddress(address);
+        if (locations.isNotEmpty) {
+          return {
+            'lat': locations.first.latitude,
+            'lng': locations.first.longitude,
+          };
+        }
       }
-    } else {
-      final locations = await geocoding.locationFromAddress(address);
-      if (locations.isNotEmpty) {
-        return {
-          'lat': locations.first.latitude,
-          'lng': locations.first.longitude,
-        };
-      }
+    } catch (e) {
+      print('Geocoding failed: $e');
     }
-  } catch (e) {
-    print('Geocoding failed: $e');
+    return null;
   }
-  return null;
-}
-
 
   final SearchClient _algoliaClient = SearchClient(
     appId: '86BOLZBS9Q', // ★ あなたのApp ID
@@ -72,8 +71,8 @@ class PostService {
   );
 
   Future<PaginatedPosts> getPosts({
-    required String locationQuery, // discover_viewmodel の _searchQuery (ロケーション用)
-    required FilterOptions filters, // discover_viewmodel の _filterOptions (全フィルター)
+    required String locationQuery, // ★ (場所) メイン検索バーから
+    required FilterOptions filters, // ★ (雰囲気 + その他) フィルターパネルから
     int page = 0,
     int limit = 10,
   }) async {
@@ -85,12 +84,14 @@ class PostService {
       // ================================
       String? aroundLatLng;
       if (locationQuery.isNotEmpty) {
+        // ★ メイン検索バー (場所) のテキストで座標を検索
         final coords = await getLatLng(locationQuery);
         if (coords != null) {
           aroundLatLng = '${coords['lat']},${coords['lng']}';
           pr('Searching near $aroundLatLng (for "$locationQuery")');
         } else {
-          pr('[WARN] Geocoding failed for "$locationQuery". Proceeding without location bias.');
+          pr(
+              '[WARN] Geocoding failed for "$locationQuery". Proceeding without location bias.');
         }
       } else {
         pr('[DEBUG] No location query provided.');
@@ -100,8 +101,6 @@ class PostService {
       // 2️⃣ Algolia フィルター文字列構築 (from filters)
       // ================================
       final List<String> filterStrings = [];
-      
-      // ★★★ 修正: facetFilters をここで初期化 ★★★
       final List<List<String>> facetFilters = [];
 
       // --- Rent Filter ---
@@ -118,12 +117,14 @@ class PostService {
       }
 
       if (filters.roomType != null && filters.roomType!.isNotEmpty) {
-        final roomFilters = filters.roomType!.map((type) => 'roomType:$type').toList();
+        final roomFilters =
+            filters.roomType!.map((type) => 'roomType:$type').toList();
         filterStrings.add('(${roomFilters.join(' OR ')})');
       }
 
       if (filters.durationStart != null) {
-        final startTimestamp = filters.durationStart!.millisecondsSinceEpoch ~/ 1000; 
+        final startTimestamp =
+            filters.durationStart!.millisecondsSinceEpoch ~/ 1000;
         filterStrings.add('availableFromTimestamp >= $startTimestamp');
       }
 
@@ -131,31 +132,29 @@ class PostService {
         filterStrings.add('durationMonths = ${filters.durationMonth}');
       }
 
-      // ★★★ 修正: hobbies を filterStrings ではなく facetFilters に追加 ★★★
       if (filters.hobbies != null && filters.hobbies!.isNotEmpty) {
         final hobbyFacets = filters.hobbies!
             .map((hobby) => 'hobbies:${hobby.trim().toLowerCase()}')
             .toList();
         facetFilters.add(hobbyFacets); // OR条件で追加
       }
-      
+
       final String algoliaFilters = filterStrings.join(' AND ');
       if (algoliaFilters.isNotEmpty) {
         pr('Algolia Filters:$algoliaFilters');
       }
-      
+
       // ================================
       // 3️⃣ Algolia クエリ作成
       // ================================
       final query = SearchForHits(
         indexName: indexName,
-        query: filters.condoName ?? '',
+        query: filters.semanticQuery ?? '', // ★★★ AI検索クエリ（雰囲気）をここに設定 ★★★
         page: page,
         hitsPerPage: limit,
-        aroundLatLng: aroundLatLng,
-        aroundRadius: aroundLatLng != null ? 20000 : null,
+        aroundLatLng: aroundLatLng, // ★★★ 場所のクエリ（座標）をここに設定 ★★★
+        aroundRadius: aroundLatLng != null ? 20000 : null, // 20km圏内
         filters: algoliaFilters.isNotEmpty ? algoliaFilters : null,
-        // ★★★ 修正: facetFilters をクエリに追加 ★★★
         facetFilters: facetFilters.isNotEmpty ? facetFilters : null,
       );
 
@@ -164,10 +163,11 @@ class PostService {
       // ================================
       final response = await _algoliaClient.searchIndex(request: query);
 
-      pr('[DEBUG ALGOLIA RESPONSE] Query: "${filters.condoName ?? ''}", Location: "${locationQuery}", Filters: "$algoliaFilters"');
-      // ★★★ デバッグログ追加 ★★★
+      // ★★★ デバッグログを修正 ★★★
+      pr(
+          '[DEBUG ALGOLIA RESPONSE] Query: "${filters.semanticQuery ?? ''}", Location: "${locationQuery}", Filters: "$algoliaFilters"');
       if (facetFilters.isNotEmpty) {
-         pr('[DEBUG ALGOLIA RESPONSE] FacetFilters: ${facetFilters.toString()}');
+        pr('[DEBUG ALGOLIA RESPONSE] FacetFilters: ${facetFilters.toString()}');
       }
       pr('[DEBUG ALGOLIA RESPONSE] nbHits: ${response.nbHits}');
       pr('[DEBUG ALGOLIA RESPONSE] page: ${response.page}/${response.nbPages}');
@@ -193,11 +193,9 @@ class PostService {
         return PostModel.fromAlgolia(docData);
       }).toList();
 
-      // ★★★ FIX: PRINT THE POST ID, NOT THE OBJECT ★★★
-      posts.forEach((post){
+      posts.forEach((post) {
         pr('post id in algolia search: ${post.id}');
       });
-      // ★★★ END FIX ★★★
 
       final bool hasMore = response.page! < (response.nbPages! - 1);
 
@@ -207,7 +205,7 @@ class PostService {
       return PaginatedPosts(posts: [], hasMore: false);
     }
   }
-  
+
   Future<void> deletePost(String postId) async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
@@ -244,9 +242,8 @@ class PostService {
         return [];
       }
 
-      final savedPostIds = savedPostsSnapshot.docs
-          .map((doc) => doc.id)
-          .toList();
+      final savedPostIds =
+          savedPostsSnapshot.docs.map((doc) => doc.id).toList();
 
       final postsSnapshot = await _postsCollection
           .where(FieldPath.documentId, whereIn: savedPostIds)
@@ -307,10 +304,8 @@ class PostService {
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception("User not logged in");
-      final userDoc = await _firestore
-          .collection('users_prof')
-          .doc(user.uid)
-          .get();
+      final userDoc =
+          await _firestore.collection('users_prof').doc(user.uid).get();
       final username = userDoc.data()?['displayName'] ?? 'Anonymous';
       final userProfileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
 
@@ -348,14 +343,14 @@ class PostService {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
-              .map(
-                (doc) => Comment.fromFirestore(
-                  doc as DocumentSnapshot<Map<String, dynamic>>,
-                ),
-              )
-              .toList();
-        });
+      return snapshot.docs
+          .map(
+            (doc) => Comment.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>,
+            ),
+          )
+          .toList();
+    });
   }
 
   Stream<List<Comment>> getReplies(String postId, String commentId) {
@@ -367,14 +362,14 @@ class PostService {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
-              .map(
-                (doc) => Comment.fromFirestore(
-                  doc as DocumentSnapshot<Map<String, dynamic>>,
-                ),
-              )
-              .toList();
-        });
+      return snapshot.docs
+          .map(
+            (doc) => Comment.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>,
+            ),
+          )
+          .toList();
+    });
   }
 
   Future<void> toggleSavePost(String postId) async {
@@ -384,10 +379,8 @@ class PostService {
         throw Exception("User is not logged in.");
       }
 
-      final savedPostRef = _usersCollection
-          .doc(userId)
-          .collection('savedPosts')
-          .doc(postId);
+      final savedPostRef =
+          _usersCollection.doc(userId).collection('savedPosts').doc(postId);
 
       final doc = await savedPostRef.get();
 
@@ -410,13 +403,13 @@ class PostService {
         .limit(1)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
-              .map(
-                (doc) => Comment.fromFirestore(
-                  doc as DocumentSnapshot<Map<String, dynamic>>,
-                ),
-              )
-              .toList();
-        });
+      return snapshot.docs
+          .map(
+            (doc) => Comment.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>,
+            ),
+          )
+          .toList();
+    });
   }
 }

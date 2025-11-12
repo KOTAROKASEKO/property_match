@@ -55,6 +55,7 @@ class MyProfilePage extends StatelessWidget {
         backgroundColor: Colors.grey[100],
         appBar: AppBar(
           actions: [
+            
             Consumer<NotificationViewModel>(
               builder: (context, viewModel, child) {
                 return IconButton(

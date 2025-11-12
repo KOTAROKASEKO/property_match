@@ -119,7 +119,7 @@ class PostModel {
 
     Timestamp safeTimestamp(dynamic ts) {
       if (ts is num) {
-        return Timestamp.fromMillisecondsSinceEpoch((ts * 1000).toInt());
+        return Timestamp.fromMillisecondsSinceEpoch(ts.toInt()); // ★ 修正: * 1000 を削除
       }
       return Timestamp.now();
     }
