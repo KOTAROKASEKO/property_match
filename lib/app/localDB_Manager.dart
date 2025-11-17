@@ -30,12 +30,11 @@ Future<bool> deleteAllData() async {
           await box.clear();
           await box.close();
         }
-
+        
         pr('Box $boxName cleared and closed.');
       } else {
-        pr('deleteAllData: Box $boxName was already closed.');
+        pr('localDB_Manager.dart : DeleteAllData: Box $boxName was already closed. Failed to clean up');
       }
-
       await Hive.deleteBoxFromDisk(boxName);
       pr('deleteAllData: Successfully deleted box from disk: $boxName');
     }

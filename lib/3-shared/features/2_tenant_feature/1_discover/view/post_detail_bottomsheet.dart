@@ -9,15 +9,24 @@ import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/view/com
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+// ★ 1. PostActionsViewModel をインポート
+import '../../../../common_feature/post_actions_viewmodel.dart';
 import '../../../../core/model/PostModel.dart';
-import '../viewmodel/discover_viewmodel.dart';
+// ★ 2. DiscoverViewModel のインポートを削除 (またはコメントアウト)
+// import '../viewmodel/discover_viewmodel.dart';
 import 'agent_profile_screen.dart';
 import 'full_pic_screen.dart';
 
 class PostDetailBottomSheet extends StatefulWidget {
   final PostModel post;
+  // ★ 3. onStartChat をパラメータとして追加
+  final Function(PostModel) onStartChat;
 
-  const PostDetailBottomSheet({super.key, required this.post});
+  const PostDetailBottomSheet({
+    super.key,
+    required this.post,
+    required this.onStartChat, // ★ 4. コンストラクタに追加
+  });
 
   @override
   State<PostDetailBottomSheet> createState() => _PostDetailBottomSheetState();
@@ -28,8 +37,8 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // The ViewModel is provided by DiscoverScreen when showing the sheet
-    final viewModel = context.watch<DiscoverViewModel>();
+    // ★ 5. DiscoverViewModel -> PostActionsViewModel に変更
+    final viewModel = context.watch<PostActionsViewModel>();
     final post = widget.post;
 
     return Column(
@@ -69,7 +78,8 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
     );
   }
 
-  Widget _buildImageCarousel(BuildContext context, PostModel post) {
+  // ... ( _buildImageCarousel, _buildHeader, _buildInfoChips, _buildDescription, _buildAgentHeader は変更なし) ...
+    Widget _buildImageCarousel(BuildContext context, PostModel post) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16.0),
       child: Stack(
@@ -301,8 +311,9 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
     );
   }
 
+
   Widget _buildActionBar(
-      BuildContext context, DiscoverViewModel viewModel, PostModel post) {
+      BuildContext context, PostActionsViewModel viewModel, PostModel post) { // ★ 6. ViewModel の型を変更
     return Container(
       padding:
           const EdgeInsets.fromLTRB(16, 12, 16, 16).copyWith(bottom: 16 + MediaQuery.of(context).padding.bottom),
@@ -361,9 +372,11 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
             child: ElevatedButton.icon(
               icon: const Icon(Icons.chat_bubble_outline),
               label: const Text('Inquire'),
+              // ★ 7. viewModel.onStartChat! -> widget.onStartChat に変更
               onPressed: () {
-                // The _startChat method in DiscoverScreen handles the auth check
-                viewModel.onStartChat!(post);
+                // The auth check is now handled by the caller,
+                // but we can just call the function.
+                widget.onStartChat(post);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepPurple,

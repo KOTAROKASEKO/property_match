@@ -2,9 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_list_screen.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_screen.dart';
+import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
+import 'package:shared_data/shared_data.dart';
 import '../model/filter_options.dart';
 import '../viewmodel/discover_viewmodel.dart';
+// ★★★ インポート追加 (1/2) ★★★
+import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'your_ai_chat_screen.dart'; // ★ AIチャット画面をインポート
 
 class DiscoverFilterPanel extends StatefulWidget {
@@ -15,7 +20,7 @@ class DiscoverFilterPanel extends StatefulWidget {
 }
 
 class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
-  // State variables from FilterBottomSheet
+  // ... (initStateや他の変数は変更なし) ...
   late String? _gender;
   late List<String> _selectedRoomTypes;
   late TextEditingController _semanticQueryController;
@@ -90,6 +95,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     });
   }
 
+  // ... (buildメソッドは変更なし) ...
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -198,7 +204,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     );
   }
 
-  // ★★★ 新しいヘルパーウィジェット: AIチャットボタン ★★★
+  // ★★★ 修正 (2/4): _buildAIChatButton の onPressed を async に変更 ★★★
   Widget _buildAIChatButton(BuildContext context) {
     return ElevatedButton.icon(
       icon: const Icon(Icons.chat_outlined, size: 18),
@@ -213,19 +219,28 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
         ),
       ),
       onPressed: () async {
-        // ★★★ 遷移ロジックを追加 ★★★
-        final aiFilters = await Navigator.push<FilterOptions>(
-          context,
-          MaterialPageRoute(builder: (_) => const AIChatScreen()),
-        );
-        // AIチャットからフィルターが返ってきたら適用する
-        if (aiFilters != null) {
-          _viewModel.applyFilters(aiFilters);
+        // ★★★ 修正 (3/4): 認証チェックとチャットID取得/作成ロジックを「削除」 ★★★
+        if(userData.userId.isNotEmpty){
+          
+          if (!context.mounted) return;
+          // ★★★ 修正 (4/4): AIChatListScreen に遷移 ★★★
+          final aiFilters = await Navigator.push<FilterOptions>(
+            context,
+            // ★ AIChatScreen ではなく AIChatListScreen を呼び出す
+            MaterialPageRoute(builder: (_) => const AIChatListScreen()),
+          );
+
+          if (aiFilters != null) {
+            _viewModel.applyFilters(aiFilters);
+          }
+        } else {
+          showSignInModal(context);
         }
       },
     );
   }
 
+  // ... (他の _build... ヘルパーは変更なし) ...
   // ★★★ 新しいヘルパーウィジェット: セクションカード ★★★
   Widget _buildSectionCard({
     required IconData icon,

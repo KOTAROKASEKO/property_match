@@ -35,21 +35,20 @@ class TemplateRepo {
     try {
       pr('✅ Initializing user databases...');
 
-      // ★★★ 修正 ★★★
-      // ボックスを開くときは、必ず「型」を指定する。
-      // また、二重に開かないように isBoxOpen でチェックする。
-
       if (!Hive.isBoxOpen(propertyTemplateBox)) {
+        
         await Hive.openBox<PropertyTemplate>(propertyTemplateBox);
+        pr('package:template_hive/TemplateRepo.dart opening PropertyTemplateBox');
       }
       if (!Hive.isBoxOpen(agentTemplateMessageBoxName)) {
         await Hive.openBox<TemplateModel>(agentTemplateMessageBoxName);
+        pr('package:template_hive/TemplateRepo.dart opening agentTemplateMessageBoxName');
       }
       if (!Hive.isBoxOpen(tenanTemplateMessageBoxName)) {
         await Hive.openBox<TemplateModel>(tenanTemplateMessageBoxName);
+        pr('package:template_hive/TemplateRepo.dart opening tenanTemplateMessageBoxName');
       }
-      // ★★★ 修正完了 ★★★
-      
+    
       pr('✅ All user databases opened successfully.');
     } catch (e) {
       pr('❌ Error opening user databases: $e');
@@ -62,9 +61,6 @@ class TemplateRepo {
       throw Exception("User not logged in, cannot access templates.");
     }
 
-    // ✅ [変更点 6]
-    // メンバー変数 `userRole` ではなく、
-    // グローバルな `userData.role` から現在のロールを取得
     final collectionName = userData.role == Roles.agent
         ? agentTemplateMessageBoxName
         : tenanTemplateMessageBoxName;
@@ -74,15 +70,11 @@ class TemplateRepo {
 
   // ★ 4. Boxを安全に取得または開くための非同期ヘルパーメソッド
   Future<Box<TemplateModel>> _getBox() async {
-    // ✅ [変更点 7]
-    // グローバルな `userData.role` から現在のロールを取得
 
     final boxName = userData.role == Roles.agent
         ? agentTemplateMessageBoxName
         : tenanTemplateMessageBoxName;
 
-    // ✅ [変更点 8]
-    // メンバー変数にキャッシュせず、常に正しいBoxを返す
     if (Hive.isBoxOpen(boxName)) {
       pr('[TemplateRepo] _getBox() was called but TemplateRepo: Box "$boxName" is already open. skip opening the box');
       return Hive.box<TemplateModel>(boxName);

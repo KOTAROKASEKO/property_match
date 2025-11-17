@@ -1,4 +1,4 @@
-// lib/2_tenant_feature/4_chat/view/property_message_bubble.dart
+// lib/3-shared/common_feature/chat/view/property_message_bubble.dart
 
 import 'dart:convert';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -6,6 +6,7 @@ import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart'; // ★ 1. kIsWeb のためにインポート
 
 // 1. StatefulWidgetに変更
 class PropertyMessageBubble extends StatefulWidget {
@@ -70,8 +71,11 @@ class _PropertyMessageBubbleState extends State<PropertyMessageBubble> {
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        // ★ 2. constraints を変更
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+          // maxWidth: MediaQuery.of(context).size.width * 0.75, // <-- 修正前
+          // Webの時だけ最大幅を 200 に設定し、それ以外は従来通り
+          maxWidth: kIsWeb ? 400 : MediaQuery.of(context).size.width * 0.75, 
         ),
         decoration: BoxDecoration(
           color: isMe ? Colors.deepPurple[400] : Colors.grey[200],
@@ -93,7 +97,8 @@ class _PropertyMessageBubbleState extends State<PropertyMessageBubble> {
                 ),
                 child: CarouselSlider(
                   options: CarouselOptions(
-                    height: 200,
+                    // aspectRatio: 16 / 10, // <-- 修正前
+                    aspectRatio: 4 / 3, // ★ 3. アスペクト比を 2:3 に変更
                     viewportFraction: 1.0,
                     enableInfiniteScroll: false,
                   ),

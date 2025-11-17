@@ -1,85 +1,179 @@
-// lib/3-shared/features/ai_chat/viewmodel/ai_chat_viewmodel.dart
-// (新規作成)
-
+// lib/3-shared/features/2_tenant_feature/2_ai_chat/viewmodel/ai_chat_viewmodel.dart
+import 'dart:async'; // StreamSubscription のため
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore のため
 import 'package:flutter/material.dart';
+import 'package:re_conver/3-shared/core/model/PostModel.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/model/filter_options.dart';
-import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/model/ai_chat_message.dart';
-import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/service/ai_service.dart';
+import '../model/ai_chat_message.dart';
+// import '../service/ai_service.dart'; // ★ AIサービスはもう不要
+
+// lib/3-shared/features/2_tenant_feature/2_ai_chat/viewmodel/ai_chat_viewmodel.dart
+// ... (imports)
 
 class AIChatViewModel extends ChangeNotifier {
-  final AIService _aiService = AIService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final String _chatId; // これは「ChatRoomID」を指す
 
   final List<AIChatMessage> _messages = [];
   bool _isLoading = false;
+  StreamSubscription? _messageSubscription;
 
-  /// Viewが表示するメッセージのリスト
   List<AIChatMessage> get messages => _messages;
-  /// AIが応答を生成中かどうか
   bool get isLoading => _isLoading;
 
-  AIChatViewModel() {
-    // 最初のAIメッセージを追加
-    _messages.add(
-      AIChatMessage(
-        text: "こんにちは！ご希望の物件条件（場所、予算、部屋タイプなど）を教えてください。",
-        isUser: false,
-        timestamp: DateTime.now(),
-      ),
-    );
+  AIChatViewModel({required String chatId}) : _chatId = chatId {
+    _listenToMessages(); // Firestoreの監視を開始
   }
 
-  /// ユーザーがメッセージを送信したときに呼び出されます
+  /// Firestoreのメッセージコレクションを監視します
+  void _listenToMessages() {
+    _messageSubscription?.cancel();
+    _messageSubscription = _firestore
+        // ★ 修正: ai_chat_messages を参照
+        .collection("ai_chat_messages")
+        // ★ 修正: chatRoomId で絞り込み
+        .where("chatRoomId", isEqualTo: _chatId)
+        .orderBy("timestamp")
+        .snapshots()
+        .listen(
+          (snapshot) {
+            _messages.clear();
+
+            // ★ 修正: Firestoreの履歴が本当に空の場合の挨拶は「ListViewModel」が担当
+            // (この画面では不要になった)
+
+            for (var doc in snapshot.docs) {
+              final data = doc.data();
+
+              // (PostModelへの変換ロジックは変更なし)
+              List<PostModel> suggestions = [];
+              if (data['recommendedProperties'] != null) {
+                // ... (変換ロジック) ...
+                 final List<dynamic> rawProps = data['recommendedProperties'];
+                suggestions = rawProps.map((prop) {
+                  final Map<String, dynamic> propMap =
+                      Map<String, dynamic>.from(prop);
+                  if (!propMap.containsKey('objectID')) {
+                    propMap['objectID'] = prop['objectID'] ?? '';
+                  }
+                  return PostModel.fromAlgolia(propMap);
+                }).toList();
+              }
+
+              _messages.add(
+                AIChatMessage(
+                  text: data['text'] ?? '',
+                  isUser: data['isUser'] ?? false,
+                  timestamp:
+                      (data['timestamp'] as Timestamp? ?? Timestamp.now())
+                          .toDate(),
+                  suggestedPosts: suggestions,
+                ),
+              );
+            }
+            // ★★★ ------------------ ★★★
+
+            _isLoading = _messages.isNotEmpty && _messages.last.isUser;
+            notifyListeners();
+          },
+          onError: (error) {
+            print("Error listening to AI chat: $error");
+            _isLoading = false;
+            notifyListeners();
+          },
+        );
+  }
+
+  /// ユーザーがメッセージを送信します
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
-    // 1. ユーザーのメッセージをリストに追加
-    _messages.add(
-      AIChatMessage(
-        text: text,
-        isUser: true,
-        timestamp: DateTime.now(),
-      ),
+    final userMessage = AIChatMessage(
+      text: text,
+      isUser: true,
+      timestamp: DateTime.now(),
     );
+
+    _messages.add(userMessage);
     _isLoading = true;
     notifyListeners();
 
     try {
-      // 2. AIサービスに応答をリクエスト
-      final aiResponse = await _aiService.getAIResponse(_messages, text);
-
-      // 3. AIの応答をリストに追加
-      _messages.add(
-        AIChatMessage(
-          text: aiResponse,
-          isUser: false,
-          timestamp: DateTime.now(),
-        ),
-      );
+      // ★ 1. Firestore (ai_chat_messages) に書き込み (Cloud Runをトリガーする)
+      await _firestore
+          .collection("ai_chat_messages") // ★ 修正: コレクション名
+          .add({
+            "chatRoomId": _chatId, // ★ 追加: ルームID
+            "text": text,
+            "isUser": true,
+            "timestamp": FieldValue.serverTimestamp(),
+            "isProcessed": false, // ★ Cloud Runが処理するためのフラグ
+          });
+          
+      // ★ 2. Firestore (ai_chat_rooms) の最終メッセージを更新
+      await _firestore.collection("ai_chat_rooms").doc(_chatId).update({
+        "lastMessageText": text,
+        "lastMessageTimestamp": FieldValue.serverTimestamp(),
+      });
+          
+      // (エラー処理は変更なし)
     } catch (e) {
-      // 4. エラー処理
+      _messages.remove(userMessage);
       _messages.add(
         AIChatMessage(
-          text: "申し訳ありません、エラーが発生しました。もう一度お試しください。",
+          text: "メッセージの送信に失敗しました。",
           isUser: false,
           timestamp: DateTime.now(),
         ),
       );
-    } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
+  
+  /// Cloud Runが保存した最新の検索条件を取得します
+  Future<FilterOptions?> getLatestFilterOptions() async {
+    try {
+      // ★ 修正: ai_chat_rooms を参照
+      final doc = await _firestore.collection("ai_chat_rooms").doc(_chatId).get();
+      final data = doc.data();
 
-  /// (将来的に実装) 会話履歴から FilterOptions を生成して返します
-  FilterOptions? generateFilterOptions() {
-    // ★★★ ここに会話履歴を解析して FilterOptions を構築するロジックを実装 ★★★
-    // 例:
-    // final String? location = _findKeyInHistory("location");
-    // final double? minRent = _findKeyInHistory("minRent");
-    // return FilterOptions(location: location, minRent: minRent);
-    
-    // 今はダミーを返します
-    print("（ダミー）FilterOptions を生成しました。");
-    return FilterOptions(semanticQuery: "AI generated query");
+      if (data != null && data.containsKey("latestConditions")) {
+        // (以降の変換ロジックは変更なし)
+        // ...
+        final conditions = data["latestConditions"] as Map<String, dynamic>;
+        return FilterOptions(
+          gender: conditions['gender'] as String?,
+          roomType: _parseRoomType(conditions['roomType']),
+          minRent: (conditions['minRent'] as num?)?.toDouble(),
+          maxRent: (conditions['maxRent'] as num?)?.toDouble(),
+          semanticQuery:
+              conditions['query'] as String?,
+          hobbies: (conditions['hobbies'] as List<dynamic>?)?.cast<String>(),
+        );
+      }
+      return null;
+    } catch (e) {
+      print("Error getting latest filter options: $e");
+      return null;
+    }
+  }
+
+  // ( _parseRoomType, dispose は変更なし) ...
+  List<String>? _parseRoomType(dynamic roomTypeData) {
+    if (roomTypeData == null) return null;
+    if (roomTypeData is String) {
+      return [roomTypeData];
+    }
+    if (roomTypeData is List) {
+      return roomTypeData.cast<String>();
+    }
+    return null;
+  }
+
+  @override
+  void dispose() {
+    _messageSubscription?.cancel();
+    super.dispose();
   }
 }

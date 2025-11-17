@@ -1,5 +1,4 @@
 // lib/3-shared/features/1_agent_feature/1_profile/view/agent_profile_view.dart
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -127,10 +126,9 @@ class MyProfilePage extends StatelessWidget {
                           ),
                         )
                       else if (useGridView)
-                        _buildPostGrid(viewModel) // ★ グリッド表示
+                        _buildPostGrid(viewModel)
                       else
-                        _buildPostList(viewModel), // ★ リスト表示 (従来の_PostList)
-                      // ★★★ 分岐ここまで ★★★
+                        _buildPostList(viewModel),
                     ],
                   );
                 },
@@ -142,7 +140,6 @@ class MyProfilePage extends StatelessWidget {
     );
   }
 
-  // --- ★★★ 新しいメソッド: グリッドレイアウトを構築 ★★★ ---
   Widget _buildPostGrid(ProfileViewModel viewModel) {
     return SliverPadding(
       padding: const EdgeInsets.all(16.0),
@@ -161,13 +158,16 @@ class MyProfilePage extends StatelessWidget {
               onDelete: () {
                 context.read<ProfileViewModel>().deletePost(post.id);
               },
-              onEdit: () {
-                Navigator.push(
+              onEdit: () async{
+                bool? result = await Navigator.push<bool>(
                   context,
                   MaterialPageRoute(
                     builder: (context) => CreatePostScreen(post: post),
                   ),
                 );
+                if(result==true || result == null){
+                  viewModel.fetchAgentData(userData.userId);
+                }
               },
               onTap: () { // ★ タップで詳細画面へ
                 Navigator.push(
@@ -346,5 +346,3 @@ class _ActionButtons extends StatelessWidget {
 }
 
 
-// --- ★★★ 従来の _PostList ウィジェットは不要になったため削除 ★★★ ---
-// class _PostList extends StatelessWidget { ... } // 削除

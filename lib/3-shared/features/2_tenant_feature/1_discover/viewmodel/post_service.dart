@@ -25,13 +25,20 @@ class PostService {
 
   Future<Map<String, double>?> getLatLng(String address) async {
     try {
-      if (kIsWeb) {
-        const apiKey = String.fromEnvironment('GEO_CODE_API_KEY');
-        if (apiKey.isEmpty) {
-          throw Exception('GEO_CODE_API_KEY not found in .env');
-        }
+      // ★ .env（dart-define）からAPIキーを読む（Web / Mobile 共通）
+      const apiKey = String.fromEnvironment('GEO_CODE_API_KEY');
 
-        pr('api key found : $apiKey');
+      if (apiKey.isEmpty) {
+        throw Exception('GEO_CODE_API_KEY not found in .env');
+      }
+
+      pr('Using API KEY: $apiKey');
+
+      // ★ ここから Web / Mobile の分岐
+      if (kIsWeb) {
+        // -------------------------
+        // Web version (existing)
+        // -------------------------
         final encodedAddress = Uri.encodeComponent(address);
         final url =
             'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';
@@ -42,26 +49,44 @@ class PostService {
           final data = json.decode(response.body);
           pr('${response.body}');
           if (data['status'] == 'OK') {
-            final location = data['results'][0]['geometry']['location'];
-            return {'lat': location['lat'], 'lng': location['lng']};
+            final loc = data['results'][0]['geometry']['location'];
+            return {'lat': loc['lat'], 'lng': loc['lng']};
           } else {
-            print('Google API Error: ${data}');
+            print('Google API Error: $data');
           }
         } else {
           print('HTTP Error: ${response.statusCode}');
         }
       } else {
-        final locations = await geocoding.locationFromAddress(address);
-        if (locations.isNotEmpty) {
-          return {
-            'lat': locations.first.latitude,
-            'lng': locations.first.longitude,
-          };
+        // -------------------------
+        // Mobile version (NEW!)
+        // -------------------------
+        final encodedAddress = Uri.encodeComponent(address);
+        final url =
+            'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';
+
+        final response = await http.get(Uri.parse(url));
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+
+          if (data['status'] == 'OK') {
+            final loc = data['results'][0]['geometry']['location'];
+            return {
+              'lat': loc['lat'],
+              'lng': loc['lng'],
+            };
+          } else {
+            print('Google API Error (Mobile): $data');
+          }
+        } else {
+          print('HTTP Error (Mobile): ${response.statusCode}');
         }
       }
     } catch (e) {
       print('Geocoding failed: $e');
     }
+
     return null;
   }
 

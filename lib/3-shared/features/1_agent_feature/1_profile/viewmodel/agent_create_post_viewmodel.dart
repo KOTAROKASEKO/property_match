@@ -49,6 +49,10 @@ class CreatePostViewModel extends ChangeNotifier {
       _durationStart = _editingPost.durationStart;
       _durationMonths = _editingPost.durationMonths;
       _hobbies = List.from(_editingPost.hobbies);
+
+      if (_editingPost.position != null) {
+        _position = GeoPoint(_editingPost.position!.latitude,_editingPost.position!.longitude); 
+      }
     }
   }
 
@@ -340,7 +344,10 @@ class CreatePostViewModel extends ChangeNotifier {
         _position = null;
         return;
       }
-      const apiKey = 'AIzaSyBSrv_NciH-II4WVLSoAdWVXSAFxHpS9jU';
+      const String apiKey = String.fromEnvironment('GEO_CODE_API_KEY');
+      if (apiKey.isEmpty) {
+        throw Exception('GEO_CODE_API_KEY not found in environment variables');
+      }
       final encodedAddress = Uri.encodeComponent(_location);
       final url =
           'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';

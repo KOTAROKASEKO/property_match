@@ -38,7 +38,6 @@ class UserData {
   void setRole(Roles newRole){
     _role = newRole;
     pr("User role set to: $_role");
-    
   }
 
   void setRoleInLocal(Roles newRole)async{

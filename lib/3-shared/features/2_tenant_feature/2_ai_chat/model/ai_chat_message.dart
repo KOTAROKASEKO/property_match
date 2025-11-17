@@ -1,15 +1,15 @@
-// lib/3-shared/features/ai_chat/model/ai_chat_message.dart
-// (新規作成)
+import '../../../../core/model/PostModel.dart'; // PostModelをインポート
 
-/// AIチャット画面専用のシンプルなメッセージモデル
 class AIChatMessage {
   final String text;
   final bool isUser;
   final DateTime timestamp;
+  final List<PostModel> suggestedPosts; // ★ 追加: 提案された物件リスト
 
   AIChatMessage({
     required this.text,
     required this.isUser,
     required this.timestamp,
+    this.suggestedPosts = const [], // デフォルトは空
   });
 }

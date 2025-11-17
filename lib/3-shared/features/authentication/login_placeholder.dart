@@ -1,19 +1,17 @@
 // lib/features/authentication/login_placeholder.dart
 
 import 'dart:async';
-import 'dart:math'; // Sign Upロジックのために追加
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:lottie/lottie.dart';
-import 'package:re_conver/3-shared/core/responsive/responsive_layout.dart';
 import 'package:re_conver/3-shared/features/authentication/forgotpassword.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:re_conver/main.dart';
 import 'sign_in_button_stub.dart';
 import 'package:shared_data/shared_data.dart';
-// import 'register_screen.dart'; // このファイルは不要になります
 import 'role_selection_screen.dart';
 import '../../service/FirebaseApi.dart';
 
@@ -199,23 +197,29 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
     if (_registerFormKey.currentState!.validate()) {
       setState(() => _isRegistering = true);
       try {
+        pr('login_placeholder.dart user creation init');
         UserCredential userCredential =
             await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _registerEmailController.text.trim(),
           password: _registerPasswordController.text.trim(),
         );
-
+        pr('login_placeholder.dart user was created');
         if (userCredential.user != null) {
           await _createUserProfile(
               userCredential.user!, _registerDisplayNameController.text.trim());
+        pr('login_placeholder.dart user collection was created');
           userData.setUser(userCredential.user);
-          await saveTokenToDatabase();
+          pr('login_placeholder.dart user state was set');
+          saveTokenToDatabase();
           if (mounted) {
+            pr('login_placeholder.dart build was mounted');
             Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                     builder: (context) => RoleSelectionScreen(
                         displayName: _registerDisplayNameController.text)),
                 (route) => false);
+          }else{
+            pr('login_placeholder.dart build was unmounted. cannot navigate');
           }
         }
       } on FirebaseAuthException catch (e) {
@@ -255,31 +259,29 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
     pr('login_placeholder.dart: _navigateAfterSignIn called');
     if (!mounted) return;
 
-    userData.setUser(user);
-    await saveTokenToDatabase();
+    // main.dart のリスナーがトークン保存を行うため、
+    // ここではナビゲーションに集中します。
+    // (重複して呼んでも害は少ないですが、必須ではありません)
+    // userData.setUser(user);
+    // await saveTokenToDatabase();
 
-    final navigator = Navigator.of(context);
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users_prof')
-        .doc(user.uid)
-        .get();
+    pr('Navigating back to AuthWrapper...');
 
-    if (userDoc.exists &&
-        userDoc.data() != null &&
-        userDoc.data()!.containsKey('role')) {
-          pr('login_placeholder.dart : ${ userDoc.data()!['role'] as String}');
-      final role = userDoc.data()!['role'] as String;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('role', role);
-
-      userData.setRole(role == 'agent' ? Roles.agent : Roles.tenant);
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const ResponsiveLayout()),
+    // navigatorKey を使って AuthWrapper に戻る
+    if (navigatorKey.currentState != null) {
+      pr('Using global navigatorKey to pushAndRemoveUntil AuthWrapper');
+      navigatorKey.currentState!.pushAndRemoveUntil(
+        MaterialPageRoute(
+          // AuthWrapperを再呼び出しして、認証状態の変更を検知させる
+          builder: (context) => const AuthWrapper(),
+        ),
         (route) => false,
       );
     } else {
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
+      // Fallback: ローカルの Navigator を使用
+      pr('Using local navigator to pushAndRemoveUntil AuthWrapper');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const AuthWrapper()),
         (route) => false,
       );
     }

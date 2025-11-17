@@ -138,7 +138,8 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                 const VerticalDivider(width: 1, thickness: 1),
                 // --- 右側: テナントリスト (残り) ---
                 Expanded(
-                  child: _buildTenantGrid(viewModel), // グリッド表示用メソッド
+                  // ★★★ 1. isWideScreen フラグを渡す ★★★
+                  child: _buildTenantGrid(viewModel, isWideScreen: true), // グリッド表示用メソッド
                 ),
               ],
             );
@@ -162,7 +163,8 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                 backgroundColor: Colors.deepPurple,
                 foregroundColor: Colors.white,
               ),
-              body: _buildTenantGrid(viewModel), // グリッド表示用メソッド
+              // ★★★ 1. isWideScreen フラグを渡す ★★★
+              body: _buildTenantGrid(viewModel, isWideScreen: false), // グリッド表示用メソッド
             );
           }
         },
@@ -170,8 +172,8 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
     );
   }
 
-  // --- ★★★ グリッド表示部分を別メソッドに抽出 ★★★ ---
-  Widget _buildTenantGrid(TenantListViewModel viewModel) {
+  // --- ★★★ 2. _buildTenantGrid のシグネチャとロジックを変更 ★★★ ---
+  Widget _buildTenantGrid(TenantListViewModel viewModel, {required bool isWideScreen}) {
     // ローディング表示は GridView の前に配置
     if (viewModel.isLoading && viewModel.filteredTenants.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -180,17 +182,28 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
       return const Center(child: Text("No tenants found matching your criteria."));
     }
 
+    // ★★★ 3. isWideScreen に応じて delegate を選択 ★★★
+    final SliverGridDelegate delegate = isWideScreen
+        ? const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 300.0, // カードの最大幅 (この値でサイズを調整)
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.75,
+          )
+        : const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2, // 狭い画面では2列固定を維持
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.75,
+          );
+
     return RefreshIndicator(
       onRefresh: () => viewModel.fetchTenants(isInitial: true),
       child: GridView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.all(16.0),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.75,
-        ),
+        // ★★★ 4. 動的な delegate を適用 ★★★
+        gridDelegate: delegate,
         // itemCount は isLoadingMore フラグを見て調整
         itemCount: viewModel.filteredTenants.length + (viewModel.isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {

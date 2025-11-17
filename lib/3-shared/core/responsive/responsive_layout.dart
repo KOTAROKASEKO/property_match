@@ -13,7 +13,7 @@ class ResponsiveLayout extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth > 700) {
-          pr('tablet scaffold was called');
+          pr('responseive_layout.dart : tablet scaffold was called');
           return const TabletScaffold();
         } else {
           if (userData.role == Roles.agent) {

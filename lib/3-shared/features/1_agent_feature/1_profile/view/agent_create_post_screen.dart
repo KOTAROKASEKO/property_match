@@ -81,7 +81,7 @@ class CreatePostScreen extends StatelessWidget {
                               } else {
                                 final success = await viewModel.submitPost();
                                 if (success && context.mounted) {
-                                  Navigator.of(context).pop();
+                                  Navigator.of(context).pop(true);
                                 } else if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(

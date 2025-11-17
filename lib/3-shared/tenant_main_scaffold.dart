@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_data/shared_data.dart';
 import 'common_feature/chat/view/chatThreadScreen.dart';
 import 'features/2_tenant_feature/1_discover/view/discover_screen.dart';
 import 'features/2_tenant_feature/3_profile/view/profile_screen.dart';
@@ -45,6 +46,7 @@ class _TenantMainScaffoldState extends State<TenantMainScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    pr('Tenant main scaffold build was called');
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,

@@ -1,10 +1,15 @@
+// lib/3-shared/features/authentication/sign_out_modal.dart
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:provider/provider.dart'; // ★ 1. Provider をインポート
 import 'package:re_conver/app/localDB_Manager.dart';
 import 'package:re_conver/main.dart';
 import 'package:shared_data/shared_data.dart';
+// ★ 2. ViewModel をインポート
+import 'package:re_conver/3-shared/common_feature/chat/viewmodel/unread_messages_viewmodel.dart';
 
 class SignOutModal extends StatefulWidget {
   const SignOutModal({super.key});
@@ -16,6 +21,9 @@ class SignOutModal extends StatefulWidget {
 class _SignOutModalState extends State<SignOutModal> {
   @override
   Widget build(BuildContext context) {
+    // ★ 3. ViewModel への参照を取得 (listen: false)
+    final unreadViewModel = context.read<UnreadMessagesViewModel>();
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -33,6 +41,7 @@ class _SignOutModalState extends State<SignOutModal> {
                   pr('Initiating sign out process...');
                   var didSuccessfullyClearedSession = await deleteAllData();
                   pr('break point1');
+                  
                   if(didSuccessfullyClearedSession){
                     await FirebaseAuth.instance.signOut();
                   }
@@ -44,7 +53,11 @@ class _SignOutModalState extends State<SignOutModal> {
                   pr('break point3: FirebaseAuth.signOut() complete');
                   // 3. Clear local data and update UI
                   if (mounted) {
+                    
+                    // ★ 4. グローバルなStateをクリアする
                     userData.clearUser();
+                    unreadViewModel.clear(); // ★★★ これを追加 ★★★
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Sign out successful.'),
@@ -53,12 +66,9 @@ class _SignOutModalState extends State<SignOutModal> {
                     );
                     
                     // ★★★ FIX: Navigate to AuthWrapper, not LoginPlaceholderScreen ★★★
-                    // This allows AuthWrapper to detect the null user
-                    // and correctly show the GuestLandingScaffold.
                     if (navigatorKey.currentState != null) {
                         navigatorKey.currentState!.pushAndRemoveUntil(
                           MaterialPageRoute(
-                            // Navigate to the AuthWrapper to re-trigger auth logic
                             builder: (context) => const AuthWrapper(), 
                           ),
                           (route) => false,
@@ -67,10 +77,11 @@ class _SignOutModalState extends State<SignOutModal> {
                       // Fallback
                       Navigator.pop(context, true);
                     }
+                  }else{
+                    pr('sign_out_modal.dart : the widget is unmounted');
                   }
                 } catch (error) {
                   pr('Error in logging out : $error');
-                  // Optionally, show the error to the user
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(

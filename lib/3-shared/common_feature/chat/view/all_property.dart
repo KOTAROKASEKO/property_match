@@ -73,8 +73,12 @@ class ChatThreadList extends StatelessWidget {
                               : '?')
                           : null,
                     ),
-                    title: Text(displayName,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      displayName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      maxLines: 1, // 1行に制限
+                      overflow: TextOverflow.ellipsis, // 溢れた場合は ... で省略
+                    ),
                     subtitle: Text(thread.lastMessage ?? '',
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                     trailing: Column(

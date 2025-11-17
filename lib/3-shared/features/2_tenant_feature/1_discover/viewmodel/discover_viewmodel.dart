@@ -1,7 +1,6 @@
-// lib/features/2_tenant_feature/1_discover/viewmodel/discover_viewmodel.dart
+// lib/3-shared/features/2_tenant_feature/1_discover/viewmodel/discover_viewmodel.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart'; // ★★★ ADDED FOR Function(PostModel) ★★★
 import 'package:shared_data/shared_data.dart';
 import '../../../../common_feature/post_actions_viewmodel.dart';
 import '../../../../core/model/PostModel.dart'; // ★★★ ADDED FOR PostModel ★★★
@@ -19,10 +18,9 @@ class DiscoverViewModel extends PostActionsViewModel  {
   bool _isLoadingMore = false;
   bool _hasMorePosts = true;
 
-  // ★★★ ADDED THIS FUNCTION PROPERTY ★★★
-  // This will be assigned by _DiscoverViewState
-  Function(PostModel)? onStartChat;
-  // ★★★ ----------------------------- ★★★
+  // ★★★ 削除 ★★★
+  // Function(PostModel)? onStartChat;
+  // ★★★ ----- ★★★
 
   List<PostModel> get posts => _posts;
   SortOrder get sortOrder => _sortOrder;

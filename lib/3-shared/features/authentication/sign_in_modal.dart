@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:lottie/lottie.dart';
 import 'package:re_conver/3-shared/features/authentication/login_placeholder.dart';
-import 'package:rive/rive.dart';
 
 class SignInModal extends StatefulWidget {
   const SignInModal({super.key});
@@ -17,7 +16,6 @@ class _SignInModalState extends State<SignInModal> {
 
   Future<UserCredential?> _signInWithGoogle() async {
     try {
-      // Ensure you added `import 'package:flutter_dotenv/flutter_dotenv.dart';` at the top
       const serverClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
         if (serverClientId.isEmpty) {
           throw Exception('GOOGLE_SERVER_CLIENT_ID not found in .env');

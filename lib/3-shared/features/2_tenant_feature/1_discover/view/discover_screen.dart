@@ -1,9 +1,10 @@
-// lib/features/2_tenant_feature/1_discover/view/discover_screen.dart
+// lib/3-shared/features/2_tenant_feature/1_discover/view/discover_screen.dart
 
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart'; // ★★★ ADDED ★★★
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/common_feature/post_actions_viewmodel.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart'; // ★★★ ADDED ★★★
 import 'package:shared_data/shared_data.dart';
 import 'package:template_hive/template_hive.dart';
@@ -58,9 +59,8 @@ class _DiscoverViewState extends State<_DiscoverView>
     // ★ initState で ViewModel を取得
     _viewModel = context.read<DiscoverViewModel>();
 
-    // ★★★ ADDED onStartChat to viewModel ★★★
-    // This allows the bottom sheet to call _startChat
-    _viewModel.onStartChat = _startChat;
+    // ★★★ onStartChat の割り当てを削除 ★★★
+    // _viewModel.onStartChat = _startChat; // <-- 削除
 
 
     _scrollController.addListener(() {
@@ -117,7 +117,6 @@ class _DiscoverViewState extends State<_DiscoverView>
     }
   }
   
-  // ★★★ NEW METHOD TO SHOW POST DETAILS ★★★
   void _showPostDetails(PostModel post) {
     showModalBottomSheet(
       context: context,
@@ -125,8 +124,10 @@ class _DiscoverViewState extends State<_DiscoverView>
       backgroundColor: Colors.transparent,
       builder: (_) {
         // Provide the ViewModel to the bottom sheet
-        return ChangeNotifierProvider.value(
-          value: _viewModel,
+        // ▼▼▼ 修正: <PostActionsViewModel> を明示的に指定 ▼▼▼
+        return ChangeNotifierProvider<PostActionsViewModel>.value(
+          value: _viewModel, // _viewModel は DiscoverViewModel
+          // ▲▲▲ 修正 ▲▲▲
           child: DraggableScrollableSheet(
             initialChildSize: 0.9,
             maxChildSize: 0.9,
@@ -139,7 +140,10 @@ class _DiscoverViewState extends State<_DiscoverView>
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 // Pass the post to the new bottom sheet widget
-                child: PostDetailBottomSheet(post: post),
+                child: PostDetailBottomSheet(
+                  post: post,
+                  onStartChat: _startChat, // _startChat メソッドを直接渡す
+                ),
               );
             },
           ),
@@ -147,8 +151,6 @@ class _DiscoverViewState extends State<_DiscoverView>
       },
     );
   }
-  // ★★★ ---------------------------------- ★★★
-
 
   @override
   Widget build(BuildContext context) {
@@ -416,7 +418,9 @@ class _DiscoverViewState extends State<_DiscoverView>
     // ★★★ Close bottom sheet if it's open ★★★
     // (It's safe to call pop even if it's not open,
     //  but this ensures it closes if chat is started from the sheet)
-    Navigator.of(context).pop(); 
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } 
 
     Navigator.of(context).push(
       MaterialPageRoute(

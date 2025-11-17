@@ -1,14 +1,22 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BilikMatch | マレーシア学生向けルームシェア・部屋探しアプリ</title> <meta name="description" content="マレーシアの学生向けルームシェアアプリ。大学名や趣味で検索して理想のルームメイトを見つけよう。" />
+    <title>BilikMatch | AI Roommate & Room Finder for Malaysian Students</title>
+    <meta name="description"
+        content="The AI-powered app for students and agents in Malaysia. Find rooms by university, station, or let our AI find the perfect match for your vague requests." />
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    
+
+    <!-- Schema.org JSON-LD -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -16,301 +24,234 @@
       "name": "BilikMatch",
       "applicationCategory": "LifestyleApplication",
       "operatingSystem": "Web",
-      "description": "マレーシアの学生向けルームシェアアプリ。大学名や趣味で検索して理想のルームメイトを見つけよう。",
+      "description": "The AI-powered app for students and agents in Malaysia. Find rooms by university, station, or let our AI find the perfect match for your vague requests.",
       "aggregateRating": {
         "@type": "AggregateRating",
-        "ratingValue": "4.8", 
-        "reviewCount": "150" 
+        "ratingValue": "4.8",
+        "reviewCount": "150"
       },
       "offers": {
         "@type": "Offer",
-        "price": "0", 
+        "price": "0",
         "priceCurrency": "MYR"
       }
     }
     </script>
 
     <style>
+        /* Apply Poppins font to the whole site */
         body {
-            margin: 0;
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
-            color: #222;
+            background-color: #f8fafc; /* Tailwind 'slate-50' */
+            color: #334155; /* Tailwind 'slate-700' */
         }
 
-        header {
-            text-align: center;
-            padding: 60px 20px;
+        /* Custom gradient for hero section */
+        .hero-gradient {
+            background: linear-gradient(135deg, #f5f3ff, #faf5ff); /* Light violet/purple gradients */
+        }
+        
+        /* Smooth scroll behavior */
+        html {
+            scroll-behavior: smooth;
         }
 
-        /* 追加: ヘッダーアイコンのスタイル */
-        .header-icon {
-            width: 100px;
-            height: 100px;
-            margin-bottom: 20px;
-            border-radius: 20px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+        /* Styling for FAQ accordions */
+        details > summary {
+            list-style: none; /* Remove default marker */
         }
-
-        header h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #2b2d42;
+        details > summary::-webkit-details-marker {
+            display: none; /* Remove default marker for Chrome */
         }
-
-        header p {
-            font-size: 1.2rem;
-            color: #555;
-            max-width: 600px;
-            margin: 0 auto 40px;
-        }
-
-        .cta-btn {
-            background: #007bff;
-            color: white;
-            text-decoration: none;
-            padding: 14px 32px;
-            border-radius: 30px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-        }
-
-        .cta-btn:hover {
-            background: #0056d8;
-            transform: translateY(-2px);
-        }
-
-        .features {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 40px;
-            padding: 60px 20px;
-        }
-
-        .feature {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            padding: 30px;
-            width: 280px;
-            text-align: center;
-            transition: transform 0.3s;
-        }
-
-        .feature:hover {
-            transform: translateY(-5px);
-        }
-
-        /* 追加: 特徴セクションのアイコンスタイル */
-        .feature-icon {
-            width: 50px;
-            height: 50px;
-            margin-bottom: 15px;
-        }
-
-        .feature h3 {
-            color: #007bff;
-        }
-
-        /* ----- 追加: 新規セクション用の共通スタイル ----- */
-        .content-section {
-            padding: 40px 20px;
-            max-width: 800px;
-            margin: 40px auto;
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        }
-
-        .content-section h2 {
-            text-align: center;
-            color: #2b2d42;
-            margin-bottom: 40px;
-        }
-
-        /* ----- 追加: 「使い方のステップ」スタイル ----- */
-        .steps-container {
-            display: flex;
-            justify-content: space-around;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .step {
-            flex: 1;
-            min-width: 200px;
-            text-align: center;
-        }
-
-        .step-icon {
-            width: 60px;
-            height: 60px;
-            margin-bottom: 15px;
-        }
-
-        .step h4 {
-            color: #007bff;
-            margin-bottom: 10px;
-        }
-
-        /* ----- 追加: 「利用者の声」スタイル ----- */
-        .testimonial-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        blockquote {
-            background: #f9f9f9;
-            border-left: 5px solid #007bff;
-            margin: 0;
-            padding: 15px 20px;
-            border-radius: 0 8px 8px 0;
-        }
-
-        blockquote p {
-            margin: 0 0 10px 0;
-            font-style: italic;
-        }
-
-        blockquote footer {
-            text-align: right;
-            font-weight: 600;
-            color: #555;
-            font-style: normal;
-            font-size: 0.9rem;
-        }
-
-        /* ----- 追加: 「FAQ」スタイル ----- */
-        details {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            background: #fdfdfd;
-        }
-
-        summary {
-            font-weight: 600;
-            padding: 16px;
-            cursor: pointer;
-            list-style: none; /* デフォルトのマーカーを削除 */
-        }
-
-        summary::after {
-            content: ' ▼'; /* アコーディオンのマーカー */
-            float: right;
-        }
-
-        details[open] summary::after {
-            content: ' ▲';
-        }
-
-        details div {
-            padding: 0 16px 16px 16px;
-            color: #555;
-            line-height: 1.6;
-        }
-        /* ----- スタイル追加ここまで ----- */
-
-        footer {
-            text-align: center;
-            padding: 40px 20px;
-            font-size: 0.9rem;
-            color: #888;
+        details[open] summary .arrow-down {
+            transform: rotate(180deg);
         }
     </style>
 </head>
 
-<body>
-    <header>
-        <img src="bilikmatch-app-icon.png" alt="BilikMatch アプリアイコン" class="header-icon">
-        
-        <h1>BilikMatch</h1>
-        <p>マレーシアの学生が理想のルームメイトを見つけるための新しい部屋探しアプリ。</p>
-        <a href="/app" class="cta-btn">アプリを開く</a>
+<body class="antialiased">
+
+    <!-- Header Section -->
+    <header class="hero-gradient">
+        <div class="container mx-auto max-w-5xl px-6 py-24 text-center">
+            <!-- App Icon Placeholder -->
+            <img src="https://placehold.co/100x100/6d28d9/white?text=BM&font=poppins"
+                 alt="BilikMatch App Icon"
+                 class="h-24 w-24 mx-auto mb-6 rounded-3xl shadow-lg"
+                 onerror="this.src='https://placehold.co/100x100/6d28d9/white?text=BM&font=poppins'">
+            
+            <h1 class="text-4xl md:text-6xl font-bold text-gray-900 leading-tight">
+                Find Your Perfect <span class="text-indigo-600">Bilik</span>, Smarter.
+            </h1>
+            <p class="mt-6 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto">
+                The AI-powered app for students and agents in Malaysia. Search by university, station, or just tell our AI what you need.
+            </p>
+            <div class="mt-10">
+                <a href="/app"
+                   class="inline-block bg-indigo-600 text-white font-semibold text-lg px-8 py-4 rounded-full shadow-lg transition-transform duration-300 hover:bg-indigo-700 hover:-translate-y-1">
+                    Open The App
+                </a>
+            </div>
+        </div>
     </header>
 
-    <section id="how-to-use" class="content-section">
-        <h2>BilikMatchの使い方</h2>
-        <div class="steps-container">
-            <div class="step">
-                <img src="icon-profile.png" alt="プロフィール登録" class="step-icon">
-                <h4>Step 1: プロフィール登録</h4>
-                <p>大学名や趣味、希望する入居時期などを登録します。</p>
-            </div>
-            <div class="step">
-                <img src="icon-search.png" alt="検索とマッチング" class="step-icon">
-                <h4>Step 2: 検索＆マッチング</h4>
-                <p>希望条件で絞り込み、気になる相手に「いいね！」を送ります。</p>
-            </div>
-            <div class="step">
-                <img src="icon-chat.png" alt="チャット" class="step-icon">
-                <h4>Step 3: チャット＆内見</h4>
-                <p>マッチングしたら、安全なチャットで詳細を話し合います。</p>
-            </div>
-        </div>
-    </section>
+    <!-- Main Content -->
+    <main>
 
-    <section class="features">
-        <div class="feature">
-            <img src="icon-search-uni.png" alt="大学名で検索" class="feature-icon">
-            <h3>🏠 駅・大学名で検索</h3>
-            <p>マレーシアの大学名や最寄り駅から最適な部屋を探せます。</p>
-        </div>
-        <div class="feature">
-            <img src="icon-hobby.png" alt="趣味でつながる" class="feature-icon">
-            <h3>💬 共通の趣味でつながる</h3>
-            <p>音楽・映画・旅行など、共通の興味を持つルームメイトとマッチング。</p>
-        </div>
-        <div class="feature">
-            <img src="icon-calendar.png" alt="入居日で絞り込み" class="feature-icon">
-            <h3>🕒 入居日で絞り込み</h3>
-            <p>希望の入居日に合わせてスムーズにマッチングできます。</p>
-        </div>
-    </section>
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="py-20 bg-white">
+            <div class="container mx-auto max-w-6xl px-6">
+                <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-16">How BilikMatch Works</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
+                    
+                    <!-- Step 1: For Tenants -->
+                    <div class="step">
+                        <img src="https://placehold.co/80x80/ede9fe/6d28d9?text=🔍&font=poppins"
+                             alt="Search for Rooms"
+                             class="h-20 w-20 mx-auto mb-4 rounded-2xl"
+                             onerror="this.src='https://placehold.co/80x80/ede9fe/6d28d9?text=🔍&font=poppins'">
+                        <h4 class="text-xl font-semibold text-indigo-600 mb-2">1. Find Your Room</h4>
+                        <p class="text-slate-600">
+                            Search listings by university, LRT/MRT station, or hobbies. Or, just ask our AI assistant!
+                        </p>
+                    </div>
 
-    <section id="testimonials" class="content-section">
-        <h2>利用者の声</h2>
-        <div class="testimonial-container">
-            <blockquote>
-                <p>"APUの近くで最高のルームメイトが見つかりました！趣味も合って最高です。"</p>
-                <footer>- A.Tさん (APU学生)</footer>
-            </blockquote>
-            <blockquote>
-                <p>"引越し日が迫っていましたが、入居日で絞り込めたので本当に助かりました。"</p>
-                <footer>- S.Kさん (Sunway大学)</footer>
-            </blockquote>
-        </div>
-    </section>
+                    <!-- Step 2: For Agents -->
+                    <div class="step">
+                        <img src="https://placehold.co/80x80/ede9fe/6d28d9?text=👤&font=poppins"
+                             alt="Find Tenants"
+                             class="h-20 w-20 mx-auto mb-4 rounded-2xl"
+                             onerror="this.src='https://placehold.co/80x80/ede9fe/6d28d9?text=👤&font=poppins'">
+                        <h4 class="text-xl font-semibold text-indigo-600 mb-2">2. Find Your Tenant</h4>
+                        <p class="text-slate-600">
+                            Agents don't just wait. Proactively browse and contact students who fit your property's profile.
+                        </p>
+                    </div>
 
-    <section id="faq" class="content-section">
-        <h2>よくある質問 (FAQ)</h2>
-        <details>
-            <summary>料金はかかりますか？</summary>
-            <div>
-                <p>BilikMatchの基本的なマッチング機能はすべて無料でご利用いただけます。一部の便利な追加機能（オプション）については、別途料金が発生する場合があります。</p>
+                    <!-- Step 3: Connect -->
+                    <div class="step">
+                        <img src="https://placehold.co/80x80/ede9fe/6d28d9?text=💬&font=poppins"
+                             alt="Chat & Connect"
+                             class="h-20 w-20 mx-auto mb-4 rounded-2xl"
+                             onerror="this.src='https://placehold.co/80x80/ede9fe/6d28d9?text=💬&font=poppins'">
+                        <h4 class="text-xl font-semibold text-indigo-600 mb-2">3. Match & Connect</h4>
+                        <p class="text-slate-600">
+                            Both tenants and agents can initiate contact. Match and discuss details in our secure, built-in chat.
+                        </p>
+                    </div>
+                </div>
             </div>
-        </details>
-        <details>
-            <summary>安全性は確保されていますか？</summary>
-            <div>
-                <p>はい。BilikMatchでは、ユーザーの安全を最優先に考えています。学生証による本人確認機能（任意）や、アプリ内での安全なチャット機能を提供し、安心してルームメイト探しができる環境を整えています。</p>
-            </div>
-        </details>
-        <details>
-            <summary>APU以外の大学も対応していますか？</summary>
-            <div>
-                <p>はい。APU（アジアパシフィック大学）の学生はもちろん、クアラルンプール近郊のSunway大学、Taylor's大学、Monash大学など、マレーシア国内の多くの大学の学生にご利用いただいています。</p>
-            </div>
-        </details>
-    </section>
+        </section>
 
-    <footer>
-        © 2025 BilikMatch. All rights reserved.
+        <!-- Key Features Section -->
+        <section id="features" class="py-20">
+            <div class="container mx-auto max-w-6xl px-6">
+                <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-16">Features That Matter</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    
+                    <!-- Feature: AI Assistant -->
+                    <div class="feature bg-white p-8 rounded-2xl shadow-lg transition-transform duration-300 hover:-translate-y-2">
+                        <img src="https://placehold.co/60x60/6d28d9/white?text=🧠&font=poppins"
+                             alt="AI Assistant" class="h-16 w-16 mb-5 rounded-xl"
+                             onerror="this.src='https://placehold.co/60x60/6d28d9/white?text=🧠&font=poppins'">
+                        <h3 class="text-2xl font-semibold text-gray-900 mb-3">Smart AI Assistant</h3>
+                        <p class="text-slate-600">
+                            Just tell our AI your vague request, like "a quiet room near APU under RM800," and let it find the best options for you.
+                        </p>
+                    </div>
+
+                    <!-- Feature: Precise Search -->
+                    <div class="feature bg-white p-8 rounded-2xl shadow-lg transition-transform duration-300 hover:-translate-y-2">
+                        <img src="https://placehold.co/60x60/6d28d9/white?text=📍&font=poppins"
+                             alt="Precise Search" class="h-16 w-16 mb-5 rounded-xl"
+                             onerror="this.src='https://placehold.co/60x60/6d28d9/white?text=📍&font=poppins'">
+                        <h3 class="text-2xl font-semibold text-gray-900 mb-3">University & Station Search</h3>
+                        <p class="text-slate-600">
+                            Filter properties and tenants based on specific university campuses (APU, Sunway, Taylor's) or train stations.
+                        </p>
+                    </div>
+
+                    <!-- Feature: Two-Way Matching -->
+                    <div class="feature bg-white p-8 rounded-2xl shadow-lg transition-transform duration-300 hover:-translate-y-2">
+                        <img src="https://placehold.co/60x60/6d28d9/white?text=🤝&font=poppins"
+                             alt="Two-Way Matching" class="h-16 w-16 mb-5 rounded-xl"
+                             onerror="this.src='https://placehold.co/60x60/6d28d9/white?text=🤝&font=poppins'">
+                        <h3 class="text-2xl font-semibold text-gray-900 mb-3">Two-Way Matching</h3>
+                        <p class="text-slate-600">
+                            Tenants can find rooms, and agents can find tenants. Everyone finds their perfect match faster.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section id="testimonials" class="py-20 bg-white">
+            <div class="container mx-auto max-w-4xl px-6">
+                <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-16">What Our Users Say</h2>
+                <div class="space-y-8">
+                    <blockquote class="bg-slate-100 p-6 rounded-xl border-l-4 border-indigo-500 shadow-sm">
+                        <p class="text-lg italic text-slate-700 mb-4">
+                            "I found the best roommate near APU! We even share the same hobbies, it's great."
+                        </p>
+                        <footer class="text-right font-semibold text-slate-600">- A.T (APU Student)</footer>
+                    </blockquote>
+                    <blockquote class="bg-slate-100 p-6 rounded-xl border-l-4 border-indigo-500 shadow-sm">
+                        <p class="text-lg italic text-slate-700 mb-4">
+                            "My move-in date was close, but being able to filter by date was a real lifesaver. Found a place from Sunway in no time."
+                        </p>
+                        <footer class="text-right font-semibold text-slate-600">- S.K (Sunway University)</footer>
+                    </blockquote>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section id="faq" class="py-20">
+            <div class="container mx-auto max-w-4xl px-6">
+                <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-16">Frequently Asked Questions</h2>
+                <div class="space-y-4">
+                    
+                    <details class="bg-white p-4 rounded-lg shadow-sm group">
+                        <summary class="flex justify-between items-center font-semibold text-gray-900 cursor-pointer">
+                            Is it free to use?
+                            <span class="arrow-down text-indigo-600 transform transition-transform duration-300">▼</span>
+                        </summary>
+                        <div class="mt-4 pt-4 border-t text-slate-600">
+                            <p>Yes! All basic matching features for both tenants and agents are completely free to use. We may introduce optional premium features in the future.</p>
+                        </div>
+                    </details>
+                    
+                    <details class="bg-white p-4 rounded-lg shadow-sm group">
+                        <summary class="flex justify-between items-center font-semibold text-gray-900 cursor-pointer">
+                            How does the AI search work?
+                            <span class="arrow-down text-indigo-600 transform transition-transform duration-300">▼</span>
+                        </summary>
+                        <div class="mt-4 pt-4 border-t text-slate-600">
+                            <p>You can simply type what you're looking for in plain English, like "a room near Taylor's with good Wi-Fi." Our AI understands your intent and searches listings that match your criteria, saving you time from clicking multiple filters.</p>
+                        </div>
+                    </details>
+
+                    <details class="bg-white p-4 rounded-lg shadow-sm group">
+                        <summary class="flex justify-between items-center font-semibold text-gray-900 cursor-pointer">
+                            Which universities are supported?
+                            <span class="arrow-down text-indigo-600 transform transition-transform duration-300">▼</span>
+                        </summary>
+                        <div class="mt-4 pt-4 border-t text-slate-600">
+                            <p>While popular with students from APU, Sunway, Taylor's, and Monash, our platform works for all universities and colleges across Malaysia. You can search by any university name or nearby location.</p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-10 bg-slate-100">
+        <p class="text-slate-500">© 2025 BilikMatch. All rights reserved.</p>
     </footer>
-</body>
 
+</body>
 </html>
