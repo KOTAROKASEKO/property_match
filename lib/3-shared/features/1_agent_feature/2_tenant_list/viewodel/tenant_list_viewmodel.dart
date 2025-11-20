@@ -1,7 +1,10 @@
 // lib/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:re_conver/3-shared/features/1_agent_feature/2_tenant_list/repo/agent_search_service.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/viewmodel/post_service.dart';
 import 'package:shared_data/shared_data.dart';
+import 'package:template_hive/template_hive.dart';
 import '../model/tenant_filter_options.dart';
 import '../../../2_tenant_feature/3_profile/models/profile_model.dart';
 
@@ -16,6 +19,8 @@ class TenantListViewModel extends ChangeNotifier {
   String _searchQuery = '';
   DocumentSnapshot? _lastDocument;
   bool _hasMoreTenants = true;
+  final PostService _postService = PostService(); // 座標変換用
+  final AgentSearchService _agentSearchService = AgentSearchService();
 
   List<UserProfile> get filteredTenants => _filteredTenants;
   bool get isLoading => _isLoading;
@@ -133,6 +138,42 @@ class TenantListViewModel extends ChangeNotifier {
     }
   }
 
+
+  Future<void> searchTenantsForProperty(PropertyTemplate template) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      print('🚀 [TenantListViewModel] Searching for: ${template.name}');
+
+      // 1. 物件の場所 (String) を 座標 (Lat/Lng) に変換
+      Map<String, double>? coords;
+      if (template.location.isNotEmpty) {
+        // ★ ここでエラーが出ていたはず。_postServiceが初期化されていれば動きます
+        coords = await _postService.getLatLng(template.location);
+      }
+
+      // 2. Algoliaで検索実行
+      final results = await _agentSearchService.searchTenants(
+        template: template,
+        lat: coords?['lat'],
+        lng: coords?['lng'],
+      );
+
+      // 3. 結果をリストに反映 (ブロックユーザー除外)
+      _filteredTenants = results.where((tenant) => !_blockedUserIds.contains(tenant.uid)).toList();
+      
+      print('✅ [TenantListViewModel] Found ${_filteredTenants.length} tenants.');
+
+    } catch (e) {
+      print('❌ [TenantListViewModel] Error searching: $e');
+      _filteredTenants = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
   void applySearchQuery(String query) {
     _searchQuery = query;
     _applyLocalSearchFilter();

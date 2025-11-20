@@ -68,13 +68,19 @@ class _PostCardState extends State<PostCard> {
 
   void _sharePost() {
     final post = widget.post;
-    final String textToShare = 'Check out this listing on Re:Conver:\n\n'
+    
+    final String shareUrl = 'https://bilikmatch.com/app/#/listing/${post.id}';
+
+    final String textToShare = 'Check out this listing on BilikMatch:\n\n'
         '🏠 *Property:* ${post.condominiumName}\n'
         '💰 *Rent:* RM ${post.rent.toStringAsFixed(0)}/month\n'
-        '🚪 *Room Type:* ${post.roomType}\n\n'
-        '${post.description}\n\n'
+        '🚪 *Room Type:* ${post.roomType}\n'
+        '📍 *Location:* ${post.location}\n\n'
+        '$shareUrl\n\n' // <--- Add the generated link here
         'View more in the app!';
-    Share.share(textToShare);
+    
+    // 2. Share the text + link
+    Share.share(textToShare, subject: 'Room for rent: ${post.condominiumName}');
   }
 
   @override

@@ -19,6 +19,8 @@ class UserProfile {
   final DateTime? moveinDate;
   final String gender; // ★★★ 追加 ★★★
   final List<String> hobbies; // Added hobbies
+  final List<String> preferredAreas; // ★ 追加: 住んでもいいエリア名
+  final List<Map<String, double>>? geoloc;
 
   UserProfile({
     required this.uid,
@@ -38,6 +40,8 @@ class UserProfile {
     this.moveinDate,
     this.gender = 'Not specified',
     this.hobbies = const [],
+    this.preferredAreas = const [], // ★ 初期化
+    this.geoloc, // ★ 初期化
   });
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
@@ -60,6 +64,9 @@ class UserProfile {
       moveinDate: (data?['moveinDate'] as Timestamp?)?.toDate(),
       gender: data?['gender'] as String? ?? 'Not specified', // ★★★ 追加 ★★★
       hobbies: List<String>.from(data?['hobbies'] ?? []), // Added hobbies
+      preferredAreas: List<String>.from(data?['preferredAreas'] ?? []), // ★ 追加
+      // Firestoreから読み込む際は型キャストに注意
+      geoloc: (data?['_geoloc'] as List<dynamic>?)?.map((e) => Map<String, double>.from(e)).toList(),
     );
   }
 
@@ -81,6 +88,8 @@ class UserProfile {
       'moveinDate': moveinDate != null ? Timestamp.fromDate(moveinDate!) : null,
       'gender': gender, // ★★★ 追加 ★★★
       'hobbies': hobbies, // Added hobbies
+      'preferredAreas': preferredAreas, // ★ 追加
+      '_geoloc': geoloc,
     };
   }
 }

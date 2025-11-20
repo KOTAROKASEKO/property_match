@@ -1,5 +1,6 @@
 // lib/3-shared/features/2_tenant_feature/2_ai_chat/viewmodel/ai_chat_list_viewmodel.dart
 import 'dart:async';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -16,13 +17,13 @@ class AIChatListViewModel extends ChangeNotifier {
 
   // AIチャットルームのリストをリアルタイムで取得
   Stream<List<AIChatRoomModel>> _getChatRoomsStream() {
-    if (userData.userId.isEmpty) return Stream.value([]);
+    final targetUserId = _currentUserId;
     
     pr('Initializing AI Chat Stream for user: ${userData.userId}');
 
     return _firestore
         .collection('ai_chat_rooms')
-        .where('userId', isEqualTo: userData.userId)
+        .where('userId', isEqualTo: targetUserId)
         .orderBy('lastMessageTimestamp', descending: true)
         .snapshots()
         .map((snapshot) {
@@ -55,15 +56,21 @@ class AIChatListViewModel extends ChangeNotifier {
       rethrow;
     }
   }
-
+String get _currentUserId {
+    if (userData.userId.isNotEmpty) {
+      return userData.userId;
+    } else {
+      return GuestIdManager.guestId; // 先ほど定義したゲストID
+    }
+  }
   Future<String> createNewChatRoom() async {
-    if (userData.userId.isEmpty) throw Exception("User not logged in");
+    final targetUserId = _currentUserId;
 
     final now = Timestamp.now();
     final newChatDoc = _firestore.collection('ai_chat_rooms').doc();
 
     final newRoomData = {
-      'userId': userData.userId,
+      'userId': targetUserId,
       'title': 'New Chat - ${DateFormat.yMd().format(now.toDate())}',
       'createdAt': now,
       'lastMessageText': 'welcome to the ai agent!',
@@ -82,5 +89,19 @@ class AIChatListViewModel extends ChangeNotifier {
     });
 
     return newChatDoc.id;
+  }
+}
+
+class GuestIdManager {
+  static String? _guestId;
+
+  static String get guestId {
+    if (_guestId == null) {
+      // ランダムなIDを生成 (例: guest_123456789)
+      final random = Random();
+      final idPart = DateTime.now().millisecondsSinceEpoch.toString() + random.nextInt(10000).toString();
+      _guestId = 'guest_$idPart';
+    }
+    return _guestId!;
   }
 }

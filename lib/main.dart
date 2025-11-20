@@ -1,12 +1,10 @@
 // lib/main.dart
+import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/viewmodel/deeplink_viewmodel.dart';
 import 'package:re_conver/3-shared/features/3_guest_feature/guest_landing_scaffold.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_event_listener.dart';
 import 'package:template_hive/template_hive.dart';
-// ★ 修正: このパスは元々正しかった
-// ★ 修正: このパスは元々正しかった
 import '3-shared/features/authentication/role_selection_screen.dart';
 import '3-shared/features/notifications/viewmodel/notification_viewmodel.dart';
-// ★ 修正: このパスは元々正しかった
 import '3-shared/firebase_options.dart';
 import '3-shared/core/responsive/responsive_layout.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -96,14 +94,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
     if (data['action'] == 'blocked_by') {
       final String blockerUid = data['blockerUid'];
-      
+
       if (blockerUid != currentUserId) {
         pr('Received silent notification: BLOCKED by $blockerUid');
         await chatRepo.addToBlockedUsers(blockerUid);
       } else {
         pr('Ignoring own "blocked_by" notification.');
       }
-
     } else if (data['action'] == 'unblocked_by') {
       final String unblockerUid = data['unblockerUid'];
 
@@ -116,7 +113,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     }
   }
 }
-
 
 Future<void> _setupInteractedMessage() async {
   RemoteMessage? initialMessage = await FirebaseMessaging.instance
@@ -153,7 +149,25 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const AuthWrapper(),
+      initialRoute: '/',
+
+      // 2. ルート定義を追加
+      routes: {'/': (context) => const AuthWrapper()},
+
+      // 3. シェア用URLをキャッチして詳細画面を開くロジック
+      onGenerateRoute: (settings) {
+        // settings.name には "/listing/123" が入ってきます
+        final uri = Uri.parse(settings.name ?? '');
+
+        if (uri.pathSegments.length == 2 && uri.pathSegments[0] == 'listing') {
+          final postId = uri.pathSegments[1];
+          // ここで詳細画面へ遷移
+          return MaterialPageRoute(
+            builder: (context) => DeepLinkPostView(postId: postId),
+          );
+        }
+        return null;
+      },
     );
   }
 }
@@ -178,7 +192,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     if (role == null) {
       try {
         FirebaseFirestore firestore = FirebaseFirestore.instance;
-        
+
         final doc = await firestore
             .collection('users_prof')
             .doc(user.uid) // ★ 3. user.uid を使用
@@ -228,15 +242,17 @@ class _AuthWrapperState extends State<AuthWrapper> {
                   if (prefsSnapshot.hasData && prefsSnapshot.data != null) {
                     final role = prefsSnapshot.data!;
                     pr('main.dart role is ${role}');
-                    userData.setRole(role == 'agent' ? Roles.agent : Roles.tenant);
+                    userData.setRole(
+                      role == 'agent' ? Roles.agent : Roles.tenant,
+                    );
                     context.read<UnreadMessagesViewModel>().restartListener();
                     return const ResponsiveLayout();
                   } else {
-                    pr('user id is : ${user.uid}'); 
+                    pr('user id is : ${user.uid}');
                     return FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance
                           .collection('users_prof')
-                          .doc(user.uid) 
+                          .doc(user.uid)
                           .get(),
                       builder: (context, userDocSnapshot) {
                         if (userDocSnapshot.connectionState ==
@@ -249,14 +265,17 @@ class _AuthWrapperState extends State<AuthWrapper> {
                         if (userDocSnapshot.hasData &&
                             userDocSnapshot.data!.exists) {
                           final data =
-                              userDocSnapshot.data!.data() as Map<String, dynamic>;
+                              userDocSnapshot.data!.data()
+                                  as Map<String, dynamic>;
                           if (data.containsKey('role')) {
                             final role = data['role'] as String;
                             _saveRoleToPrefs(role);
                             userData.setRole(
                               role == 'agent' ? Roles.agent : Roles.tenant,
                             );
-                            context.read<UnreadMessagesViewModel>().restartListener();
+                            context
+                                .read<UnreadMessagesViewModel>()
+                                .restartListener();
                             return const ResponsiveLayout();
                           }
                         }
@@ -274,7 +293,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           );
         }
         userData.clearUser();
-        
+
         return DelayedFrameBuilder(
           builder: (context) {
             // GuestLandingScaffold のビルドを1フレーム遅らせる
@@ -293,7 +312,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
 /// 1フレーム待機してから子ウィジェットをビルドするヘルパー
 class DelayedFrameBuilder extends StatefulWidget {
   final WidgetBuilder builder;
-  const DelayedFrameBuilder({Key? key, required this.builder}) : super(key: key);
+  const DelayedFrameBuilder({Key? key, required this.builder})
+    : super(key: key);
 
   @override
   State<DelayedFrameBuilder> createState() => _DelayedFrameBuilderState();

@@ -1,5 +1,6 @@
 // lib/features/authentication/login_placeholder.dart
-
+// 他のimportの下に追加
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -377,8 +378,6 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        // フォーム切り替え時にカードの高さが
-        // スムーズに変わるように AnimatedSize を追加
         child: AnimatedSize(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
@@ -430,7 +429,8 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
     );
   }
 
-  /// Sign In フォームを構築
+
+  
   Widget _buildSignInForm(BuildContext context) {
     // アニメーションのためにキーを設定
     return Container(

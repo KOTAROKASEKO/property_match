@@ -44,6 +44,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late DateTime? _moveInDate;
   late List<String> _hobbies; // Added hobbies
   final _hobbyController = TextEditingController(); // Added hobby controller
+  late List<String> _preferredAreas; // ★ 追加
+  final _areaController = TextEditingController();
 
   bool _isLoading = false;
 
@@ -65,6 +67,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _moveInDate = widget.userProfile.moveinDate;
     _gender = widget.userProfile.gender;
     _hobbies = List<String>.from(widget.userProfile.hobbies); // Added hobbies
+    _preferredAreas = List<String>.from(widget.userProfile.preferredAreas);
   }
 
   Future<void> _pickImage() async {
@@ -119,10 +122,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         moveinDate: _moveInDate, // ★★★ 追加 ★★★
         gender: _gender,
         hobbies: _hobbies,
+        preferredAreas: _preferredAreas,
       );
+      
 
       try {
-        await _userService.updateUserProfile(updatedProfile);
+        await _userService.updateUserProfileWithGeo(updatedProfile);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );
@@ -289,11 +294,53 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Work/Study Location',
                 ),
+
                 onSaved: (value) => _location = value!,
                 validator: (value) =>
                     value!.isEmpty ? 'Please enter a location' : null,
               ),
               const SizedBox(height: 16),
+              const SizedBox(height: 24),
+              _buildSectionHeader('Preferred Living Areas'),
+              TextFormField(
+                controller: _areaController,
+                decoration: InputDecoration(
+                  labelText: 'Add area (e.g. Cheras, Bangsar)',
+                  hintText: 'Press + to add',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    onPressed: () {
+                      if (_areaController.text.isNotEmpty) {
+                        setState(() {
+                          _preferredAreas.add(_areaController.text.trim());
+                          _areaController.clear();
+                        });
+                      }
+                    },
+                  ),
+                ),
+                onFieldSubmitted: (val) {
+                  if (val.isNotEmpty) {
+                    setState(() {
+                      _preferredAreas.add(val.trim());
+                      _areaController.clear();
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8.0,
+                children: _preferredAreas
+                    .map(
+                      (area) => Chip(
+                        label: Text(area),
+                        onDeleted: () =>
+                            setState(() => _preferredAreas.remove(area)),
+                      ),
+                    )
+                    .toList(),
+              ),
               DropdownButtonFormField<String>(
                 value: _pets,
                 decoration: const InputDecoration(labelText: 'Allow Pets?'),

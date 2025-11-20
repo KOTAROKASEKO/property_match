@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:algoliasearch/algoliasearch_lite.dart';
-import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:http/http.dart' as http;
 import 'package:shared_data/shared_data.dart';
 import '../../../../core/model/PostModel.dart';
@@ -122,9 +121,6 @@ class PostService {
         pr('[DEBUG] No location query provided.');
       }
 
-      // ================================
-      // 2️⃣ Algolia フィルター文字列構築 (from filters)
-      // ================================
       final List<String> filterStrings = [];
       final List<List<String>> facetFilters = [];
 

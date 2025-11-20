@@ -20,14 +20,11 @@ class AIChatScreen extends StatefulWidget {
 }
 
 class _AIChatScreenState extends State<AIChatScreen> {
-  // late String _chatId; // ★★★ 削除 (2/3) ★★★
   late AIChatViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
-    // ★★★ 修正 (3/3): widget から chatId を渡す ★★★
-    // _chatId = FirebaseFirestore.instance.collection("ai_chats").doc().id; // 削除
     _viewModel = AIChatViewModel(chatId: widget.chatId); // 修正
   }
 
@@ -37,7 +34,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
     super.dispose();
   }
 
-  // ★★★ チャット開始ロジック ★★★
   void _startChatWithAgent(PostModel post) {
     // チャットID生成ロジック (共通化しても良い)
     List<String> uids = [userData.userId, post.userId];

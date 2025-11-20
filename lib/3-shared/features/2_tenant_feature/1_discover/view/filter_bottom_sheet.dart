@@ -2,13 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_list_screen.dart';
-import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_screen.dart';
 import '../model/filter_options.dart';
-// ★★★ インポート追加 (1/4) ★★★
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_data/shared_data.dart';
-import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
-// import 'your_ai_chat_screen.dart'; // ★ AIチャット画面をインポート
 
 class FilterBottomSheet extends StatefulWidget {
   final FilterOptions initialFilters;
@@ -20,7 +14,6 @@ class FilterBottomSheet extends StatefulWidget {
 }
 
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
-  // ... (initStateや他の変数は変更なし) ...
   late String? _gender;
   late List<String> _selectedRoomTypes;
   late TextEditingController _semanticQueryController;
@@ -79,7 +72,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     Navigator.of(context).pop(filters);
   }
 
-  // ... (buildメソッドや他の _build... ヘルパーは変更なし) ...
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -189,10 +181,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       ),
     onPressed: () async {
         // ★★★ 修正 (3/4): 認証チェックとチャットID取得/作成ロジックを「削除」 ★★★
-        if (userData.userId.isEmpty) {
-          showSignInModal(context);
-          return;
-        }
+        
 
         // ★★★ 修正 (4/4): AIChatListScreen に遷移 ★★★
         final aiFilters = await Navigator.push<FilterOptions>(
@@ -209,8 +198,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
   }
   
-  // ... (他の _build... ヘルパーは変更なし) ...
-  // ★★★ 新しいヘルパーウィジェット: セクションカード ★★★
   Widget _buildSectionCard({
     required IconData icon,
     required String title,

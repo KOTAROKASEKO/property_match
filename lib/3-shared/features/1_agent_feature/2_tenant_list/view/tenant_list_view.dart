@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
 import '../model/tenant_filter_options.dart';
 import 'tenant_detail_screen.dart';
 import 'tenant_filter_bottom_sheet.dart';
@@ -138,8 +139,14 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                 const VerticalDivider(width: 1, thickness: 1),
                 // --- 右側: テナントリスト (残り) ---
                 Expanded(
-                  // ★★★ 1. isWideScreen フラグを渡す ★★★
-                  child: _buildTenantGrid(viewModel, isWideScreen: true), // グリッド表示用メソッド
+                  child: Column( // ★ Columnに変更してボタンを追加
+                    children: [
+                      _buildSmartSearchBar(context), // ★ 追加
+                      Expanded(
+                        child: _buildTenantGrid(viewModel, isWideScreen: true),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );
@@ -164,7 +171,14 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                 foregroundColor: Colors.white,
               ),
               // ★★★ 1. isWideScreen フラグを渡す ★★★
-              body: _buildTenantGrid(viewModel, isWideScreen: false), // グリッド表示用メソッド
+              body: Column( // ★ Columnに変更してボタンを追加
+                children: [
+                  _buildSmartSearchBar(context), // ★ 追加
+                  Expanded(
+                    child: _buildTenantGrid(viewModel, isWideScreen: false),
+                  ),
+                ],
+              ),
             );
           }
         },
@@ -219,6 +233,118 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
           return TenantGridCard(
             tenant: tenant,
             onTap: () => _showTenantDetails(tenant),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSmartSearchBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Material(
+        elevation: 3,
+        shadowColor: Colors.black.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(30),
+        color: Colors.white,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(30),
+          onTap: () => _showPropertySelectorSheet(context), // ★ タップで物件選択シートを表示
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.auto_awesome, size: 20, color: Colors.deepPurple),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "Find matching tenants",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      Text(
+                        "Select from your properties",
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ★ 物件選択シートを表示するメソッド
+  void _showPropertySelectorSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.8,
+        expand: false,
+        builder: (_, scrollController) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                // ハンドルバー
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16.0),
+                  child: Text(
+                    "Select a Property",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                // ★ 既存のカルーセルウィジェットを再利用！
+                Expanded(
+                  child: PropertyTemplateCarouselWidget( //
+                    onTemplateSelected: (template) {
+                      Navigator.pop(context); // シートを閉じる
+                      
+                      // TODO: ここで検索処理を実行！
+                      context.read<TenantListViewModel>().searchTenantsForProperty(template);
+                      
+                      // 選択したことをユーザーにフィードバック
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Searching tenants for ${template.name}...'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
