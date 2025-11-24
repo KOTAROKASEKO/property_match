@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_list_screen.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_main_layout.dart';
 import '../model/filter_options.dart';
 
 class FilterBottomSheet extends StatefulWidget {
@@ -165,11 +166,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
   }
 
-  // ★★★ 修正 (2/4): _buildAIChatButton の onPressed を async に変更 ★★★
   Widget _buildAIChatButton(BuildContext context) {
     return ElevatedButton.icon(
       icon: const Icon(Icons.chat_outlined, size: 18),
-      label: const Text('Chat with AI to Find Your Room'),
+      label: const Text('Click me ;)'),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.deepPurple.shade50,
         foregroundColor: Colors.deepPurple.shade700,
@@ -180,14 +180,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         ),
       ),
     onPressed: () async {
-        // ★★★ 修正 (3/4): 認証チェックとチャットID取得/作成ロジックを「削除」 ★★★
-        
-
-        // ★★★ 修正 (4/4): AIChatListScreen に遷移 ★★★
         final aiFilters = await Navigator.push<FilterOptions>(
           context,
           // ★ AIChatScreen ではなく AIChatListScreen を呼び出す
-          MaterialPageRoute(builder: (_) => const AIChatListScreen()),
+          MaterialPageRoute(builder: (_) => const AIChatMainLayout()),
         );
         
         if (aiFilters != null && context.mounted) {

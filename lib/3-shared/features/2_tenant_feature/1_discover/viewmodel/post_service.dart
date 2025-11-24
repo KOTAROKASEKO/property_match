@@ -24,7 +24,6 @@ class PostService {
 
   Future<Map<String, double>?> getLatLng(String address) async {
     try {
-      // ★ .env（dart-define）からAPIキーを読む（Web / Mobile 共通）
       const apiKey = String.fromEnvironment('GEO_CODE_API_KEY');
 
       if (apiKey.isEmpty) {

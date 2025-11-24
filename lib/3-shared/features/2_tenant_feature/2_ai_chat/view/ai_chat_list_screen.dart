@@ -70,12 +70,7 @@ class AIChatListScreen extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No AI chats yet. Tap + to start!',
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
-                    ),
-                  );
+                  return _buildEmptyState(context, viewModel);
                 }
 
                 final chatRooms = snapshot.data!;
@@ -137,5 +132,117 @@ class AIChatListScreen extends StatelessWidget {
         },
       ),
     );
+  }
+  
+  Widget _buildEmptyState(BuildContext context, AIChatListViewModel viewModel) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // 1. アイキャッチアイコン
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.auto_awesome,
+                  size: 64, color: Colors.deepPurple),
+            ),
+            const SizedBox(height: 24),
+
+            // 2. キャッチコピー
+            const Text(
+              "Your Personal Rental Concierge",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 3. 機能説明 (Why)
+            const Text(
+              "Stop endless scrolling. Just tell the AI your budget, location, and vibe.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black54,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // 4. メリットの箇条書き
+            _buildFeatureRow(Icons.check, "Fun and close to APU"),
+            const SizedBox(height: 8),
+            _buildFeatureRow(Icons.check, "Room with nice accessibility to Sunway uni"),
+            const SizedBox(height: 8),
+            _buildFeatureRow(Icons.check, "Around 900rm, and fun place, close to APU"),
+
+            const SizedBox(height: 32),
+
+            // 5. アクションボタン
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _startNewChat(context, viewModel),
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: const Text("Start AI Chat",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureRow(IconData icon, String text) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 18, color: Colors.green),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Future<void> _startNewChat(
+      BuildContext context, AIChatListViewModel viewModel) async {
+    final newChatId = await viewModel.createNewChatRoom();
+    if (!context.mounted) return;
+
+    final filters = await Navigator.push<FilterOptions>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AIChatScreen(chatId: newChatId),
+      ),
+    );
+    
+    if (context.mounted && filters != null) {
+      Navigator.of(context).pop(filters);
+    }
   }
 }

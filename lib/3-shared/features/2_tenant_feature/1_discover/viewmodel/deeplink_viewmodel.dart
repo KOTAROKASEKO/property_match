@@ -215,7 +215,7 @@ class _DeepLinkPostViewState extends State<DeepLinkPostView> {
                         child: Consumer<PostActionsViewModel>(
                           builder: (context, model, child) {
                             // ViewModel内のpostを使用
-                            final post = (_viewModel as DeepLinkViewModel).post!;
+                            final post = (_viewModel).post!;
                             return PostCard(
                               post: post,
                               onToggleLike: _viewModel.toggleLike,

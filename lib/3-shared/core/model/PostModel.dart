@@ -27,7 +27,8 @@ class PostModel {
   final DateTime? durationStart;
   final DateTime? moveInDate;
   final int? durationMonths;
-  final List<String> hobbies; // ★★★ ADDED ★★★
+  final List<String> hobbies;
+  final String phoneNumber;
 
   PostModel({
     this.moveInDate,
@@ -54,6 +55,7 @@ class PostModel {
     this.durationStart,
     this.durationMonths,
     this.hobbies = const [], // ★★★ ADDED ★★★
+    this.phoneNumber = '',
   });
 
   bool get isLikedByCurrentUser {
@@ -102,7 +104,8 @@ class PostModel {
       location: data['location'] as String? ?? '',
       durationStart: (data['durationStart'] as Timestamp?)?.toDate(),
       durationMonths: data['durationMonths'] as int? ?? 12,
-      hobbies: List<String>.from(data['hobbies'] ?? []), // ★★★ ADDED ★★★
+      hobbies: List<String>.from(data['hobbies'] ?? []),
+      phoneNumber: data['phoneNumber'] ?? '',
     );
   }
 
@@ -148,6 +151,7 @@ class PostModel {
       durationStart: safeTimestamp(hit['durationStart']).toDate(),
       durationMonths: hit['durationMonths'] as int?,
       hobbies: List<String>.from(hit['hobbies'] ?? []), // ★★★ ADDED ★★★
+      phoneNumber: hit['phoneNumber'] ?? '',
     );
   }
 }

@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart'; // ★★★ ADDED ★★★
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/3-shared/common_feature/post_actions_viewmodel.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_list_screen.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_main_layout.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart'; // ★★★ ADDED ★★★
 import 'package:shared_data/shared_data.dart';
 import 'package:template_hive/template_hive.dart';
@@ -162,17 +164,13 @@ class _DiscoverViewState extends State<_DiscoverView>
     // ★★★ LayoutBuilder で画面幅を判定 ★★★
     return LayoutBuilder(
       builder: (context, constraints) {
-        // --- 画面幅の閾値 ---
         const double wideScreenThreshold = 800.0;
         final bool isWideScreen = constraints.maxWidth >= wideScreenThreshold;
-
-        // --- Scaffold または Row を返す ---
         return Scaffold(
-          // AppBar は縦長画面でのみ表示
           appBar: isWideScreen ? null : _buildNarrowAppBar(),
-          backgroundColor: Colors.grey[100], // 背景色を設定
-          body: Center( // ワイドスクリーン時に中央寄せ
-            child: ConstrainedBox( // ワイドスクリーン時の最大幅を設定
+          backgroundColor: Colors.grey[100],
+          body: Center(
+            child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: isWideScreen ? 1400 : double.infinity,
               ),
@@ -210,11 +208,25 @@ class _DiscoverViewState extends State<_DiscoverView>
         ),
       ),
       actions: [ // フィルターボタンを actions に配置
+      IconButton(
+          onPressed: ()async{
+          final aiFilters = await Navigator.push<FilterOptions>(
+          context,
+          // ★ AIChatScreen ではなく AIChatListScreen を呼び出す
+          MaterialPageRoute(builder: (_) => const AIChatMainLayout()),
+        );
+        
+        if (aiFilters != null && context.mounted) {
+          // AIチャット画面からフィルターが返ってきたら、このボトムシートも閉じる
+          Navigator.of(context).pop(aiFilters);
+        }
+        }, icon: Icon(Icons.auto_awesome, color: Colors.amber,)),
         IconButton(
           icon: const Icon(Icons.filter_list),
           onPressed: _showFilterSheet, // ★ ボトムシート表示メソッドを呼び出す
           tooltip: 'Filters',
         ),
+        
       ],
     );
   }
@@ -252,16 +264,13 @@ class _DiscoverViewState extends State<_DiscoverView>
           child: DiscoverFilterPanel(), // 作成したフィルターパネル
         ),
         const VerticalDivider(width: 1, thickness: 1),
-        // --- 右側: 投稿リスト ---
         Expanded(
-          child: Column( // 検索バーを追加するために Column に変更
+          child: Column(
             children: [
-              // 検索バー (AppBarの代わりにここに配置)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0), // 上下の Padding を調整
                 child: _buildSearchBar(),
               ),
-              // 投稿リスト部分
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () => _viewModel.fetchInitialPosts(),
@@ -340,10 +349,7 @@ class _DiscoverViewState extends State<_DiscoverView>
     );
   }
 
-
-  // --- ★ GridView 構築メソッド ---
   Widget _buildPostGrid(DiscoverViewModel viewModel, BoxConstraints constraints) {
-     // 画面幅に基づいて列数を計算 (例)
     final crossAxisCount = (constraints.maxWidth / 400).floor().clamp(1, 4); // 最小1列、最大4列
 
     return SliverPadding(
@@ -372,7 +378,6 @@ class _DiscoverViewState extends State<_DiscoverView>
     );
   }
 
-  // --- ★ ListView 構築メソッド (旧 _buildNarrowScreenList) ---
   Widget _buildPostList(DiscoverViewModel viewModel) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
@@ -415,9 +420,6 @@ class _DiscoverViewState extends State<_DiscoverView>
       nationality: 'Any', // Consider adding nationality to PostModel if needed
     );
 
-    // ★★★ Close bottom sheet if it's open ★★★
-    // (It's safe to call pop even if it's not open,
-    //  but this ensures it closes if chat is started from the sheet)
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     } 
@@ -434,7 +436,4 @@ class _DiscoverViewState extends State<_DiscoverView>
       ),
     );
   }
-
-  // --- ( Shimmer Widget は変更なし ) ---
-  // ... _ShimmerPostCard ...
 }

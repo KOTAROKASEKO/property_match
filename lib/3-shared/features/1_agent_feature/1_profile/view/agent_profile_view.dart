@@ -323,7 +323,7 @@ class _ActionButtons extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton.icon(
-              icon: const Icon(Icons.add_circle_outline),
+              icon: const Row(children: [Icon(Icons.add),Icon(Icons.home)],),
               onPressed: () {
                 Navigator.push(
                   context,

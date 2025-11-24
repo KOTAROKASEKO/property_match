@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_list_screen.dart';
-import 'package:shared_data/shared_data.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_main_layout.dart';
 import '../model/filter_options.dart';
 import '../viewmodel/discover_viewmodel.dart';
 
@@ -15,7 +15,6 @@ class DiscoverFilterPanel extends StatefulWidget {
 }
 
 class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
-  // ... (initStateや他の変数は変更なし) ...
   late String? _gender;
   late List<String> _selectedRoomTypes;
   late TextEditingController _semanticQueryController;
@@ -26,7 +25,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   final List<String> _genderOptions = ['Male', 'Female', 'Mix', 'Any'];
   final List<String> _roomTypeOptions = ['Single', 'Middle', 'Master'];
 
-  late DiscoverViewModel _viewModel; // ViewModel reference
+  late DiscoverViewModel _viewModel; 
 
   final _hobbyController = TextEditingController();
   late List<String> _hobbies;
@@ -38,7 +37,6 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     _initializeFilters(_viewModel.filterOptions);
   }
 
-  // Update UI if ViewModel filters change (e.g., cleared)
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -47,7 +45,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   }
 
   void _initializeFilters(FilterOptions filters) {
-    _gender = filters.gender ?? 'Any'; // Default to 'Any' if null
+    _gender = filters.gender ?? 'Any'; 
     _selectedRoomTypes = filters.roomType ?? [];
     _semanticQueryController =
         TextEditingController(text: filters.semanticQuery);
@@ -62,7 +60,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
 
   void _applyFilters() {
     final filters = FilterOptions(
-      gender: _gender == 'Any' ? null : _gender, // Send null if 'Any'
+      gender: _gender == 'Any' ? null : _gender, 
       roomType: _selectedRoomTypes.isEmpty ? null : _selectedRoomTypes,
       semanticQuery: _semanticQueryController.text.trim().isEmpty
           ? null
@@ -104,22 +102,23 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
             child: ListView(
               children: [
                 _buildSectionCard(
-                  icon: Icons.auto_awesome, // ★ アイコン
-                  title: 'AI Search Assistant', // ★ タイトル
+                  color: Colors.amber,
+                  icon: Icons.auto_awesome, 
+                  title: 'AI Search Assistant', 
                   children: [
-                    _buildAIChatButton(context), // ★ AIチャットボタン
+                    _buildAIChatButton(context), 
                   ],
                 ),
                 _buildSectionCard(
-                  icon: Icons.calendar_today_outlined, // ★ アイコン
-                  title: 'Availability', // ★ タイトル
+                  icon: Icons.calendar_today_outlined, 
+                  title: 'Availability', 
                   children: [
                     _buildDateRangePicker(context),
                   ],
                 ),
                 _buildSectionCard(
-                  icon: Icons.home_outlined, // ★ アイコン
-                  title: 'Property Details', // ★ タイトル
+                  icon: Icons.home_outlined, 
+                  title: 'Property Details', 
                   children: [
                     const Text("Gender",
                         style: TextStyle(fontWeight: FontWeight.w500)),
@@ -133,22 +132,22 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
                   ],
                 ),
                 _buildSectionCard(
-                  icon: Icons.attach_money_outlined, // ★ アイコン
-                  title: 'Rent Range (RM)', // ★ タイトル
+                  icon: Icons.attach_money_outlined, 
+                  title: 'Rent Range (RM)', 
                   children: [
                     _buildRentSlider(),
                   ],
                 ),
                 _buildSectionCard(
-                  icon: Icons.lightbulb_outline, // ★ アイコン
-                  title: 'Atmosphere / Keywords', // ★ タイトル
+                  icon: Icons.lightbulb_outline, 
+                  title: 'Atmosphere / Keywords', 
                   children: [
                     _buildSemanticQueryInput(),
                   ],
                 ),
                 _buildSectionCard(
-                  icon: Icons.pool_outlined, // ★ アイコン
-                  title: 'Hobbies & Lifestyle', // ★ タイトル
+                  icon: Icons.pool_outlined, 
+                  title: 'Hobbies & Lifestyle', 
                   children: [
                     _buildHobbiesInput(),
                   ],
@@ -163,7 +162,6 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     );
   }
 
-  // --- Header ---
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -178,7 +176,6 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     );
   }
 
-  // --- Apply Button ---
   Widget _buildApplyButton() {
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
@@ -197,11 +194,13 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     );
   }
 
-  // ★★★ 修正 (2/4): _buildAIChatButton の onPressed を async に変更 ★★★
+
   Widget _buildAIChatButton(BuildContext context) {
     return ElevatedButton.icon(
-      icon: const Icon(Icons.chat_outlined, size: 18),
-      label: const Text('Chat with AI to Find Your Room'),
+      icon: const Padding(
+        padding: EdgeInsetsGeometry.only(left: 10),
+        child:Icon(Icons.rocket_launch, size: 18),),
+      label: const Text('Try Me!!!  '),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.deepPurple.shade50,
         foregroundColor: Colors.deepPurple.shade700,
@@ -212,26 +211,21 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
         ),
       ),
       onPressed: () async {
-        if(userData.userId.isNotEmpty){
-          
-          if (!context.mounted) return;
-          
-          final aiFilters = await Navigator.push<FilterOptions>(
-            context,
-            // ★ AIChatScreen ではなく AIChatListScreen を呼び出す
-            MaterialPageRoute(builder: (_) => const AIChatListScreen()),
-          );
-          if (aiFilters != null) {
-            _viewModel.applyFilters(aiFilters);
-          }
+        if (!context.mounted) return;
+        
+        final aiFilters = await Navigator.push<FilterOptions>(
+          context,
+          MaterialPageRoute(builder: (_) => const AIChatMainLayout()),
+        );
+        if (aiFilters != null) {
+          _viewModel.applyFilters(aiFilters);
         }
       },
     );
   }
 
-  // ... (他の _build... ヘルパーは変更なし) ...
-  // ★★★ 新しいヘルパーウィジェット: セクションカード ★★★
   Widget _buildSectionCard({
+    Color? color,
     required IconData icon,
     required String title,
     required List<Widget> children,
@@ -248,10 +242,9 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // アイコンとタイトル
             Row(
               children: [
-                Icon(icon, color: Colors.deepPurple, size: 20),
+                Icon(icon, color: color??Colors.deepPurple, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   title,
@@ -263,18 +256,12 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
               ],
             ),
             const Divider(height: 24),
-            // 子ウィジェット
             ...children,
           ],
         ),
       ),
     );
   }
-
-  // --- 既存のヘルパーウィジェット (変更なし) ---
-  // ( _buildHobbiesInput, _buildDateRangePicker, _buildGenderChips,
-  //   _buildRoomTypeToggle, _getBorderRadius, _buildRentSlider,
-  //   _buildSemanticQueryInput )
 
   Widget _buildHobbiesInput() {
     return Column(
@@ -347,7 +334,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
             },
             child: InputDecorator(
               decoration: const InputDecoration(
-                labelText: 'From', // Simplified label
+                labelText: 'From', 
                 border: OutlineInputBorder(),
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 12, vertical: 16),
@@ -363,9 +350,9 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
         const SizedBox(width: 16),
         Expanded(
           child: TextFormField(
-            initialValue: _durationMonth?.toString(), // ★ 修正: initialValue を設定
+            initialValue: _durationMonth?.toString(),
             decoration: InputDecoration(
-              labelText: 'Duration (Months)', // Simplified label
+              labelText: 'Duration (Months)', 
               border: OutlineInputBorder(),
               contentPadding:
                   EdgeInsets.symmetric(horizontal: 12, vertical: 16),
@@ -400,7 +387,6 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
           selected: isSelected,
           onSelected: (selected) {
             setState(() {
-              // Allow deselecting back to 'Any' implicitly if needed, or handle explicitly
               _gender = selected ? gender : 'Any';
             });
           },
@@ -421,7 +407,6 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   }
 
   Widget _buildRoomTypeToggle() {
-    // This UI works well in a panel too
     return Container(
       decoration: BoxDecoration(
           color: Colors.grey[50],
@@ -467,7 +452,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   }
 
   BorderRadius _getBorderRadius(int index) {
-    const radius = Radius.circular(15); // Adjust for inner rounding
+    const radius = Radius.circular(15); 
     if (index == 0) {
       return const BorderRadius.horizontal(left: radius);
     } else if (index == _roomTypeOptions.length - 1) {
@@ -477,7 +462,6 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   }
 
   Widget _buildRentSlider() {
-    // This UI works well in a panel
     return Column(
       children: [
         RangeSlider(
@@ -512,14 +496,13 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   }
 
   Widget _buildSemanticQueryInput() {
-    // This UI works well in a panel
     return TextFormField(
-      controller: _semanticQueryController, // ★ 変更
+      controller: _semanticQueryController, 
       decoration: InputDecoration(
-        hintText: 'e.g., "sunny", "stylish furniture"', // ★ 変更
+        hintText: 'e.g., "sunny", "stylish furniture"', 
         hintStyle: TextStyle(color: Colors.grey[500]),
         filled: true,
-        fillColor: Colors.white, // Or Colors.grey[50]
+        fillColor: Colors.white, 
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
@@ -533,13 +516,12 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
           borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
         ),
         prefixIcon:
-            Icon(Icons.auto_awesome_outlined, color: Colors.grey[500]), // ★ 変更
+            Icon(Icons.auto_awesome_outlined, color: Colors.grey[500]), 
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       style: const TextStyle(fontSize: 16),
       onChanged: (value) {
-        // No immediate action needed, applied via button
       },
     );
   }

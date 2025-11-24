@@ -1,4 +1,3 @@
-// lib/features/1_agent_feature/2_tenant_list/view/tenant_filter_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../model/tenant_filter_options.dart';
@@ -9,8 +8,7 @@ class TenantFilterBottomSheet extends StatefulWidget {
   const TenantFilterBottomSheet({super.key, required this.initialFilters});
 
   @override
-  _TenantFilterBottomSheetState createState() =>
-      _TenantFilterBottomSheetState();
+  _TenantFilterBottomSheetState createState() => _TenantFilterBottomSheetState();
 }
 
 class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
@@ -20,8 +18,9 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
   late TextEditingController _nationalityController;
   late String? _gender;
   DateTime? _moveinDate;
-  final _hobbyController = TextEditingController();
-  late List<String> _hobbies;
+
+  final List<String> _genderOptions = ['Male', 'Female'];
+  final List<String> _roomTypeOptions = ['Single', 'Middle', 'Master', 'Studio'];
 
   @override
   void initState() {
@@ -36,7 +35,6 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
         TextEditingController(text: widget.initialFilters.nationality);
     _gender = widget.initialFilters.gender;
     _moveinDate = widget.initialFilters.moveinDate;
-    _hobbies = widget.initialFilters.hobbies ?? [];
   }
 
   void _applyFilters() {
@@ -48,7 +46,7 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
       nationality: _nationalityController.text.trim(),
       gender: _gender,
       moveinDate: _moveinDate,
-      hobbies: _hobbies,
+      // hobbies は削除済み
     );
     Navigator.of(context).pop(filters);
   }
@@ -61,38 +59,43 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
       _nationalityController.clear();
       _gender = null;
       _moveinDate = null;
-      _hobbies = [];
     });
-    // Immediately apply cleared filters
     Navigator.of(context).pop(TenantFilterOptions());
   }
 
   @override
   Widget build(BuildContext context) {
-    // Using a DraggableScrollableSheet for better UX on smaller screens
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.9,
-      maxChildSize: 0.9,
-      builder: (_, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      // キーボード表示時に隠れないようにPaddingを追加
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        children: [
+          // ドラッグ用ハンドル
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          _buildHeader(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              children: [
+                _buildSectionCard(
+                  icon: Icons.article_outlined,
+                  title: 'Tenancy Details',
                   children: [
-                    // --- Section 1: Tenancy Info ---
-                    _buildSectionTitle(Icons.article_outlined, 'Tenancy Details'),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -101,44 +104,46 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
                         Expanded(child: _buildPaxDropdown()),
                       ],
                     ),
-                    const SizedBox(height: 24),
-
-                    // --- Section 2: Tenant Preferences ---
-                    _buildSectionTitle(Icons.tune_outlined, 'Tenant Preferences'),
-                     _buildDropdown('Room Type', ['Single', 'Middle', 'Master'], _roomType, (val) => setState(() => _roomType = val)),
-                    const SizedBox(height: 16),
-                    _buildBudgetSlider(),
-                    const SizedBox(height: 24),
-
-                    // --- Section 3: Tenant Profile ---
-                    _buildSectionTitle(Icons.person_outline, 'Tenant Profile'),
-                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: _buildGenderDropdown()),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildNationalityInput()),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildHobbiesInput(),
-                    const SizedBox(height: 32),
                   ],
                 ),
-              ),
-              _buildButtonArea(),
-            ],
+                _buildSectionCard(
+                  icon: Icons.tune_outlined,
+                  title: 'Tenant Preferences',
+                  children: [
+                    const Text("Room Type", style: TextStyle(fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    _buildRoomTypeChips(),
+                    const SizedBox(height: 24),
+                    const Text("Budget Range", style: TextStyle(fontWeight: FontWeight.w500)),
+                    _buildBudgetSlider(),
+                  ],
+                ),
+                _buildSectionCard(
+                  icon: Icons.person_outline,
+                  title: 'Tenant Profile',
+                  children: [
+                    const Text("Gender", style: TextStyle(fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    _buildGenderChips(),
+                    const SizedBox(height: 16),
+                    _buildNationalityInput(),
+                  ],
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
-        );
-      },
+          _buildButtonArea(),
+        ],
+      ),
     );
   }
-  
-  // --- WIDGET BUILDER HELPERS ---
+
+  // --- Widgets ---
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(24, 0, 16, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -152,16 +157,92 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
     );
   }
 
-  Widget _buildSectionTitle(IconData icon, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.grey[600], size: 20),
-          const SizedBox(width: 8),
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-        ],
+  Widget _buildSectionCard({
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0,
+      color: Colors.grey[50],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[200]!),
       ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Colors.deepPurple, size: 20),
+                const SizedBox(width: 8),
+                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const Divider(height: 24),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoomTypeChips() {
+    return Wrap(
+      spacing: 8.0,
+      children: _roomTypeOptions.map((type) {
+        final isSelected = _roomType == type;
+        return ChoiceChip(
+          label: Text(type),
+          selected: isSelected,
+          onSelected: (selected) {
+            setState(() {
+              _roomType = selected ? type : null;
+            });
+          },
+          selectedColor: Colors.deepPurple,
+          labelStyle: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: isSelected ? Colors.transparent : Colors.grey[300]!),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildGenderChips() {
+    return Wrap(
+      spacing: 8.0,
+      children: _genderOptions.map((gender) {
+        final isSelected = _gender == gender;
+        return ChoiceChip(
+          label: Text(gender),
+          selected: isSelected,
+          onSelected: (selected) {
+            setState(() {
+              _gender = selected ? gender : null;
+            });
+          },
+          selectedColor: Colors.deepPurple,
+          labelStyle: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: isSelected ? Colors.transparent : Colors.grey[300]!),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -179,71 +260,48 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
         }
       },
       child: InputDecorator(
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'Move-in',
-          border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          filled: true,
+          fillColor: Colors.white,
         ),
-        child: Text(_moveinDate != null ? DateFormat.yMMMd().format(_moveinDate!) : 'Any Date'),
+        child: Text(
+          _moveinDate != null ? DateFormat.yMMMd().format(_moveinDate!) : 'Any Date',
+          style: const TextStyle(fontSize: 14),
+        ),
       ),
     );
   }
 
   Widget _buildPaxDropdown() {
-    return _buildDropdown(
-      'Pax', 
-      List.generate(10, (index) => (index + 1).toString()), 
-      _pax?.toString(), 
-      (val) => setState(() => _pax = val != null ? int.parse(val) : null)
+    return DropdownButtonFormField<String>(
+      value: _pax?.toString(),
+      decoration: InputDecoration(
+        labelText: 'Pax',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      items: List.generate(10, (index) => (index + 1).toString())
+          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+          .toList(),
+      onChanged: (val) => setState(() => _pax = val != null ? int.parse(val) : null),
     );
   }
 
-  Widget _buildGenderDropdown() {
-    return _buildDropdown('Gender', ['Male', 'Female', 'Mix'], _gender, (val) => setState(() => _gender = val));
-  }
-  
   Widget _buildNationalityInput() {
     return TextFormField(
       controller: _nationalityController,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Nationality',
-        border: OutlineInputBorder(),
+        hintText: 'e.g. Japanese',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.white,
       ),
-    );
-  }
-
-  Widget _buildHobbiesInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextFormField(
-          controller: _hobbyController,
-          decoration: InputDecoration(
-            labelText: 'Hobbies',
-            hintText: 'e.g., Hiking, Cooking',
-            border: const OutlineInputBorder(),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: () {
-                if (_hobbyController.text.trim().isNotEmpty) {
-                  setState(() {
-                    _hobbies.add(_hobbyController.text.trim());
-                    _hobbyController.clear();
-                  });
-                }
-              },
-            ),
-          ),
-        ),
-        if (_hobbies.isNotEmpty) const SizedBox(height: 8),
-        Wrap(
-          spacing: 8.0,
-          children: _hobbies.map((hobby) => Chip(
-                label: Text(hobby),
-                onDeleted: () => setState(() => _hobbies.remove(hobby)),
-              )).toList(),
-        ),
-      ],
     );
   }
 
@@ -260,27 +318,17 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
             'RM ${_budgetRange.end.round() == 5000 ? "Any" : _budgetRange.end.round()}',
           ),
           onChanged: (values) => setState(() => _budgetRange = values),
+          activeColor: Colors.deepPurple,
+          inactiveColor: Colors.deepPurple.withOpacity(0.2),
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('RM ${_budgetRange.start.round()}'),
-            Text(_budgetRange.end.round() == 5000 ? "RM 5000+" : 'RM ${_budgetRange.end.round()}'),
+            Text('RM ${_budgetRange.start.round()}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(_budgetRange.end.round() == 5000 ? "RM 5000+" : 'RM ${_budgetRange.end.round()}', style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         )
       ],
-    );
-  }
-
-  Widget _buildDropdown(String title, List<String> items, String? value, ValueChanged<String?> onChanged) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      decoration: InputDecoration(
-        labelText: title,
-        border: const OutlineInputBorder(),
-      ),
-      items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
-      onChanged: onChanged,
     );
   }
 
@@ -303,6 +351,7 @@ class _TenantFilterBottomSheetState extends State<TenantFilterBottomSheet> {
           minimumSize: const Size(double.infinity, 52),
           backgroundColor: Colors.deepPurple,
           foregroundColor: Colors.white,
+          elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: _applyFilters,

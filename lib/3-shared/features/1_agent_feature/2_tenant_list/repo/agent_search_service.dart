@@ -29,7 +29,6 @@ class AgentSearchService {
       filters.add('gender:${template.gender}');
     }
     
-    // 部屋タイプ条件
     if (template.roomType.isNotEmpty) {
       filters.add('roomType:${template.roomType}');
     }
@@ -41,7 +40,7 @@ class AgentSearchService {
     final query = SearchForHits(
       indexName: indexName,
       // ★ テキスト検索: "Preferred Areas" や "Location" (地名) にヒットさせる
-      query: template.location,
+      query: '',
       
       // ★ ジオ検索: 勤務地が物件から近い人をヒットさせる (半径15km)
       // 座標が取れている場合のみ適用

@@ -1,4 +1,4 @@
-// lib/common_feature/chat/view/message_input_widget.dart
+// lib/3-shared/common_feature/chat/view/message_input_widget.dart
 
 import 'dart:async';
 import 'package:chatrepo_interface/chatrepo_interface.dart';
@@ -401,8 +401,21 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8.0),
-      color: Theme.of(context).cardColor,
+      // ★★★ 変更点: マージンと装飾を追加して浮かせる ★★★
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(30.0), // 丸みを帯びさせる
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15), // 少し影をつける
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      // color: Theme.of(context).cardColor, // Containerのcolorは削除（Decorationに移動）
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -536,7 +549,6 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
     );
   }
 
-  // ★ 新しいプレビューウィジェット
   Widget _buildTemplatePreview() {
     final template = widget.previewTemplate!;
     return Container(

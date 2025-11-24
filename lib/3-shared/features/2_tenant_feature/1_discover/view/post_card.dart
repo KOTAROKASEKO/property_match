@@ -1,8 +1,9 @@
-// lib/features/2_tenant_feature/1_discover/view/post_card.dart
+// lib/3-shared/features/2_tenant_feature/1_discover/view/post_card.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_svg/svg.dart';
+// import 'package:flutter/services.dart'; // Riveロード用だったため不要なら削除
 import 'package:intl/intl.dart';
 import 'package:shared_data/shared_data.dart';
 import '../../../../core/model/PostModel.dart';
@@ -10,26 +11,25 @@ import 'agent_profile_screen.dart';
 import 'comment_bottomsheet.dart';
 import 'full_pic_screen.dart';
 import '../../../authentication/auth_service.dart';
-import 'package:rive/rive.dart' hide Image;
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart'; // ★ 追加
 
 class PostCard extends StatefulWidget {
   final PostModel post;
-  // Define function parameters for the actions
-  final Function(String) onToggleLike;
+  final Function(String) onToggleLike; // ★ UIからは削除しますが、呼び出し元のエラー回避のため残します
   final Function(String) onToggleSave;
-  final Function(PostModel)? onStartChat; // ★ 追加
-  final VoidCallback? onTap; // ★★★ ADDED THIS ★★★
+  final Function(PostModel)? onStartChat;
+  final VoidCallback? onTap;
 
   const PostCard({
     super.key,
     required this.post,
     required this.onToggleLike,
     required this.onToggleSave,
-    this.onStartChat, // ★ 追加
-    this.onTap, // ★★★ ADDED THIS ★★★
+    this.onStartChat,
+    this.onTap,
   });
 
   @override
@@ -37,57 +37,66 @@ class PostCard extends StatefulWidget {
 }
 
 class _PostCardState extends State<PostCard> {
-  final CarouselSliderController _carouselController =
-      CarouselSliderController();
+  final CarouselSliderController _carouselController = CarouselSliderController();
   int _currentPage = 0;
-  Artboard? _riveArtboard;
-  SMIInput<bool>? _isLikedInput;
+  
+  // ★ Rive関連の変数は削除しました
+  // Artboard? _riveArtboard;
+  // SMIInput<bool>? _isLikedInput;
 
   @override
   void initState() {
     super.initState();
-    rootBundle.load('assets/like.riv').then(
-      (data) async {
-        try {
-          final file = RiveFile.import(data);
-          final artboard = file.mainArtboard;
-          var controller =
-              StateMachineController.fromArtboard(artboard, 'State Machine 1');
-          if (controller != null) {
-            artboard.addController(controller);
-            _isLikedInput = controller.findInput<bool>('isLiked');
-            _isLikedInput?.value = widget.post.isLikedByCurrentUser;
-          }
-          setState(() => _riveArtboard = artboard);
-        } catch (e) {
-          print(e);
-        }
-      },
-    );
+    // ★ Riveのロード処理を削除しました
   }
 
   void _sharePost() {
     final post = widget.post;
-    
     final String shareUrl = 'https://bilikmatch.com/app/#/listing/${post.id}';
-
     final String textToShare = 'Check out this listing on BilikMatch:\n\n'
         '🏠 *Property:* ${post.condominiumName}\n'
         '💰 *Rent:* RM ${post.rent.toStringAsFixed(0)}/month\n'
         '🚪 *Room Type:* ${post.roomType}\n'
         '📍 *Location:* ${post.location}\n\n'
-        '$shareUrl\n\n' // <--- Add the generated link here
+        '$shareUrl\n\n'
         'View more in the app!';
-    
-    // 2. Share the text + link
     Share.share(textToShare, subject: 'Room for rent: ${post.condominiumName}');
+  }
+
+  // ★ WhatsApp起動ロジックを追加
+  Future<void> _launchWhatsApp() async {
+    // PostModelにphoneNumberが含まれている前提です
+    final phone = widget.post.phoneNumber; 
+    
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No WhatsApp number available for this agent.')),
+      );
+      return;
+    }
+
+    // 数字以外を除去
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+    // WhatsAppのURLスキーム
+    final url = Uri.parse('https://wa.me/$cleanPhone');
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch WhatsApp';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open WhatsApp: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    _isLikedInput?.value = widget.post.isLikedByCurrentUser;
+    // _isLikedInput?.value = widget.post.isLikedByCurrentUser; // ★ 削除
 
-    // ★★★ WRAPPED Card IN InkWell ★★★
     return InkWell(
       onTap: widget.onTap,
       borderRadius: BorderRadius.circular(12),
@@ -127,14 +136,12 @@ class _PostCardState extends State<PostCard> {
             return Builder(
               builder: (BuildContext context) {
                 return Hero(
-                  tag: item, // Heroアニメーションのためのタグ
+                  tag: item,
                   child: GestureDetector(
                     onTap: () {
-                      // ★★★ ALSO ALLOW TAP-TO-ZOOM FROM HERE ★★★
                       if (widget.onTap != null) {
                         widget.onTap!();
                       } else {
-                        // Fallback for screens without onTap (like SavedPosts)
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -186,9 +193,7 @@ class _PostCardState extends State<PostCard> {
     );
   }
 
-  // FIXED: Changed parameter type from DiscoverViewModel to PostActionsViewModel
   Widget _buildContent(BuildContext context) {
-    // ★ 1. 先にチップのWidgetリストを作成します
     final List<Widget> chips = [
       _buildInfoChip(Icons.meeting_room_outlined, widget.post.roomType),
       _buildInfoChip(Icons.person_outline, '${widget.post.gender} Unit'),
@@ -226,21 +231,19 @@ class _PostCardState extends State<PostCard> {
           ),
           const SizedBox(height: 8),
 
-          // ★ 2. Wrapの代わりにSizedBoxとListView.separatedを使用
           SizedBox(
-            height: 36, // チップの高さ（必要に応じて調整してください）
+            height: 36,
             child: ListView.separated(
-              scrollDirection: Axis.horizontal, // 横スクロール
+              scrollDirection: Axis.horizontal,
               itemCount: chips.length,
               itemBuilder: (context, index) {
-                return chips[index]; // リストからチップを表示
+                return chips[index];
               },
               separatorBuilder: (context, index) {
-                return const SizedBox(width: 8.0); // チップ間のスペース
+                return const SizedBox(width: 8.0);
               },
             ),
           ),
-          // ★ ------------------------------------------------
 
           const SizedBox(height: 12),
           Text(
@@ -324,7 +327,6 @@ class _PostCardState extends State<PostCard> {
                 : null,
           ),
           const SizedBox(width: 8),
-          // ★ 2. Column を Expanded でラップ
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,7 +334,6 @@ class _PostCardState extends State<PostCard> {
                 Text(
                   widget.post.username,
                   style: const TextStyle(fontWeight: FontWeight.bold),
-                  // ★ 3. オーバーフロー処理を追加
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -355,27 +356,20 @@ class _PostCardState extends State<PostCard> {
           icon: const Icon(Icons.share_outlined),
           onPressed: _sharePost,
         ),
-        GestureDetector(
-          onTap: () {
-            if (FirebaseAuth.instance.currentUser == null) {
-              showSignInModal(context);
-              return;
-            }
-            pr('post id : ${widget.post.id}');
-            // Use the callback from the widget's properties
-            widget.onToggleLike(widget.post.id);
-          },
-          child: SizedBox(
-            width: 30,
-            height: 30,
-            child: _riveArtboard == null
-                ? const Center(child: Icon(Icons.favorite_border))
-                : Rive(
-                    artboard: _riveArtboard!,
-                    fit: BoxFit.contain,
-                  ),
+        
+        // ★★★ RiveのいいねボタンをWhatsAppボタンに置換 ★★★
+        IconButton(
+          icon: SvgPicture.asset(
+            'whatsapp.svg', // ★ あなたのSVGファイルのパスに合わせてください
+            width: 23,
+            height: 23,
           ),
+          tooltip: 'Contact on WhatsApp',
+          onPressed: () {
+            _launchWhatsApp();
+          },
         ),
+
         const SizedBox(width: 4),
         IconButton(
           icon: const Icon(Icons.chat_bubble_outline),
@@ -401,7 +395,6 @@ class _PostCardState extends State<PostCard> {
             if (FirebaseAuth.instance.currentUser == null) {
               showSignInModal(context);
             } else {
-              // Use the callback from the widget's properties
               widget.onToggleSave(widget.post.id);
             }
           },

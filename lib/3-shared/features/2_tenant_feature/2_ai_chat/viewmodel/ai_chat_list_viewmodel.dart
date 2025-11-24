@@ -33,9 +33,10 @@ class AIChatListViewModel extends ChangeNotifier {
     });
     
   }
+  
   Future<void> deleteChatRoom(String chatRoomId) async {
     try {
-      // 1. メッセージの削除 (サブコレクションではなくトップレベルなのでクエリで取得して削除)
+      // 1. メッセージの削除
       final messagesSnapshot = await _firestore
           .collection('ai_chat_messages')
           .where('chatRoomId', isEqualTo: chatRoomId)
@@ -56,37 +57,58 @@ class AIChatListViewModel extends ChangeNotifier {
       rethrow;
     }
   }
-String get _currentUserId {
+
+  String get _currentUserId {
     if (userData.userId.isNotEmpty) {
       return userData.userId;
     } else {
-      return GuestIdManager.guestId; // 先ほど定義したゲストID
+      return GuestIdManager.guestId;
     }
   }
-  Future<String> createNewChatRoom() async {
+
+  // ★★★ Updated Method: Accepts optional initialMessage ★★★
+  Future<String> createNewChatRoom({String? initialMessage}) async {
     final targetUserId = _currentUserId;
 
     final now = Timestamp.now();
     final newChatDoc = _firestore.collection('ai_chat_rooms').doc();
 
+    // If there's an initial message (user started chat), use it as preview.
+    // Otherwise (blank start), use the welcome message.
+    final lastMessageText = initialMessage ?? 'welcome to the ai agent!';
+
     final newRoomData = {
       'userId': targetUserId,
       'title': 'New Chat - ${DateFormat.yMd().format(now.toDate())}',
       'createdAt': now,
-      'lastMessageText': 'welcome to the ai agent!',
+      'lastMessageText': lastMessageText,
       'lastMessageTimestamp': now,
       'latestConditions': {},
     };
 
     await newChatDoc.set(newRoomData);
-    await _firestore.collection('ai_chat_messages').add({
-      'chatRoomId': newChatDoc.id,
-      'text': 'hello! How may I help you?',
-      'isUser': false,
-      'timestamp': FieldValue.serverTimestamp(),
-      'isProcessed': true,
-      'recommendedProperties': [],
-    });
+
+    if (initialMessage != null) {
+      // Case 1: User sent a prompt to start
+      await _firestore.collection('ai_chat_messages').add({
+        'chatRoomId': newChatDoc.id,
+        'text': initialMessage,
+        'isUser': true, // User message
+        'timestamp': FieldValue.serverTimestamp(),
+        'isProcessed': false, // Triggers AI processing
+        'recommendedProperties': [],
+      });
+    } else {
+      // Case 2: Started from "New Chat" button without prompt
+      await _firestore.collection('ai_chat_messages').add({
+        'chatRoomId': newChatDoc.id,
+        'text': 'hello! How may I help you?',
+        'isUser': false, // AI message
+        'timestamp': FieldValue.serverTimestamp(),
+        'isProcessed': true,
+        'recommendedProperties': [],
+      });
+    }
 
     return newChatDoc.id;
   }
@@ -97,7 +119,6 @@ class GuestIdManager {
 
   static String get guestId {
     if (_guestId == null) {
-      // ランダムなIDを生成 (例: guest_123456789)
       final random = Random();
       final idPart = DateTime.now().millisecondsSinceEpoch.toString() + random.nextInt(10000).toString();
       _guestId = 'guest_$idPart';

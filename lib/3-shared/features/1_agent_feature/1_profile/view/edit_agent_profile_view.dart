@@ -22,13 +22,14 @@ class _EditAgentProfileScreenState extends State<EditAgentProfileScreen> {
   late String _bio;
   XFile? _imageFile;
   bool _isLoading = false;
-
+  late String _phoneNumber;
   @override
   void initState() {
     super.initState();
     _displayName = widget.agentProfile.displayName;
     _profileImageUrl = widget.agentProfile.profileImageUrl;
     _bio = widget.agentProfile.bio;
+    _phoneNumber = widget.agentProfile.phoneNumber;
   }
 
   Future<void> _pickImage() async {
@@ -66,6 +67,7 @@ class _EditAgentProfileScreenState extends State<EditAgentProfileScreen> {
         displayName: _displayName,
         profileImageUrl: newProfileImageUrl,
         bio: _bio,
+        phoneNumber: _phoneNumber,
       );
 
       try {
@@ -144,6 +146,17 @@ class _EditAgentProfileScreenState extends State<EditAgentProfileScreen> {
               decoration: const InputDecoration(labelText: 'Display Name'),
               onSaved: (value) => _displayName = value!,
               validator: (value) => value!.isEmpty ? 'Please enter a display name' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: _phoneNumber,
+              decoration: const InputDecoration(
+                labelText: 'WhatsApp Number',
+                hintText: 'e.g. 60123456789 (Country code required)',
+                prefixIcon: Icon(Icons.phone),
+              ),
+              keyboardType: TextInputType.phone,
+              onSaved: (value) => _phoneNumber = value!,
             ),
             const SizedBox(height: 16),
             TextFormField(

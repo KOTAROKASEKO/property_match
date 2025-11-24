@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/view/comment_bottomsheet.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:url_launcher/url_launcher.dart';
 
 // ★ 1. PostActionsViewModel をインポート
 import '../../../../common_feature/post_actions_viewmodel.dart';
@@ -34,6 +35,32 @@ class PostDetailBottomSheet extends StatefulWidget {
 
 class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
   int _currentPage = 0;
+
+  Future<void> _launchWhatsApp(BuildContext context, String phone) async {
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No phone number available for this agent.')),
+      );
+      return;
+    }
+
+    // Clean the phone number (remove +, spaces, dashes)
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+    
+    // Create the URL
+    final url = Uri.parse('https://wa.me/$cleanPhone');
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch WhatsApp';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open WhatsApp: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -368,6 +395,12 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
           const SizedBox(width: 16),
 
           // Main Action Button
+          IconButton(
+            icon: const Icon(Icons.message, color: Colors.green, size: 28), // Use a suitable icon
+            tooltip: 'Contact on WhatsApp',
+            onPressed: () => _launchWhatsApp(context, post.phoneNumber),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton.icon(
               icon: const Icon(Icons.chat_bubble_outline),

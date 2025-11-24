@@ -30,7 +30,6 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  final _registerDisplayNameController = TextEditingController();
   final _registerEmailController = TextEditingController();
   final _registerPasswordController = TextEditingController();
 
@@ -46,82 +45,83 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
     _initializeGoogleSignIn();
   }
 
-  /// GoogleSignInを初期化し、認証ストリームのリスナーを設定
-  Future<void> _initializeGoogleSignIn() async {
-    try {
-      pr('web google auth init');
-      await GoogleSignIn.instance.initialize(
-        clientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'],
-      );
-      _authSubscription = GoogleSignIn.instance.authenticationEvents
-          .listen((GoogleSignInAuthenticationEvent event) async {
-        if (event is GoogleSignInAuthenticationEventSignIn) {
-          if (mounted && !_isSigningIn) {
-            setState(() => _isSigningIn = true);
-          }
-          final GoogleSignInAccount account = event.user;
-          try {
-            final String? idToken = account.authentication.idToken;
-            final authClient = account.authorizationClient;
-            final GoogleSignInClientAuthorization? clientAuth =
-                await authClient.authorizeScopes(['email']);
-            final String? accessToken = clientAuth?.accessToken;
-            if (accessToken == null) {
-              throw 'Failed to get access token from Google.';
-            }
-            if (idToken == null) {
-              throw 'Failed to get id token from Google.';
-            }
-
-            final AuthCredential credential = GoogleAuthProvider.credential(
-              accessToken: accessToken,
-              idToken: idToken,
-            );
-
-            final userCredential =
-                await FirebaseAuth.instance.signInWithCredential(credential);
-
-            if (userCredential.user != null) {
-              await _navigateAfterSignIn(userCredential.user!);
-            }
-          } catch (error) {
-            print("Error during auth event processing: $error");
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Sign in Error: $error')),
-              );
-            }
-            await GoogleSignIn.instance.signOut();
-          } finally {
-            if (mounted) {
-              setState(() => _isSigningIn = false);
-            }
-          }
-        }
-      }, onError: (error) {
-        print("Auth Stream Error: $error");
-        if (mounted) {
-          setState(() => _isSigningIn = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Sign in Error: $error')),
-          );
-        }
-      });
-    } catch (error) {
-      print("Error initializing Google Sign-In: $error");
-    }
-  }
+  
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _registerDisplayNameController.dispose();
     _registerEmailController.dispose();
     _registerPasswordController.dispose();
     _authSubscription?.cancel();
     super.dispose();
   }
+
+  Future<void> _initializeGoogleSignIn() async {
+      try {
+        pr('web google auth init');
+        await GoogleSignIn.instance.initialize(
+          clientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'],
+        );
+        
+        _authSubscription = GoogleSignIn.instance.authenticationEvents
+            .listen((GoogleSignInAuthenticationEvent event) async {
+          if (event is GoogleSignInAuthenticationEventSignIn) {
+            if (mounted && !_isSigningIn) {
+              setState(() => _isSigningIn = true);
+            }
+            final GoogleSignInAccount account = event.user;
+            try {
+              // 1. authentication を取得
+              final GoogleSignInAuthentication googleAuth = await account.authentication;
+              
+              // 2. idToken を取得
+              final String? idToken = googleAuth.idToken;
+
+              if (idToken == null) {
+                throw 'Failed to get id token from Google.';
+              }
+
+              // ★ 4. 修正箇所: accessToken は null を指定して credential を作成
+              // Web版の新しい仕様では idToken だけでログイン可能です
+              final AuthCredential credential = GoogleAuthProvider.credential(
+                accessToken: null, 
+                idToken: idToken,
+              );
+
+              final userCredential =
+                  await FirebaseAuth.instance.signInWithCredential(credential);
+
+              if (userCredential.user != null) {
+                await _navigateAfterSignIn(userCredential.user!);
+              }
+              } catch (error) {
+              print("Error during auth event processing: $error");
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Sign in Error: $error')),
+                );
+              }
+              await GoogleSignIn.instance.signOut();
+            } finally {
+              if (mounted) {
+                setState(() => _isSigningIn = false);
+              }
+            }
+          }
+        }, onError: (error) {
+          print("Auth Stream Error: $error");
+          if (mounted) {
+            setState(() => _isSigningIn = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Sign in Error: $error')),
+            );
+          }
+        });
+      } catch (error) {
+        print("Error initializing Google Sign-In: $error");
+      }
+    }
 
   Future<UserCredential?> _signInWithGoogleMobile() async {
     try {
@@ -207,7 +207,7 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
         pr('login_placeholder.dart user was created');
         if (userCredential.user != null) {
           await _createUserProfile(
-              userCredential.user!, _registerDisplayNameController.text.trim());
+              userCredential.user!, 'New user');
         pr('login_placeholder.dart user collection was created');
           userData.setUser(userCredential.user);
           pr('login_placeholder.dart user state was set');
@@ -217,7 +217,7 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
             Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                     builder: (context) => RoleSelectionScreen(
-                        displayName: _registerDisplayNameController.text)),
+                        )),
                 (route) => false);
           }else{
             pr('login_placeholder.dart build was unmounted. cannot navigate');
@@ -254,7 +254,7 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
           '${displayName.replaceAll(' ', '').toLowerCase()}${_generateRandomString(4)}',
     });
   }
-  // --- ここまで register_screen.dart のロジック ---
+
 
   Future<void> _navigateAfterSignIn(User user) async {
     pr('login_placeholder.dart: _navigateAfterSignIn called');
@@ -348,7 +348,6 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
     );
   }
 
-  /// Web/デスクトップレイアウト（横並び）を構築
   Widget _buildWebLayout(BuildContext context) {
     return Center(
       child: Row(
@@ -429,8 +428,6 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
     );
   }
 
-
-  
   Widget _buildSignInForm(BuildContext context) {
     // アニメーションのためにキーを設定
     return Container(
@@ -500,22 +497,20 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
             // Forgot Password Link
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _isSigningIn
-                    ? null
-                    : () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ForgotPassword(),
-                          ),
-                        );
-                      },
-                child: Text(
-                  'Forgot Password?',
-                  style: TextStyle(color: Colors.blue.shade700),
-                ),
-              ),
-            ),
+              child:TextButton(
+                  onPressed: _isSigningIn
+                      ? null
+                      // 画面遷移の代わりに State を変更
+                      : () => setState(() => _showSignIn = false),
+                  child: Text(
+                    'Quick Sign Up!',
+                    style: TextStyle(
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),),
+
             const SizedBox(height: 24),
 
             // Sign In Button
@@ -566,22 +561,25 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "Don't have an account?",
+                  "Forgot password?",
                   style: TextStyle(color: Colors.grey[600]),
                 ),
+                
                 TextButton(
-                  onPressed: _isSigningIn
-                      ? null
-                      // 画面遷移の代わりに State を変更
-                      : () => setState(() => _showSignIn = false),
-                  child: Text(
-                    'Sign Up',
-                    style: TextStyle(
-                      color: Colors.blue.shade700,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                onPressed: _isSigningIn
+                    ? null
+                    : () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ForgotPassword(),
+                          ),
+                        );
+                      },
+                child: Text(
+                  'Forgot Password?',
+                  style: TextStyle(color: Colors.blue.shade700),
                 ),
+              ),
               ],
             ),
           ],
@@ -602,7 +600,7 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             const Text(
-              'Create Account',
+              'Quick Sign up',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 28,
@@ -611,17 +609,11 @@ class _LoginPlaceholderScreenState extends State<LoginPlaceholderScreen> {
                 fontFamily: 'fancy',
               ),
             ),
+            Text('(takes only 10second!)',textAlign: TextAlign.center,),
             const SizedBox(height: 48),
 
             // Display Name Text Field
-            _buildTextField(
-              controller: _registerDisplayNameController,
-              hintText: 'Display Name',
-              icon: Icons.person_outline,
-              validator: (value) => (value == null || value.isEmpty)
-                  ? 'Please enter a display name'
-                  : null,
-            ),
+            
             const SizedBox(height: 16),
             
             // Email Text Field

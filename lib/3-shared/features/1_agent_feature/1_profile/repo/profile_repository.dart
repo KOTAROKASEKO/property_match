@@ -69,6 +69,7 @@ class FirestoreProfileRepository implements ProfileRepository {
           await _firestore.collection('users_prof').doc(user.uid).get();
       final username = userDoc.data()?['displayName'] ?? 'Anonymous';
       final userProfileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
+      final phoneNumber = userDoc.data()?['phoneNumber'] ?? '';
 
       postData.addAll({
         'userId': user.uid,
@@ -80,6 +81,7 @@ class FirestoreProfileRepository implements ProfileRepository {
         'manualTags': [],
         'status': 'open',
         'reportedBy': [],
+        'phoneNumber': phoneNumber,
       });
 
       final docRef = await _firestore.collection('posts').add(postData);
@@ -132,6 +134,7 @@ class FirestoreProfileRepository implements ProfileRepository {
           _firestore.collection('users_prof').doc(updatedProfile.uid);
       batch.update(userRef, updatedProfile.toJson());
 
+      // エージェントの全ポストを取得して更新
       final postsQuery = await _firestore
           .collection('posts')
           .where('userId', isEqualTo: updatedProfile.uid)
@@ -141,6 +144,8 @@ class FirestoreProfileRepository implements ProfileRepository {
         batch.update(postDoc.reference, {
           'username': updatedProfile.displayName,
           'userProfileImageUrl': updatedProfile.profileImageUrl,
+          // ★★★ 追加: 電話番号も同期して更新する ★★★
+          'phoneNumber': updatedProfile.phoneNumber, 
         });
       }
       await batch.commit();
@@ -150,29 +155,29 @@ class FirestoreProfileRepository implements ProfileRepository {
     }
   }
 
-@override // Or just Future<String> in UserService
-Future<String> uploadProfileImage(String userId, XFile imageFile) async {
-  try {
-    final ref = _storage.ref().child('profile_images').child('$userId.jpg');
-    UploadTask uploadTask;
-    if (kIsWeb) {
-      // For Web: Read bytes and use putData
-      final Uint8List data = await imageFile.readAsBytes();
-      uploadTask = ref.putData(data, SettableMetadata(contentType: imageFile.mimeType ?? 'image/jpeg')); // Optionally set content type
-    } else {
-      // For Mobile: Use putFile with dart:io File
-      uploadTask = ref.putFile(File(imageFile.path));
-    }
-    // ★★★ --------------------- ★★★
+  @override // Or just Future<String> in UserService
+  Future<String> uploadProfileImage(String userId, XFile imageFile) async {
+    try {
+      final ref = _storage.ref().child('profile_images').child('$userId.jpg');
+      UploadTask uploadTask;
+      if (kIsWeb) {
+        // For Web: Read bytes and use putData
+        final Uint8List data = await imageFile.readAsBytes();
+        uploadTask = ref.putData(data, SettableMetadata(contentType: imageFile.mimeType ?? 'image/jpeg')); // Optionally set content type
+      } else {
+        // For Mobile: Use putFile with dart:io File
+        uploadTask = ref.putFile(File(imageFile.path));
+      }
+      // ★★★ --------------------- ★★★
 
-    final snapshot = await uploadTask.whenComplete(() => {});
-    return await snapshot.ref.getDownloadURL();
-  } catch (e) {
-    // Keep original error message but add context
-    print("Error uploading profile image: $e"); // Log the specific error
-    throw Exception('Failed to upload profile image: ${e.toString()}');
+      final snapshot = await uploadTask.whenComplete(() => {});
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      // Keep original error message but add context
+      print("Error uploading profile image: $e"); // Log the specific error
+      throw Exception('Failed to upload profile image: ${e.toString()}');
+    }
   }
-}
 
   @override
   Future<void> deletePost(String postId) async {

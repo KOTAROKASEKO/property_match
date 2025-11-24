@@ -6,6 +6,7 @@ class AgentProfile {
   final String displayName;
   final String profileImageUrl;
   final String bio;
+  final String phoneNumber;
 
   AgentProfile({
     required this.uid,
@@ -13,6 +14,7 @@ class AgentProfile {
     this.displayName = 'New user',
     this.profileImageUrl = '',
     this.bio = '',
+    this.phoneNumber = '',
   });
 
   factory AgentProfile.fromFirestore(DocumentSnapshot doc) {
@@ -23,6 +25,7 @@ class AgentProfile {
       displayName: data?['displayName'] as String? ?? 'New user',
       profileImageUrl: data?['profileImageUrl'] as String? ?? '',
       bio: data?['bio'] as String? ?? '',
+      phoneNumber: data?['phoneNumber'] as String? ?? '',
     );
   }
 
@@ -31,6 +34,7 @@ class AgentProfile {
       'displayName': displayName,
       'profileImageUrl': profileImageUrl,
       'bio': bio,
+      'phoneNumber': phoneNumber,
     };
   }
 }

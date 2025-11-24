@@ -1,18 +1,20 @@
 // lib/3-shared/features/2_tenant_feature/2_ai_chat/viewmodel/ai_chat_viewmodel.dart
-import 'dart:async'; // StreamSubscription のため
-import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore のため
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:re_conver/3-shared/core/model/PostModel.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/model/filter_options.dart';
 import '../model/ai_chat_message.dart';
-// import '../service/ai_service.dart'; // ★ AIサービスはもう不要
-
-// lib/3-shared/features/2_tenant_feature/2_ai_chat/viewmodel/ai_chat_viewmodel.dart
-// ... (imports)
+import 'ai_chat_list_viewmodel.dart';
 
 class AIChatViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _chatId; // これは「ChatRoomID」を指す
+  
+  // ★ 変更: null許容に変更 (null = 新規チャット状態)
+  String? _chatId; 
+  
+  // ルーム作成用に ListViewModel のインスタンスを持つ
+  final AIChatListViewModel _listViewModel = AIChatListViewModel();
 
   final List<AIChatMessage> _messages = [];
   bool _isLoading = false;
@@ -20,18 +22,25 @@ class AIChatViewModel extends ChangeNotifier {
 
   List<AIChatMessage> get messages => _messages;
   bool get isLoading => _isLoading;
+  
+  // ★ 追加: 外部からアクセスするためのゲッター
+  String? get chatId => _chatId;
 
-  AIChatViewModel({required String chatId}) : _chatId = chatId {
-    _listenToMessages(); // Firestoreの監視を開始
+  // ★ 変更: コンストラクタで null を受け取れるようにする
+  AIChatViewModel({String? chatId}) : _chatId = chatId {
+    if (_chatId != null) {
+      _listenToMessages();
+    }
   }
 
   /// Firestoreのメッセージコレクションを監視します
   void _listenToMessages() {
+    // IDがない場合は何もしない
+    if (_chatId == null) return;
+
     _messageSubscription?.cancel();
     _messageSubscription = _firestore
-        // ★ 修正: ai_chat_messages を参照
         .collection("ai_chat_messages")
-        // ★ 修正: chatRoomId で絞り込み
         .where("chatRoomId", isEqualTo: _chatId)
         .orderBy("timestamp")
         .snapshots()
@@ -39,16 +48,11 @@ class AIChatViewModel extends ChangeNotifier {
           (snapshot) {
             _messages.clear();
 
-            // ★ 修正: Firestoreの履歴が本当に空の場合の挨拶は「ListViewModel」が担当
-            // (この画面では不要になった)
-
             for (var doc in snapshot.docs) {
               final data = doc.data();
 
-              // (PostModelへの変換ロジックは変更なし)
               List<PostModel> suggestions = [];
               if (data['recommendedProperties'] != null) {
-                // ... (変換ロジック) ...
                  final List<dynamic> rawProps = data['recommendedProperties'];
                 suggestions = rawProps.map((prop) {
                   final Map<String, dynamic> propMap =
@@ -71,7 +75,6 @@ class AIChatViewModel extends ChangeNotifier {
                 ),
               );
             }
-            // ★★★ ------------------ ★★★
 
             _isLoading = _messages.isNotEmpty && _messages.last.isUser;
             notifyListeners();
@@ -85,9 +88,11 @@ class AIChatViewModel extends ChangeNotifier {
   }
 
   /// ユーザーがメッセージを送信します
-  Future<void> sendMessage(String text) async {
-    if (text.trim().isEmpty) return;
+  /// 戻り値: 新規作成されたチャットID (既存の場合は null)
+  Future<String?> sendMessage(String text) async {
+    if (text.trim().isEmpty) return null;
 
+    // UIへの即時反映 (Optimistic UI)
     final userMessage = AIChatMessage(
       text: text,
       isUser: true,
@@ -99,56 +104,66 @@ class AIChatViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // ★ 1. Firestore (ai_chat_messages) に書き込み (Cloud Runをトリガーする)
-      await _firestore
-          .collection("ai_chat_messages") // ★ 修正: コレクション名
-          .add({
-            "chatRoomId": _chatId, // ★ 追加: ルームID
-            "text": text,
-            "isUser": true,
-            "timestamp": FieldValue.serverTimestamp(),
-            "isProcessed": false, // ★ Cloud Runが処理するためのフラグ
-          });
-          
-      // ★ 2. Firestore (ai_chat_rooms) の最終メッセージを更新
-      await _firestore.collection("ai_chat_rooms").doc(_chatId).update({
-        "lastMessageText": text,
-        "lastMessageTimestamp": FieldValue.serverTimestamp(),
-      });
-          
-      // (エラー処理は変更なし)
+      String? newChatId;
+
+      // ★ IDがない場合（新規チャット）はここで作成
+      if (_chatId == null) {
+        // createNewChatRoomを呼び出してルームを作成
+        // ※ AIChatListViewModel側が initialMessage に対応していればそれを渡すのがベストですが、
+        // 対応していない場合は空で作成後にメッセージを追加します。
+        _chatId = await _listViewModel.createNewChatRoom(initialMessage: text);
+        newChatId = _chatId;
+        
+        // 作成されたIDで監視を開始
+        _listenToMessages();
+      } else {
+        // 既存チャットへの追加
+        await _firestore.collection("ai_chat_messages").add({
+          "chatRoomId": _chatId,
+          "text": text,
+          "isUser": true,
+          "timestamp": FieldValue.serverTimestamp(),
+          "isProcessed": false,
+        });
+
+        await _firestore.collection("ai_chat_rooms").doc(_chatId).update({
+          "lastMessageText": text,
+          "lastMessageTimestamp": FieldValue.serverTimestamp(),
+        });
+      }
+      
+      return newChatId;
+
     } catch (e) {
+      print("Error sending message: $e");
       _messages.remove(userMessage);
       _messages.add(
         AIChatMessage(
-          text: "メッセージの送信に失敗しました。",
+          text: "Failed to send message. Please try again.",
           isUser: false,
           timestamp: DateTime.now(),
         ),
       );
       _isLoading = false;
       notifyListeners();
+      return null;
     }
   }
   
-  /// Cloud Runが保存した最新の検索条件を取得します
   Future<FilterOptions?> getLatestFilterOptions() async {
+    if (_chatId == null) return null;
     try {
-      // ★ 修正: ai_chat_rooms を参照
       final doc = await _firestore.collection("ai_chat_rooms").doc(_chatId).get();
       final data = doc.data();
 
       if (data != null && data.containsKey("latestConditions")) {
-        // (以降の変換ロジックは変更なし)
-        // ...
         final conditions = data["latestConditions"] as Map<String, dynamic>;
         return FilterOptions(
           gender: conditions['gender'] as String?,
           roomType: _parseRoomType(conditions['roomType']),
           minRent: (conditions['minRent'] as num?)?.toDouble(),
           maxRent: (conditions['maxRent'] as num?)?.toDouble(),
-          semanticQuery:
-              conditions['query'] as String?,
+          semanticQuery: conditions['query'] as String?,
           hobbies: (conditions['hobbies'] as List<dynamic>?)?.cast<String>(),
         );
       }
@@ -159,7 +174,6 @@ class AIChatViewModel extends ChangeNotifier {
     }
   }
 
-  // ( _parseRoomType, dispose は変更なし) ...
   List<String>? _parseRoomType(dynamic roomTypeData) {
     if (roomTypeData == null) return null;
     if (roomTypeData is String) {
