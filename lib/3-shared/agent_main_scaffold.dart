@@ -5,6 +5,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/common_feature/chat/view/providerIndividualChat.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/3_profile/models/profile_model.dart';
+import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
+import 'package:shared_data/shared_data.dart';
 import 'features/1_agent_feature/1_profile/view/agent_profile_view.dart';
 import 'features/1_agent_feature/2_tenant_list/view/tenant_list_view.dart';
 import 'common_feature/chat/view/chatThreadScreen.dart';
@@ -29,14 +33,14 @@ class _AgentMainScaffoldState extends State<AgentMainScaffold> {
 
   @override
   void initState() {
+
     super.initState();
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
-    // <-- 3. Assign the listener to the variable
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      // <-- 4. Add a 'mounted' check before using context
       if (mounted && user != null && !kIsWeb) {
         checkAndRequestNotificationPermission(context);
+        _checkPendingAction();
       }
     });
 
@@ -53,6 +57,47 @@ class _AgentMainScaffoldState extends State<AgentMainScaffold> {
         MyProfilePage(),
       ];
     }
+  }
+
+  void _checkPendingAction() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('is pending action null ${pendingAction== null}');
+      if (pendingAction != null && mounted) {
+        final action = pendingAction!;
+        pendingAction = null; // 二重実行防止のためにクリア
+
+        // アクションの種類が「テナントとのチャット」の場合
+        if (action.type == PendingActionType.chatWithTenant) {
+          final tenant = action.payload['tenant'] as UserProfile;
+          _navigateToChat(tenant);
+        }
+      }
+    });
+  }
+
+  // ★★★ 追加: チャット画面への遷移ロジック ★★★
+  void _navigateToChat(UserProfile tenant) {
+    // チャットIDの生成
+    List<String> uids = [userData.userId, tenant.uid];
+    uids.sort();
+    final chatThreadId = uids.join('_');
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => IndividualChatScreenWithProvider(
+          chatThreadId: chatThreadId,
+          otherUserUid: tenant.uid,
+          otherUserName: tenant.displayName,
+          otherUserPhotoUrl: tenant.profileImageUrl,
+          // Agentからの開始なのでPropertyTemplateは空でOK、
+          // もし特定の物件について話したい場合はここでセットすることも可能
+        ),
+      ),
+    );
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Continuing chat with ${tenant.displayName}...')),
+    );
   }
 
   void _onItemTapped(int index) {

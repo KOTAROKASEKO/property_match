@@ -1,6 +1,5 @@
 // lib/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_main_screen.dart
 import 'package:flutter/material.dart';
-import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/model/filter_options.dart';
 import 'ai_chat_history_sidebar.dart';
 import 'ai_chat_screen.dart';
 

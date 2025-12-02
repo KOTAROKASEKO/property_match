@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
@@ -26,7 +25,6 @@ abstract class ProfileRepository {
 class FirestoreProfileRepository implements ProfileRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<List<String>> getCondoNameSuggestions(String query) async {
   if (query.isEmpty) {
@@ -63,16 +61,15 @@ class FirestoreProfileRepository implements ProfileRepository {
   @override
   Future<String> createPost({required Map<String, dynamic> postData}) async {
     try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception("User not logged in");
+      if (userData.userId == '') throw Exception("User not logged in");
       final userDoc =
-          await _firestore.collection('users_prof').doc(user.uid).get();
+          await _firestore.collection('users_prof').doc(userData.userId).get();
       final username = userDoc.data()?['displayName'] ?? 'Anonymous';
       final userProfileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
       final phoneNumber = userDoc.data()?['phoneNumber'] ?? '';
 
       postData.addAll({
-        'userId': user.uid,
+        'userId': userData.userId,
         'username': username,
         'userProfileImageUrl': userProfileImageUrl,
         'likeCount': 0,

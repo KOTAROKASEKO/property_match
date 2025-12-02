@@ -1,7 +1,6 @@
 // lib/features/2_tenant_feature/1_discover/view/filter_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_list_screen.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_main_layout.dart';
 import '../model/filter_options.dart';
 

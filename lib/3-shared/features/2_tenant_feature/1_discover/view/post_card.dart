@@ -2,7 +2,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 // import 'package:flutter/services.dart'; // Riveロード用だったため不要なら削除
 import 'package:intl/intl.dart';
 import 'package:shared_data/shared_data.dart';
@@ -270,6 +269,10 @@ class _PostCardState extends State<PostCard> {
               label: const Text('Inquire'),
               onPressed: () {
                 if (FirebaseAuth.instance.currentUser == null) {
+                  pendingAction = PendingAction(
+                    type: PendingActionType.chatWithAgent,
+                    payload: {'post': widget.post},
+                  );
                   showSignInModal(context);
                 } else {
                   widget.onStartChat?.call(widget.post);
@@ -357,12 +360,11 @@ class _PostCardState extends State<PostCard> {
           onPressed: _sharePost,
         ),
         
-        // ★★★ RiveのいいねボタンをWhatsAppボタンに置換 ★★★
         IconButton(
-          icon: SvgPicture.asset(
-            'whatsapp.svg', // ★ あなたのSVGファイルのパスに合わせてください
-            width: 23,
-            height: 23,
+          icon: const Icon(
+            WhatsappIcons.whatsapp, // 作成したカスタムアイコン
+            color: Color(0xFF25D366), // WhatsAppのブランドカラー（必要に応じて調整してください）
+            size: 28,
           ),
           tooltip: 'Contact on WhatsApp',
           onPressed: () {
@@ -375,8 +377,14 @@ class _PostCardState extends State<PostCard> {
           icon: const Icon(Icons.chat_bubble_outline),
           onPressed: () {
             if (FirebaseAuth.instance.currentUser == null) {
-              showSignInModal(context);
-            } else {
+            // ★ コメントアクションとして登録
+            pendingAction = PendingAction(
+              type: PendingActionType.postComment,
+              payload: {'postId': widget.post.id, 'text': ''},
+            );
+            showSignInModal(context);
+            return;
+          } else {
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
@@ -402,4 +410,15 @@ class _PostCardState extends State<PostCard> {
       ],
     );
   }
+}
+
+
+class WhatsappIcons {
+  WhatsappIcons._();
+
+  static const _kFontFam = 'WhatsappIcons'; // pubspec.yamlのfamily名と一致させる
+  static const String? _kFontPkg = null;
+
+  // 62002 (10進数) -> 0xf232 (16進数) に修正
+  static const IconData whatsapp = IconData(0xf232, fontFamily: _kFontFam, fontPackage: _kFontPkg);
 }

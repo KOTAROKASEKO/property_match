@@ -13,6 +13,7 @@ class ProfileViewModel extends ChangeNotifier {
   final ProfileRepository _repository;
 
   ProfileViewModel(this._repository);
+  
 
   AgentProfile? _agentProfile;
   List<PostModel> _posts = [];

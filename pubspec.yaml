@@ -67,7 +67,7 @@ dependencies:
   timeago: ^3.7.1
   mime: ^2.0.0
   http: ^1.5.0
-  go_router: ^16.3.0
+  go_router: ^17.0.0
 
   # --- WebView ---
   webview_flutter: ^4.13.0 # If you use WebView directly in the main app
@@ -110,6 +110,9 @@ flutter:
     - family: fancy
       fonts:
         - asset: assets/fancy2.ttf
+    - family: WhatsappIcons #アイコンセットのタイトル
+      fonts:
+        - asset: assets/whatsapp.ttf
 
 flutter_native_splash:
   color: "#ffffff"

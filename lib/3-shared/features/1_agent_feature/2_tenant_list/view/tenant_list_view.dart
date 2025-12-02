@@ -217,7 +217,7 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                   color: Colors.purpleAccent.withOpacity(0.15),
                   shape: BoxShape.circle,
                   image: const DecorationImage(
-                    image: AssetImage('assets/noise.png'), // Optional texture
+                    image: AssetImage('noise.png'), // Optional texture
                     fit: BoxFit.cover,
                     opacity: 0.1
                   )

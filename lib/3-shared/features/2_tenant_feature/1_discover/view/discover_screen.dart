@@ -5,22 +5,18 @@ import 'package:firebase_auth/firebase_auth.dart'; // ★★★ ADDED ★★★
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/3-shared/common_feature/post_actions_viewmodel.dart';
-import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_list_screen.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_main_layout.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart'; // ★★★ ADDED ★★★
 import 'package:shared_data/shared_data.dart';
 import 'package:template_hive/template_hive.dart';
 import '../../../../common_feature/chat/view/providerIndividualChat.dart';
-// import '../../../../common_feature/chat/viewmodel/unread_messages_viewmodel.dart'; // Discover doesn't need this directly
 import 'post_card.dart';
 import '../viewmodel/discover_viewmodel.dart';
-// ★★★ インポート追加 ★★★
 import '../model/filter_options.dart';
-import 'discover_filter_panel.dart'; // 左側フィルターパネル
-import 'filter_bottom_sheet.dart';   // ボトムシート
-import '../../../../core/model/PostModel.dart'; // PostModel のインポートを追加
-import 'post_detail_bottomsheet.dart'; // ★★★ IMPORT THE NEW BOTTOM SHEET ★★★
-// ★★★ ------------- ★★★
+import 'discover_filter_panel.dart';
+import 'filter_bottom_sheet.dart';
+import '../../../../core/model/PostModel.dart';
+import 'post_detail_bottomsheet.dart';
 
 
 class DiscoverScreen extends StatelessWidget {
@@ -28,7 +24,6 @@ class DiscoverScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ViewModel Provider はそのまま
     return ChangeNotifierProvider(
       create: (_) => DiscoverViewModel(),
       child: const _DiscoverView(),
@@ -58,18 +53,11 @@ class _DiscoverViewState extends State<_DiscoverView>
   @override
   void initState() {
     super.initState();
-    // ★ initState で ViewModel を取得
     _viewModel = context.read<DiscoverViewModel>();
-
-    // ★★★ onStartChat の割り当てを削除 ★★★
-    // _viewModel.onStartChat = _startChat; // <-- 削除
-
-
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 200) {
         if (mounted) {
-          // ★ _viewModel を使用
           _viewModel.fetchMorePosts();
         }
       }
@@ -107,8 +95,6 @@ class _DiscoverViewState extends State<_DiscoverView>
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          // 既存の FilterBottomSheet ウィジェットを再利用
-          // FilterBottomSheet は内部で ListView を持つため scrollController は不要
           child: FilterBottomSheet(initialFilters: _viewModel.filterOptions),
         ),
       ),
@@ -125,11 +111,8 @@ class _DiscoverViewState extends State<_DiscoverView>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
-        // Provide the ViewModel to the bottom sheet
-        // ▼▼▼ 修正: <PostActionsViewModel> を明示的に指定 ▼▼▼
         return ChangeNotifierProvider<PostActionsViewModel>.value(
-          value: _viewModel, // _viewModel は DiscoverViewModel
-          // ▲▲▲ 修正 ▲▲▲
+          value: _viewModel,
           child: DraggableScrollableSheet(
             initialChildSize: 0.9,
             maxChildSize: 0.9,
@@ -156,12 +139,7 @@ class _DiscoverViewState extends State<_DiscoverView>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // AutomaticKeepAliveClientMixin のため
-
-    // watch で ViewModel の変更を監視
-    // final viewModel = context.watch<DiscoverViewModel>(); // initState で取得済みに変更
-
-    // ★★★ LayoutBuilder で画面幅を判定 ★★★
+    super.build(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         const double wideScreenThreshold = 800.0;
@@ -240,7 +218,7 @@ class _DiscoverViewState extends State<_DiscoverView>
       },
       controller: _searchController,
       decoration: InputDecoration(
-        hintText: 'Search properties or locations...',
+        hintText: 'Bukit Jalil LRT, APU, Sunway Pyramid',
         hintStyle: TextStyle(color: Colors.grey[500]),
         prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
         filled: true,
@@ -399,10 +377,14 @@ class _DiscoverViewState extends State<_DiscoverView>
     );
   }
 
-  // --- ★ チャット開始のロジックをメソッド化 ---
+
   void _startChat(PostModel post) {
-    // ★★★ ADDED AUTH CHECK ★★★
     if (FirebaseAuth.instance.currentUser == null) {
+      pendingAction = PendingAction(
+        type: PendingActionType.chatWithAgent,
+        payload: {'post': post}, // PostModelを渡す
+      );
+      
       showSignInModal(context);
       return;
     }

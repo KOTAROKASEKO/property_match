@@ -1,6 +1,7 @@
 // lib/features/1_agent_feature/2_tenant_list/view/tenant_detail_screen.dart
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
 import 'package:shared_data/shared_data.dart';
@@ -88,7 +89,11 @@ class TenantDetailSheetContent extends StatelessWidget {
                     textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
                   ),
                   onPressed: () {
-                    if(userData.userId==''){
+                    if(FirebaseAuth.instance.currentUser == null){
+                      pendingAction = PendingAction(
+                        type: PendingActionType.chatWithTenant,
+                        payload: {'tenant': tenant}, // UserProfileオブジェクトを渡す
+                      );
                       showSignInModal(context);
                     }else{
                       final chatThreadId = _generateChatThreadId(userData.userId, tenant.uid);

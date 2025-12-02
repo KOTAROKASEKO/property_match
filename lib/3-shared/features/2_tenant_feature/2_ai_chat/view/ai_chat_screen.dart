@@ -1,8 +1,10 @@
 // lib/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_screen.dart
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
 import 'package:shared_data/shared_data.dart';
 import 'package:template_hive/template_hive.dart';
 import '../../../../core/model/PostModel.dart';
@@ -30,7 +32,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
     _viewModel = AIChatViewModel(chatId: widget.chatId);
   }
 
-  // chatIdが変わったらViewModelを再構築
   @override
   void didUpdateWidget(covariant AIChatScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -48,12 +49,13 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   // エージェントとのチャット開始ロジック（既存）
   void _startChatWithAgent(PostModel post) {
-    // ... (省略: 既存のロジックと同じ) ...
-    // 前回のコードから変更なしのため省略します
+    if(FirebaseAuth.instance.currentUser == null){
+      showSignInModal(context);
+      return;
+    }
     List<String> uids = [userData.userId, post.userId];
     uids.sort();
     final chatThreadId = uids.join('_');
-    // ...
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => IndividualChatScreenWithProvider(
       chatThreadId: chatThreadId,
       otherUserUid: post.userId,
@@ -91,9 +93,6 @@ class _AIChatViewWithLogic extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<AIChatViewModel>();
-    final bool isNewChat = viewModel.chatId == null; 
-    // もしくは viewModel.messages.isEmpty で判定しても良いですが、
-    // ChatGPTは「履歴がない＝Welcome画面」なので、メッセージ数で判定します。
     final bool showWelcome = viewModel.messages.isEmpty;
 
     return Scaffold(
@@ -154,9 +153,9 @@ class _AIChatViewWithLogic extends StatelessWidget {
                 runSpacing: 8,
                 alignment: WrapAlignment.center,
                 children: [
-                  _buildSuggestionChip(context, "Find a studio in KL", viewModel),
-                  _buildSuggestionChip(context, "Budget under RM 1000", viewModel),
-                  _buildSuggestionChip(context, "Near MRT station", viewModel),
+                  _buildSuggestionChip(context, "A room that has some restaurant near there", viewModel),
+                  _buildSuggestionChip(context, "Cheaper than 1000rm, but clean room", viewModel),
+                  _buildSuggestionChip(context, "1 to 3 station away from bukit jalil with supermarket", viewModel),
                 ],
               ),
             ],
@@ -173,7 +172,6 @@ class _AIChatViewWithLogic extends StatelessWidget {
       side: BorderSide.none,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       onPressed: () {
-        // チップを押したら送信
         viewModel.sendMessage(text).then((newId) {
           if (newId != null && onChatCreated != null) onChatCreated!(newId);
         });
@@ -325,7 +323,7 @@ class _MessageInputState extends State<_MessageInput> {
           minLines: 1,
           textInputAction: TextInputAction.newline, // Enterで改行したい場合
           decoration: InputDecoration(
-            hintText: 'Ask anything...',
+            hintText: 'a room convenient to commute APU and nearby supermarket',
             hintStyle: TextStyle(color: Colors.grey[400]),
             filled: true,
             fillColor: fillColor,
@@ -356,7 +354,7 @@ class _MessageInputState extends State<_MessageInput> {
               ),
             ),
           ),
-          onChanged: (val) => setState(() {}), // 入力状態に応じてボタン色を変えるため
+          onChanged: (val) => setState(() {}),
         ),
       ),
     );

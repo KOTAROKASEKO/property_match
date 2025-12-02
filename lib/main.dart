@@ -195,7 +195,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         final doc = await firestore
             .collection('users_prof')
-            .doc(user.uid) // ★ 3. user.uid を使用
+            .doc(user.uid)
             .get();
         if (doc.exists) {
           final data = doc.data() as Map<String, dynamic>;
@@ -234,7 +234,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           final user = snapshot.data!; // ★ 4. user オブジェクトを取得
           userData.setUser(user);
           return FutureBuilder<String?>(
-            future: _getRoleFromPrefs(user), // ★ 5. user オブジェクトを渡す
+            future: _getRoleFromPrefs(user),
             builder: (context, prefsSnapshot) {
               return DelayedFrameBuilder(
                 builder: (context) {

@@ -65,8 +65,8 @@ class _AIChatMainLayoutState extends State<AIChatMainLayout> {
           return Scaffold(
             appBar: AppBar(
               title: const Text('AI Agent'),
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black87,
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
               elevation: 0,
               leading: Builder(
                 builder: (context) => IconButton(

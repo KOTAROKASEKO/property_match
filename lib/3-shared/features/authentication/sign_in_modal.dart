@@ -1,12 +1,14 @@
+// lib/3-shared/features/authentication/sign_in_modal.dart
+
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart'; // For kIsWeb
+import 'package:flutter/foundation.dart'; // kIsWeb
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:lottie/lottie.dart';
 import 'package:re_conver/3-shared/features/authentication/login_placeholder.dart';
-import 'package:re_conver/3-shared/features/authentication/sign_in_button_stub.dart'; // Import the cross-platform button
+import 'package:re_conver/3-shared/features/authentication/sign_in_button_stub.dart'; // Cross-platform button
 
 class SignInModal extends StatefulWidget {
   const SignInModal({super.key});
@@ -22,7 +24,10 @@ class _SignInModalState extends State<SignInModal> {
   @override
   void initState() {
     super.initState();
-    _initializeGoogleSignIn();
+    // Only initialize Web GIS SDK and listener on Web
+    if (kIsWeb) {
+      _initializeGoogleSignInWeb();
+    }
   }
 
   @override
@@ -31,14 +36,13 @@ class _SignInModalState extends State<SignInModal> {
     super.dispose();
   }
 
-  /// Sets up Google Sign-In for Web (listening to events) and initializes the client.
-  Future<void> _initializeGoogleSignIn() async {
+  /// Web: Google Sign-In Initialization & Event Listener (GIS Flow)
+  Future<void> _initializeGoogleSignInWeb() async {
     try {
       await GoogleSignIn.instance.initialize(
         clientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'],
       );
 
-      // Only listen to events if on Web, or generally for the GIS flow
       _authSubscription = GoogleSignIn.instance.authenticationEvents
           .listen((GoogleSignInAuthenticationEvent event) async {
         if (event is GoogleSignInAuthenticationEventSignIn) {
@@ -51,7 +55,7 @@ class _SignInModalState extends State<SignInModal> {
             final GoogleSignInAuthentication googleAuth =
                 await account.authentication;
 
-            // 2. Get idToken
+            // 2. Get ID token
             final String? idToken = googleAuth.idToken;
 
             if (idToken == null) {
@@ -64,11 +68,11 @@ class _SignInModalState extends State<SignInModal> {
               idToken: idToken,
             );
 
+            // 4. Sign in to Firebase
             final userCredential =
                 await FirebaseAuth.instance.signInWithCredential(credential);
 
             if (userCredential.user != null && mounted) {
-              // Return true to indicate successful login
               Navigator.pop(context, true);
             }
           } catch (error) {
@@ -99,19 +103,30 @@ class _SignInModalState extends State<SignInModal> {
     }
   }
 
-  /// Handles Google Sign-In for Mobile (Android/iOS)
-  Future<UserCredential?> _signInWithGoogleMobile() async {
+  /// Mobile: Native Google Sign-In (App implementation)
+  Future<void> _signInWithGoogleMobile() async {
+    setState(() {
+      _isSigningIn = true;
+    });
     try {
+      // 1. Initialize (Required for this specific implementation)
       await GoogleSignIn.instance.initialize(
         serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '',
       );
+
+      // 2. Authenticate using the 'authenticate' method as found in login_placeholder.dart
       final GoogleSignInAccount? googleUser =
           await GoogleSignIn.instance.authenticate();
 
       if (googleUser == null) {
-        return null;
+        // User canceled
+        setState(() {
+          _isSigningIn = false;
+        });
+        return;
       }
 
+      // 3. Retrieve tokens using the specific properties from login_placeholder.dart
       final googleAuth = googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
@@ -127,21 +142,32 @@ class _SignInModalState extends State<SignInModal> {
         throw 'Failed to get id token from Google.';
       }
 
+      // 4. Create credential
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: accessToken,
         idToken: idToken,
       );
 
+      // 5. Sign in to Firebase
       final userCredential =
           await FirebaseAuth.instance.signInWithCredential(credential);
 
-      return userCredential;
+      if (userCredential.user != null && mounted) {
+        Navigator.pop(context, true);
+      }
     } catch (error) {
       print("Error during Google Sign-In: $error");
-      return null;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign in failed: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSigningIn = false);
+      }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +188,7 @@ class _SignInModalState extends State<SignInModal> {
               height: 150,
               width: 150,
               child: Lottie.asset(
-                'signin_dog.json',
+                'assets/signin_dog.json',
               ),
             ),
             const SizedBox(height: 20),
@@ -175,9 +201,9 @@ class _SignInModalState extends State<SignInModal> {
             else
               Column(
                 children: [
-                  // Use the Cross-Platform SignInButton
-                  // On Web: Renders gsi_web button (ignores onPressed).
-                  // On Mobile: Renders ElevatedButton and uses onPressed.
+                  // Cross-platform button
+                  // Mobile: uses sign_in_button_mobile.dart and executes onPressed
+                  // Web: uses sign_in_button_web.dart (GIS button), ignores onPressed
                   SignInButton(
                     isSigningIn: _isSigningIn,
                     onPressed: _signInWithGoogleMobile,
@@ -186,9 +212,7 @@ class _SignInModalState extends State<SignInModal> {
                   // Email Sign In Button
                   ElevatedButton.icon(
                     onPressed: () {
-                      // Pop this modal
                       Navigator.pop(context);
-                      // Navigate to the LoginPlaceholderScreen (Full email flow)
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const LoginPlaceholderScreen(),

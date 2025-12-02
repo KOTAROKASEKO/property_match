@@ -2,13 +2,19 @@
 
 import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
+import 'package:re_conver/3-shared/common_feature/chat/view/chatThreadScreen.dart';
 import 'package:shared_data/shared_data.dart';
+import 'package:template_hive/template_hive.dart'; // ★ PropertyTemplate用にインポート
 import '../../features/1_agent_feature/1_profile/view/agent_profile_view.dart';
-import '../../common_feature/chat/view/chatThreadScreen.dart';
 import '../../common_feature/chat/view/providerIndividualChat.dart';
 import '../../features/2_tenant_feature/1_discover/view/discover_screen.dart';
 import '../../features/2_tenant_feature/3_profile/view/profile_screen.dart';
 import '../../features/1_agent_feature/2_tenant_list/view/tenant_list_view.dart'; 
+
+// ★ Pending Action 用のインポートを追加
+import '../../features/authentication/auth_service.dart';
+import '../../core/model/PostModel.dart';
+import '../../features/2_tenant_feature/3_profile/models/profile_model.dart';
 
 class TabletScaffold extends StatefulWidget {
   const TabletScaffold({super.key});
@@ -20,23 +26,20 @@ class TabletScaffold extends StatefulWidget {
 class _TabletScaffoldState extends State<TabletScaffold> {
   int _selectedIndex = 0;
   ChatThread? _selectedThread;
+  PropertyTemplate? _pendingPropertyTemplate; // ★ Pending Actionからのテンプレート保持用
 
-  // ★★★ 1. ページリストの宣言を削除 ★★★
-  // late final List<Widget> _agentPages;
-  // late final List<Widget> _tenantPages;
   late final bool _isAgent;
 
-  // ★★★ 2. 状態を保持するウィジェットをメンバ変数として宣言 ★★★
   late final ChatThreadsScreen _chatThreadsScreen;
   late final TenantListView _tenantListView;
   late final MyProfilePage _myProfilePage;
   late final DiscoverScreen _discoverScreen;
   late final ProfileScreen _profileScreen;
 
-
   void _onThreadSelected(ChatThread thread) {
     setState(() {
       _selectedThread = thread;
+      _pendingPropertyTemplate = null; // ★ 手動選択時はテンプレートをクリア
     });
   }
 
@@ -46,23 +49,130 @@ class _TabletScaffoldState extends State<TabletScaffold> {
         : thread.whoSent;
   }
 
-  // ★★★ 3. initState でウィジェットのインスタンスを一度だけ作成 ★★★
   @override
   void initState() {
     super.initState();
     _isAgent = userData.role == Roles.agent;
 
-    // --- 状態を保持したいウィジェットをここで初期化 ---
     _chatThreadsScreen = ChatThreadsScreen(onThreadSelected: _onThreadSelected);
     _tenantListView = TenantListView();
     _myProfilePage = MyProfilePage();
     _discoverScreen = DiscoverScreen();
     _profileScreen = ProfileScreen();
 
-    // --- ページリストの作成は build メソッドに移動 ---
+    // ★ 起動時（ログイン直後）にPending Actionをチェック
+    _checkPendingAction();
   }
 
-  // ( _buildChatDetailView は変更なし)
+  // ★★★ Pending Action 処理ロジック ★★★
+  void _checkPendingAction() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (pendingAction != null && mounted) {
+        final action = pendingAction!;
+        bool actionHandled = false;
+
+        // エージェントがテナントへチャットしようとしている場合
+        if (_isAgent && action.type == PendingActionType.chatWithTenant) {
+          final tenant = action.payload['tenant'] as UserProfile;
+          _handleChatWithTenant(tenant);
+          actionHandled = true;
+        } 
+        // テナントがエージェントへチャット（Inquire）しようとしている場合
+        else if (!_isAgent && action.type == PendingActionType.chatWithAgent) {
+          final post = action.payload['post'] as PostModel;
+          _handleChatWithAgent(post);
+          actionHandled = true;
+        }
+
+        // 処理したらクリア
+        if (actionHandled) {
+          pr('TabletScaffold: Handled pending action ${action.type}');
+          pendingAction = null;
+        }
+      }
+    });
+  }
+
+  // エージェント用: テナントとのチャットを開く
+ // エージェント用: テナントとのチャットを開く
+  void _handleChatWithTenant(UserProfile tenant) {
+    final chatThreadId = _generateChatThreadId(userData.userId, tenant.uid);
+    
+    // ★ 修正: コンストラクタ引数ではなく、カスケード記法でプロパティを設定
+    final dummyThread = ChatThread()
+      ..id = chatThreadId
+      ..whoSent = userData.userId
+      ..whoReceived = tenant.uid
+      ..lastMessage = ''
+      ..timeStamp = DateTime.now()
+      ..unreadCountMap = {} // setter経由でjsonに変換されます
+      ..viewingTimes = []
+      ..viewingNotes = []
+      ..viewingImageUrls = []
+      ..generalImageUrls = []
+      ..hisName = tenant.displayName
+      ..hisPhotoUrl = tenant.profileImageUrl;
+
+    setState(() {
+      _selectedIndex = 0; // チャットタブへ切り替え
+      _selectedThread = dummyThread;
+      _pendingPropertyTemplate = null;
+    });
+    
+    _showSnackBar('Continuing chat with ${tenant.displayName}...');
+  }
+
+  // テナント用: 物件について問い合わせる
+  void _handleChatWithAgent(PostModel post) {
+    final chatThreadId = _generateChatThreadId(userData.userId, post.userId);
+
+    final dummyThread = ChatThread()
+      ..id = chatThreadId
+      ..whoSent = userData.userId
+      ..whoReceived = post.userId
+      ..lastMessage = ''
+      ..timeStamp = DateTime.now()
+      ..unreadCountMap = {}
+      ..viewingTimes = []
+      ..viewingNotes = []
+      ..viewingImageUrls = []
+      ..generalImageUrls = []
+      ..hisName = post.username
+      ..hisPhotoUrl = post.userProfileImageUrl;
+
+    // テンプレートを作成
+    final template = PropertyTemplate(
+      postId: post.id,
+      name: post.condominiumName,
+      rent: post.rent,
+      location: post.location,
+      description: post.description,
+      roomType: post.roomType,
+      gender: post.gender,
+      photoUrls: post.imageUrls,
+      nationality: 'Any',
+    );
+
+    setState(() {
+      _selectedIndex = 0; // チャットタブへ切り替え
+      _selectedThread = dummyThread;
+      _pendingPropertyTemplate = template; // ★ テンプレートをセットして入力欄に表示させる
+    });
+
+    _showSnackBar('Opening chat for ${post.condominiumName}...');
+  }
+  String _generateChatThreadId(String uid1, String uid2) {
+    List<String> uids = [uid1, uid2];
+    uids.sort();
+    return uids.join('_');
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   Widget _buildChatDetailView() {
     if (_selectedThread != null) {
       return IndividualChatScreenWithProvider(
@@ -71,6 +181,8 @@ class _TabletScaffoldState extends State<TabletScaffold> {
         otherUserUid: _getOtherParticipantId(_selectedThread!, userData.userId),
         otherUserName: _selectedThread!.hisName ?? 'Chat User',
         otherUserPhotoUrl: _selectedThread!.hisPhotoUrl,
+        // ★ PendingActionからのテンプレートがあれば渡す
+        initialPropertyTemplate: _pendingPropertyTemplate,
       );
     } else {
       return const Center(
@@ -91,7 +203,6 @@ class _TabletScaffoldState extends State<TabletScaffold> {
   Widget build(BuildContext context) {
     pr('build method in tablet scaffold was called');
     
-    // ★★★ 4. ページリストを build メソッド内で動的に構築 ★★★
     final List<Widget> pages;
     if (_isAgent) {
       pages = [
@@ -99,16 +210,16 @@ class _TabletScaffoldState extends State<TabletScaffold> {
           children: [
             SizedBox(
               width: 350,
-              child: _chatThreadsScreen, // ★ 1. 保存したインスタンスを再利用
+              child: _chatThreadsScreen,
             ),
             const VerticalDivider(width: 1),
             Expanded(
-              child: _buildChatDetailView(), // ★ 2. ここで毎回呼び出し、最新の _selectedThread を反映
+              child: _buildChatDetailView(), 
             ),
           ],
         ),
-        _tenantListView,  // ★ 1. 保存したインスタンスを再利用
-        _myProfilePage, // ★ 1. 保存したインスタンスを再利用
+        _tenantListView,
+        _myProfilePage,
       ];
     } else {
       pages = [
@@ -116,16 +227,16 @@ class _TabletScaffoldState extends State<TabletScaffold> {
           children: [
             SizedBox(
               width: 350,
-              child: _chatThreadsScreen, // ★ 1. 保存したインスタンスを再利用
+              child: _chatThreadsScreen,
             ),
             const VerticalDivider(width: 1),
             Expanded(
-              child: _buildChatDetailView(), // ★ 2. ここで毎回呼び出し、最新の _selectedThread を反映
+              child: _buildChatDetailView(),
             ),
           ],
         ),
-        _discoverScreen, // ★ 1. 保存したインスタンスを再利用
-        _profileScreen,  // ★ 1. 保存したインスタンスを再利用
+        _discoverScreen,
+        _profileScreen,
       ];
     }
 
@@ -156,6 +267,7 @@ class _TabletScaffoldState extends State<TabletScaffold> {
               setState(() {
                 if (index != 0) {
                   _selectedThread = null;
+                  _pendingPropertyTemplate = null; // ★ タブ切り替え時にクリア
                 }
                 _selectedIndex = index;
               });
@@ -167,7 +279,7 @@ class _TabletScaffoldState extends State<TabletScaffold> {
           Expanded(
             child: IndexedStack(
               index: _selectedIndex,
-              children: pages, // ★ 5. 動的に構築されたリストを使用
+              children: pages,
             ),
           ),
         ],

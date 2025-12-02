@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/view/comment_bottomsheet.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/view/post_card.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
@@ -403,12 +404,12 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton.icon(
-              icon: const Icon(Icons.chat_bubble_outline),
+              icon: Icon(WhatsappIcons.whatsapp),
               label: const Text('Inquire'),
               // ★ 7. viewModel.onStartChat! -> widget.onStartChat に変更
               onPressed: () {
                 // The auth check is now handled by the caller,
-                // but we can just call the function.
+                // but we can just call the function. 
                 widget.onStartChat(post);
               },
               style: ElevatedButton.styleFrom(
