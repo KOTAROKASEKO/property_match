@@ -88,6 +88,7 @@ dependencies:
   flutter_native_splash: ^2.4.7
   flutter_markdown: ^0.7.7+1
   font_awesome_flutter: ^10.12.0
+  cloud_functions: ^6.0.4
 
 dev_dependencies:
   flutter_test:
@@ -110,7 +111,7 @@ flutter:
     - family: fancy
       fonts:
         - asset: assets/fancy2.ttf
-    - family: WhatsappIcons #アイコンセットのタイトル
+    - family: WhatsappIcons
       fonts:
         - asset: assets/whatsapp.ttf
 

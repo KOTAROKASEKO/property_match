@@ -11,6 +11,8 @@ import '../../../../core/model/PostModel.dart';
 import '../model/comment_model.dart';
 import '../model/paginated_post.dart';
 import '../model/filter_options.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+
 
 enum SortOrder { byDate, byPopularity }
 
@@ -22,71 +24,25 @@ class PostService {
   final CollectionReference _usersCollection =
       FirebaseFirestore.instance.collection('users');
 
-  Future<Map<String, double>?> getLatLng(String address) async {
-    try {
-      const apiKey = String.fromEnvironment('GEO_CODE_API_KEY');
+      
+Future<Map<String, double>?> getLatLng(String address) async {
+  try {
+    final callable = FirebaseFunctions.instance.httpsCallable('geocode');
+    final result = await callable({'address': address});
 
-      if (apiKey.isEmpty) {
-        throw Exception('GEO_CODE_API_KEY not found in .env');
-      }
-
-      pr('Using API KEY: $apiKey');
-
-      // ★ ここから Web / Mobile の分岐
-      if (kIsWeb) {
-        // -------------------------
-        // Web version (existing)
-        // -------------------------
-        final encodedAddress = Uri.encodeComponent(address);
-        final url =
-            'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';
-
-        final response = await http.get(Uri.parse(url));
-
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          pr('${response.body}');
-          if (data['status'] == 'OK') {
-            final loc = data['results'][0]['geometry']['location'];
-            return {'lat': loc['lat'], 'lng': loc['lng']};
-          } else {
-            print('Google API Error: $data');
-          }
-        } else {
-          print('HTTP Error: ${response.statusCode}');
-        }
-      } else {
-        // -------------------------
-        // Mobile version (NEW!)
-        // -------------------------
-        final encodedAddress = Uri.encodeComponent(address);
-        final url =
-            'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$apiKey';
-
-        final response = await http.get(Uri.parse(url));
-
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-
-          if (data['status'] == 'OK') {
-            final loc = data['results'][0]['geometry']['location'];
-            return {
-              'lat': loc['lat'],
-              'lng': loc['lng'],
-            };
-          } else {
-            print('Google API Error (Mobile): $data');
-          }
-        } else {
-          print('HTTP Error (Mobile): ${response.statusCode}');
-        }
-      }
-    } catch (e) {
-      print('Geocoding failed: $e');
+    if (result.data is Map && result.data['lat'] != null) {
+      return {
+        'lat': result.data['lat'],
+        'lng': result.data['lng'],
+      };
+    } else {
+      print("Error: ${result.data}");
     }
-
-    return null;
+  } catch (e) {
+    print("Firebase Function error: $e");
   }
+  return null;
+}
 
   final SearchClient _algoliaClient = SearchClient(
     appId: '86BOLZBS9Q', // ★ あなたのApp ID

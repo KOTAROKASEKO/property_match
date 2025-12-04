@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart'; // ★★★ ADDED ★★★
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/3-shared/common_feature/post_actions_viewmodel.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/view/shimmer_postcard.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_main_layout.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart'; // ★★★ ADDED ★★★
 import 'package:shared_data/shared_data.dart';
@@ -47,18 +48,16 @@ class _DiscoverViewState extends State<_DiscoverView>
   final _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
-  // ★ ViewModel への参照を State 内で保持 (initStateで初期化)
-  late DiscoverViewModel _viewModel;
+  
 
   @override
   void initState() {
     super.initState();
-    _viewModel = context.read<DiscoverViewModel>();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 200) {
         if (mounted) {
-          _viewModel.fetchMorePosts();
+          context.read<DiscoverViewModel>().fetchMorePosts();
         }
       }
     });
@@ -95,13 +94,13 @@ class _DiscoverViewState extends State<_DiscoverView>
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: FilterBottomSheet(initialFilters: _viewModel.filterOptions),
+          child: FilterBottomSheet(initialFilters: context.read<DiscoverViewModel>().filterOptions),
         ),
       ),
     );
 
-    if (newFilters != null) {
-      _viewModel.applyFilters(newFilters);
+    if (newFilters != null && mounted) { // mountedチェック推奨
+      context.read<DiscoverViewModel>().applyFilters(newFilters); // ★変更
     }
   }
   
@@ -112,7 +111,8 @@ class _DiscoverViewState extends State<_DiscoverView>
       backgroundColor: Colors.transparent,
       builder: (_) {
         return ChangeNotifierProvider<PostActionsViewModel>.value(
-          value: _viewModel,
+          // ★ 修正: _viewModel を context.read<DiscoverViewModel>() に変更
+          value: context.read<DiscoverViewModel>(),
           child: DraggableScrollableSheet(
             initialChildSize: 0.9,
             maxChildSize: 0.9,
@@ -124,10 +124,9 @@ class _DiscoverViewState extends State<_DiscoverView>
                   color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-                // Pass the post to the new bottom sheet widget
                 child: PostDetailBottomSheet(
                   post: post,
-                  onStartChat: _startChat, // _startChat メソッドを直接渡す
+                  onStartChat: _startChat,
                 ),
               );
             },
@@ -136,7 +135,6 @@ class _DiscoverViewState extends State<_DiscoverView>
       },
     );
   }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -214,7 +212,15 @@ class _DiscoverViewState extends State<_DiscoverView>
     return TextField(
       textInputAction: TextInputAction.search, // キーボードに検索ボタンを表示
       onSubmitted: (query) {
-        _viewModel.applySearchQuery(query); // Enterキーで検索を実行
+        // ★ 直接 context.read を使う
+        
+        context.read<DiscoverViewModel>().applySearchQuery(query);
+        FocusScope.of(context).unfocus();
+      },
+      onEditingComplete: () {
+        // ★ 直接 context.read を使う
+        context.read<DiscoverViewModel>().applySearchQuery(_searchController.text);
+        FocusScope.of(context).unfocus();
       },
       controller: _searchController,
       decoration: InputDecoration(
@@ -236,23 +242,22 @@ class _DiscoverViewState extends State<_DiscoverView>
   Widget _buildWideLayout() {
     return Row(
       children: [
-        // --- 左側: フィルターパネル ---
         SizedBox(
-          width: 300, // 固定幅 または constraints.maxWidth * 0.3 など
-          child: DiscoverFilterPanel(), // 作成したフィルターパネル
+          width: 300,
+          child: DiscoverFilterPanel(),
         ),
         const VerticalDivider(width: 1, thickness: 1),
         Expanded(
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0), // 上下の Padding を調整
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
                 child: _buildSearchBar(),
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () => _viewModel.fetchInitialPosts(),
-                  // CustomScrollView を直接配置 (AppBarなし)
+                  // ★ 修正: _viewModel.fetchInitialPosts() を以下に変更
+                  onRefresh: () => context.read<DiscoverViewModel>().fetchInitialPosts(),
                   child: _buildPostContentScrollView(),
                 ),
               ),
@@ -262,12 +267,11 @@ class _DiscoverViewState extends State<_DiscoverView>
       ],
     );
   }
-
   // --- ★★★ ナロースクリーン用レイアウト (AppBarなしのコンテンツ部分) ★★★ ---
   Widget _buildNarrowLayout() {
     return RefreshIndicator(
-      onRefresh: () => _viewModel.fetchInitialPosts(),
-      // CustomScrollView を直接配置 (AppBarは Scaffold にある)
+      // ★ 修正: _viewModel.fetchInitialPosts() を以下に変更
+      onRefresh: () => context.read<DiscoverViewModel>().fetchInitialPosts(),
       child: _buildPostContentScrollView(),
     );
   }
@@ -275,25 +279,52 @@ class _DiscoverViewState extends State<_DiscoverView>
 
   // --- ★★★ 投稿リスト表示の CustomScrollView 部分を共通化 ★★★ ---
   Widget _buildPostContentScrollView() {
-    // ViewModel を再度 watch (build メソッド内で変更を検知するため)
-     final viewModel = context.watch<DiscoverViewModel>(); // Use watch here
+    final viewModel = context.watch<DiscoverViewModel>();
 
-    // 画面幅を LayoutBuilder で取得 (Grid表示の切り替えのため)
     return LayoutBuilder(
       builder: (context, constraints) {
-          const double gridBreakpoint = 600.0; // Grid表示に切り替える幅
+          const double gridBreakpoint = 600.0;
           final bool useGridView = constraints.maxWidth >= gridBreakpoint;
+
+          // ★ Shimmerの表示数を計算 (画面サイズに合わせて調整)
+          final shimmerCount = useGridView ? 8 : 4; 
+          
+          // ★ Gridの場合の列数計算 (後でShimmerでも使うためここで計算)
+          final crossAxisCount = (constraints.maxWidth / 400).floor().clamp(1, 4);
 
           return CustomScrollView(
             controller: _scrollController,
             slivers: [
               // コンテンツエリア
-              if (viewModel.isLoading && viewModel.posts.isEmpty) // 初期ロード中
-                const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator()),
-                  // child: _ShimmerPostCard(), // Or Shimmer
-                )
+              if (viewModel.isLoading && viewModel.posts.isEmpty) 
+                // ★★★ 修正: ローディング中は Shimmer を表示 ★★★
+                useGridView 
+                  ? SliverPadding(
+                      padding: const EdgeInsets.all(16.0),
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          mainAxisSpacing: 16.0,
+                          crossAxisSpacing: 16.0,
+                          childAspectRatio: 0.70,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => const ShimmerPostCard(),
+                          childCount: shimmerCount,
+                        ),
+                      ),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8.0),
+                          child: ShimmerPostCard(),
+                        ),
+                        childCount: shimmerCount, // リスト形式なら4つくらい表示
+                      ),
+                    )
               else if (viewModel.posts.isEmpty)
+                // (ここは変更なし: No posts found)
                 const SliverFillRemaining(
                   child: Center(
                     child: Padding(
@@ -306,12 +337,12 @@ class _DiscoverViewState extends State<_DiscoverView>
                     ),
                   ),
                 )
-              else if (useGridView) // ★ Grid表示
-                _buildPostGrid(viewModel, constraints) // GridView を構築
-              else // ★ List表示
-                _buildPostList(viewModel), // ListView を構築
+              else if (useGridView) 
+                _buildPostGrid(viewModel, constraints)
+              else 
+                _buildPostList(viewModel),
 
-              // もっと読み込むインジケータ
+              // もっと読み込むインジケータ (ここも必要なら小さなShimmerにできますが、Indicatorで十分なことが多いです)
               if (viewModel.isLoadingMore)
                 SliverToBoxAdapter(
                   child: const Center(
@@ -326,7 +357,7 @@ class _DiscoverViewState extends State<_DiscoverView>
         }
     );
   }
-
+  
   Widget _buildPostGrid(DiscoverViewModel viewModel, BoxConstraints constraints) {
     final crossAxisCount = (constraints.maxWidth / 400).floor().clamp(1, 4); // 最小1列、最大4列
 

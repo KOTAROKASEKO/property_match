@@ -136,12 +136,14 @@ Future<void> _fetchBlockedUsersAndThenPosts() async {
 
   Future<void> applySearchQuery(String query) async {
     // これはトップの検索バー（ロケーション用）
+    _posts = [];
     _searchQuery = query;
     await fetchInitialPosts();
   }
 
   Future<void> applyFilters(FilterOptions filters) async {
     // これはフィルターパネル（家賃、性別、コンドミニアム名など）
+    _posts = [];
     _filterOptions = filters;
     await fetchInitialPosts();
   }

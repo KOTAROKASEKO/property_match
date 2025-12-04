@@ -209,7 +209,6 @@ class _DeepLinkPostViewState extends State<DeepLinkPostView> {
                   child: SingleChildScrollView(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
-                      // PostCardを表示するためにViewModelを提供
                       child: ChangeNotifierProvider<PostActionsViewModel>.value(
                         value: _viewModel,
                         child: Consumer<PostActionsViewModel>(
