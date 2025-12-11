@@ -1,7 +1,10 @@
+// lib/3-shared/features/1_agent_feature/1_profile/view/edit_agent_profile_view.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:country_picker/country_picker.dart'; // ★ 追加: これをインポートしてください
 import '../model/agent_profile_model.dart';
 import '../viewmodel/agent_profile_viewmodel.dart';
 
@@ -22,16 +25,40 @@ class _EditAgentProfileScreenState extends State<EditAgentProfileScreen> {
   late String _bio;
   XFile? _imageFile;
   bool _isLoading = false;
-  late String _phoneNumber;
+  
+  String _countryCode = '+60'; 
+  late String _phoneBody;
+
   @override
   void initState() {
     super.initState();
     _displayName = widget.agentProfile.displayName;
     _profileImageUrl = widget.agentProfile.profileImageUrl;
     _bio = widget.agentProfile.bio;
-    _phoneNumber = widget.agentProfile.phoneNumber;
+    
+    // 既存の番号を解析して初期値をセット
+    String currentPhone = widget.agentProfile.phoneNumber;
+    if (currentPhone.startsWith('+')) {
+      // "+6012345" のような形式を想定し、簡易的に国番号を抽出するロジック
+      // (厳密にやるなら libphonenumber が必要ですが、簡易版として)
+      if(currentPhone.startsWith('+60')) {
+         _countryCode = '+60';
+         _phoneBody = currentPhone.substring(3);
+      } else if (currentPhone.startsWith('+81')) {
+         _countryCode = '+81';
+         _phoneBody = currentPhone.substring(3);
+      } else {
+        // マッチしない場合は、デフォルト+60にして、全体をbodyに入れるなどのフォールバック
+        // 実際には保存されている形式に合わせて調整してください
+        _countryCode = '+60'; 
+        _phoneBody = currentPhone.replaceAll('+60', ''); 
+      }
+    } else {
+      _phoneBody = currentPhone;
+    }
   }
 
+  // ... (途中省略: _pickImage, _saveProfile などは変更なし) ...
   Future<void> _pickImage() async {
     final XFile? selectedImage = await _picker.pickImage(source: ImageSource.gallery);
     if (selectedImage != null) {
@@ -53,13 +80,22 @@ class _EditAgentProfileScreenState extends State<EditAgentProfileScreen> {
         try {
           newProfileImageUrl = await viewModel.uploadProfileImage(widget.agentProfile.uid, _imageFile!);
         } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to upload image: $e')),
-          );
-          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to upload image: $e')),
+            );
+            setState(() => _isLoading = false);
+          }
           return;
         }
       }
+
+      // 国番号と本文を結合
+      String finalCountryCode = _countryCode.trim();
+      if (!finalCountryCode.startsWith('+')) {
+        finalCountryCode = '+$finalCountryCode';
+      }
+      final String fullPhoneNumber = '$finalCountryCode${_phoneBody.trim()}';
 
       final updatedProfile = AgentProfile(
         uid: widget.agentProfile.uid,
@@ -67,27 +103,29 @@ class _EditAgentProfileScreenState extends State<EditAgentProfileScreen> {
         displayName: _displayName,
         profileImageUrl: newProfileImageUrl,
         bio: _bio,
-        phoneNumber: _phoneNumber,
+        phoneNumber: fullPhoneNumber,
       );
 
       try {
         await viewModel.updateUserProfile(updatedProfile);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!')),
-        );
-        Navigator.pop(context, true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile updated successfully!')),
+          );
+          Navigator.pop(context, true);
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile: $e')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update profile: $e')),
+          );
+        }
       } finally {
         if (mounted) {
           setState(() => _isLoading = false);
         }
       }
     }
-
-    
   }
 
   @override
@@ -114,6 +152,7 @@ class _EditAgentProfileScreenState extends State<EditAgentProfileScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
+            // ... (アバター部分は変更なし) ...
             Center(
               child: Stack(
                 children: [
@@ -148,16 +187,83 @@ class _EditAgentProfileScreenState extends State<EditAgentProfileScreen> {
               validator: (value) => value!.isEmpty ? 'Please enter a display name' : null,
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              initialValue: _phoneNumber,
-              decoration: const InputDecoration(
-                labelText: 'WhatsApp Number',
-                hintText: 'e.g. 60123456789 (Country code required)',
-                prefixIcon: Icon(Icons.phone),
-              ),
-              keyboardType: TextInputType.phone,
-              onSaved: (value) => _phoneNumber = value!,
+            
+            const Text(
+              'WhatsApp Number',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ★★★ 国番号選択部分 (変更箇所) ★★★
+                SizedBox(
+                  width: 90, // 国番号用の幅を指定 (80〜100くらいが適切)
+                  child: InkWell(
+                    onTap: () {
+                      showCountryPicker(
+                        context: context,
+                        showPhoneCode: true,
+                        countryListTheme: CountryListThemeData(
+                          borderRadius: BorderRadius.circular(16),
+                          inputDecoration: InputDecoration(
+                            labelText: 'Search',
+                            hintText: 'Start typing to search',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        onSelect: (Country country) {
+                          setState(() {
+                            _countryCode = '+${country.phoneCode}';
+                          });
+                        },
+                      );
+                    },
+                    // InputDecorator
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Code',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                      ),
+                      child: Text(
+                        _countryCode,
+                        style: const TextStyle(fontSize: 16),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // 電話番号本体入力欄 (ほぼ変更なし)
+                Expanded(
+                  child: TextFormField(
+                    initialValue: _phoneBody,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone Number',
+                      hintText: '123456789',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      prefixIcon: Icon(Icons.phone),
+                    ),
+                    keyboardType: TextInputType.phone,
+                    onSaved: (value) => _phoneBody = value!,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Please enter phone number';
+                      if (!RegExp(r'^\d+$').hasMatch(value.replaceAll(' ', ''))) {
+                        return 'Digits only';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            ),
+            
             const SizedBox(height: 16),
             TextFormField(
               initialValue: _bio,

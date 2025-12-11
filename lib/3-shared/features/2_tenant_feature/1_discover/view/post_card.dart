@@ -206,11 +206,7 @@ class _PostCardState extends State<PostCard> {
       ));
     }
 
-    if (widget.post.hobbies.isNotEmpty) {
-      chips.addAll(widget.post.hobbies
-          .map((hobby) => _buildInfoChip(Icons.interests_outlined, hobby))
-          .toList());
-    }
+    
 
     return Padding(
       padding: const EdgeInsets.all(12.0),

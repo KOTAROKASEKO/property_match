@@ -1,3 +1,5 @@
+// lib/3-shared/common_feature/chat/view/all_property.dart
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chatrepo_interface/chatrepo_interface.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_data/shared_data.dart';
 import 'providerIndividualChat.dart';
 import 'viewing_details_bottomsheet.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ★ Added for StreamBuilder
 
 class ChatThreadList extends StatelessWidget {
   final List<ChatThread> threads;
@@ -20,7 +23,6 @@ class ChatThreadList extends StatelessWidget {
     this.onThreadSelected,
   });
 
-
   @override
   Widget build(BuildContext context) {
     if (threads.isEmpty) {
@@ -31,30 +33,22 @@ class ChatThreadList extends StatelessWidget {
       itemCount: threads.length,
       itemBuilder: (context, index) {
         final thread = threads[index];
-        final otherParticipantId =
-            getOtherParticipantId(thread);
-
+        final otherParticipantId = getOtherParticipantId(thread);
 
         final displayName = thread.hisName ?? 'Chat User';
         final imageUrl = thread.hisPhotoUrl;
         final unreadCount = thread.unreadCountMap[userData.userId] ?? 0;
         final note = thread.generalNote;
 
-        // ★ Use the safe decoding helper for generalImageUrls
-        // Assuming generalImageUrls from Isar/Drift is List<String>
-        // If Firestore stores it differently, adjust accordingly
-        List<String> generalImageUrlsDecoded = thread.generalImageUrls; // Directly use if it's List<String>
-        // If thread.generalImageUrls might be dynamic/String from Firestore sync:
-        // List<String> generalImageUrlsDecoded = _decodeImageUrls(thread.generalImageUrls);
-
+        List<String> generalImageUrlsDecoded = thread.generalImageUrls;
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
           child: Card(
             key: ValueKey(thread.id),
             elevation: 2.0,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
@@ -62,22 +56,63 @@ class ChatThreadList extends StatelessWidget {
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      radius: 25,
-                      backgroundImage: (imageUrl != null && imageUrl.isNotEmpty)
-                          ? CachedNetworkImageProvider(imageUrl)
-                          : null,
-                      child: (imageUrl == null || imageUrl.isEmpty)
-                          ? Text(displayName.isNotEmpty
-                              ? displayName[0].toUpperCase()
-                              : '?')
-                          : null,
+                    // ★ Modified Leading: Stack for Online Status Dot
+                    leading: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 25,
+                          backgroundImage:
+                              (imageUrl != null && imageUrl.isNotEmpty)
+                                  ? CachedNetworkImageProvider(imageUrl)
+                                  : null,
+                          child: (imageUrl == null || imageUrl.isEmpty)
+                              ? Text(displayName.isNotEmpty
+                                  ? displayName[0].toUpperCase()
+                                  : '?')
+                              : null,
+                        ),
+                        // ★ StreamBuilder to listen for online status
+                        StreamBuilder<DocumentSnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('users_prof')
+                              .doc(otherParticipantId)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData &&
+                                snapshot.data != null &&
+                                snapshot.data!.exists) {
+                              final data =
+                                  snapshot.data!.data() as Map<String, dynamic>;
+                              final isOnline =
+                                  data['isOnline'] as bool? ?? false;
+                              
+                              if (isOnline) {
+                                return Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF00E676),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: Colors.white, width: 2),
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ],
                     ),
                     title: Text(
                       displayName,
                       style: const TextStyle(fontWeight: FontWeight.bold),
-                      maxLines: 1, // 1行に制限
-                      overflow: TextOverflow.ellipsis, // 溢れた場合は ... で省略
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(thread.lastMessage ?? '',
                         maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -99,19 +134,19 @@ class ChatThreadList extends StatelessWidget {
                                 style: const TextStyle(
                                     color: Colors.white, fontSize: 12)),
                           )
-                        else const SizedBox(height: 24),
+                        else
+                          const SizedBox(height: 24),
                       ],
                     ),
                     onTap: () {
                       if (onThreadSelected != null) {
                         onThreadSelected!(thread);
                       } else {
-                        print('thread id is ::::  ${thread.id}');
                         Navigator.of(context).push(
                           PageRouteBuilder(
-                            pageBuilder:
-                                (context, animation, secondaryAnimation) =>
-                                    IndividualChatScreenWithProvider(
+                            pageBuilder: (context, animation,
+                                    secondaryAnimation) =>
+                                IndividualChatScreenWithProvider(
                               chatThreadId: thread.id,
                               otherUserUid: otherParticipantId,
                               otherUserName: displayName,
@@ -135,7 +170,8 @@ class ChatThreadList extends StatelessWidget {
                     },
                     onLongPress: () => onLongPress(thread),
                   ),
-                  if (generalImageUrlsDecoded.isNotEmpty || (note != null && note.isNotEmpty))
+                  if (generalImageUrlsDecoded.isNotEmpty ||
+                      (note != null && note.isNotEmpty))
                     const Divider(height: 24),
                   GestureDetector(
                     onTap: () {
@@ -145,7 +181,7 @@ class ChatThreadList extends StatelessWidget {
                         backgroundColor: Colors.transparent,
                         builder: (_) => ViewingDetailsBottomSheet(
                           note: note ?? "",
-                          imageUrls: generalImageUrlsDecoded, // Use decoded URLs
+                          imageUrls: generalImageUrlsDecoded,
                         ),
                       );
                     },
@@ -163,11 +199,13 @@ class ChatThreadList extends StatelessWidget {
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
                                   child: CachedNetworkImage(
-                                    imageUrl: generalImageUrlsDecoded[idx], // Use decoded URLs
+                                    imageUrl: generalImageUrlsDecoded[idx],
                                     width: 80,
                                     fit: BoxFit.cover,
-                                     placeholder: (context, url) => Container(color: Colors.grey[200]),
-                                     errorWidget: (context, url, error) => const Icon(Icons.error),
+                                    placeholder: (context, url) => Container(
+                                        color: Colors.grey[200]),
+                                    errorWidget: (context, url, error) =>
+                                        const Icon(Icons.error),
                                   ),
                                 ),
                               ),
@@ -178,8 +216,7 @@ class ChatThreadList extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 12.0),
                             child: Text(
                               "Note: $note",
-                              style:
-                                  TextStyle(color: Colors.grey.shade700),
+                              style: TextStyle(color: Colors.grey.shade700),
                               maxLines: 3,
                               overflow: TextOverflow.ellipsis,
                             ),

@@ -236,6 +236,49 @@ class CreatePostScreen extends StatelessWidget {
                             },
                           ),
                           const SizedBox(height: 16),
+                          _buildSectionCard(
+                            title: 'Initial Costs (in months)',
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      initialValue: viewModel.securityDeposit
+                                          .toString(),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Security Deposit (Months)',
+                                      ),
+                                      keyboardType:
+                                          TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
+                                      onChanged: (val) =>
+                                          viewModel.securityDeposit =
+                                              double.tryParse(val) ?? 0,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: TextFormField(
+                                      initialValue: viewModel.utilityDeposit
+                                          .toString(),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Utility Deposit (Months)',
+                                      ),
+                                      keyboardType:
+                                          TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
+                                      onChanged: (val) =>
+                                          viewModel.utilityDeposit =
+                                              double.tryParse(val) ?? 0,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
                           _buildDateRangePicker(context, viewModel),
                         ],
                       ),
@@ -275,10 +318,7 @@ class CreatePostScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      _buildSectionCard(
-                        title: 'Hobbies & Lifestyle Tags',
-                        children: [_buildHobbiesInput(context, viewModel)],
-                      ),
+
                       //
                       _buildSectionCard(
                         title: 'Description',
@@ -535,55 +575,6 @@ class CreatePostScreen extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildHobbiesInput(
-    BuildContext context,
-    CreatePostViewModel viewModel,
-  ) {
-    // A local controller is fine here as its state is temporary for input.
-    final _hobbyController = TextEditingController();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextFormField(
-          controller: _hobbyController,
-          decoration: InputDecoration(
-            labelText: 'Add a tag (e.g., foodie, badminton)',
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: () {
-                if (_hobbyController.text.isNotEmpty) {
-                  viewModel.addHobby(_hobbyController.text);
-                  _hobbyController.clear();
-                }
-              },
-            ),
-          ),
-          onFieldSubmitted: (value) {
-            if (value.isNotEmpty) {
-              viewModel.addHobby(value);
-              _hobbyController.clear();
-            }
-          },
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8.0,
-          runSpacing: 4.0,
-          children: viewModel.hobbies
-              .map(
-                (hobby) => Chip(
-                  label: Text(hobby),
-                  onDeleted: () {
-                    viewModel.removeHobby(hobby);
-                  },
-                ),
-              )
-              .toList(),
-        ),
-      ],
     );
   }
 }

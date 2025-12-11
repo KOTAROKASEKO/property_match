@@ -1,4 +1,3 @@
-// lib/3-shared/features/2_tenant_feature/1_discover/view/post_detail_bottomsheet.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,26 +7,22 @@ import 'package:provider/provider.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/view/comment_bottomsheet.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/view/post_card.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
+import 'package:re_conver/l10n/app_localizations.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
-
-// ★ 1. PostActionsViewModel をインポート
 import '../../../../common_feature/post_actions_viewmodel.dart';
 import '../../../../core/model/PostModel.dart';
-// ★ 2. DiscoverViewModel のインポートを削除 (またはコメントアウト)
-// import '../viewmodel/discover_viewmodel.dart';
 import 'agent_profile_screen.dart';
 import 'full_pic_screen.dart';
 
 class PostDetailBottomSheet extends StatefulWidget {
   final PostModel post;
-  // ★ 3. onStartChat をパラメータとして追加
   final Function(PostModel) onStartChat;
 
   const PostDetailBottomSheet({
     super.key,
     required this.post,
-    required this.onStartChat, // ★ 4. コンストラクタに追加
+    required this.onStartChat,
   });
 
   @override
@@ -37,18 +32,16 @@ class PostDetailBottomSheet extends StatefulWidget {
 class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
   int _currentPage = 0;
 
-  Future<void> _launchWhatsApp(BuildContext context, String phone) async {
+  Future<void> _launchWhatsApp(
+      BuildContext context, String phone, AppLocalizations l) async {
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No phone number available for this agent.')),
+        SnackBar(content: Text(l.postDetail_noPhoneNumber)),
       );
       return;
     }
 
-    // Clean the phone number (remove +, spaces, dashes)
     final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
-    
-    // Create the URL
     final url = Uri.parse('https://wa.me/$cleanPhone');
     try {
       if (await canLaunchUrl(url)) {
@@ -65,13 +58,12 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // ★ 5. DiscoverViewModel -> PostActionsViewModel に変更
     final viewModel = context.watch<PostActionsViewModel>();
     final post = widget.post;
+    final l = AppLocalizations.of(context)!;
 
     return Column(
       children: [
-        // 1. Draggable Handle
         Container(
           margin: const EdgeInsets.only(top: 12, bottom: 8),
           width: 40,
@@ -81,33 +73,30 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-
-        // 2. Scrollable Content
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             children: [
               if (post.imageUrls.isNotEmpty) _buildImageCarousel(context, post),
               const SizedBox(height: 16),
-              _buildHeader(context, post),
+              _buildHeader(context, post, l),
               const SizedBox(height: 16),
               _buildInfoChips(post),
               const Divider(height: 32),
-              _buildDescription(post),
+              _buildInitialCostBreakdown(context, post, l),
               const Divider(height: 32),
-              _buildAgentHeader(context, post),
+              _buildDescription(post, l),
+              const Divider(height: 32),
+              _buildAgentHeader(context, post, l),
             ],
           ),
         ),
-
-        // 3. Bottom Action Bar
-        _buildActionBar(context, viewModel, post),
+        _buildActionBar(context, viewModel, post, l),
       ],
     );
   }
 
-  // ... ( _buildImageCarousel, _buildHeader, _buildInfoChips, _buildDescription, _buildAgentHeader は変更なし) ...
-    Widget _buildImageCarousel(BuildContext context, PostModel post) {
+  Widget _buildImageCarousel(BuildContext context, PostModel post) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16.0),
       child: Stack(
@@ -181,7 +170,7 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, PostModel post) {
+  Widget _buildHeader(BuildContext context, PostModel post, AppLocalizations l) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -199,7 +188,7 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                'RM ${post.rent.toStringAsFixed(0)} / month',
+                l.placeholder_rmPerMonth(post.rent.toStringAsFixed(0)),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -209,7 +198,6 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
             ],
           ),
         ),
-        // Like/Save buttons can go here if needed
       ],
     );
   }
@@ -226,10 +214,6 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
             Icons.date_range_outlined,
             '${DateFormat.yMd().format(post.durationStart!)} - ${post.durationMonths!} months',
           ),
-        if (post.hobbies.isNotEmpty)
-          ...post.hobbies
-              .map((hobby) => _buildInfoChip(Icons.interests_outlined, hobby))
-              .toList(),
       ],
     );
   }
@@ -251,18 +235,76 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
     );
   }
 
-  Widget _buildDescription(PostModel post) {
+  Widget _buildInitialCostBreakdown(
+      BuildContext context, PostModel post, AppLocalizations l) {
+    final double advanceRental = post.rent;
+    final double securityDepositAmt = post.rent * post.securityDeposit;
+    final double utilityDepositAmt = post.rent * post.utilityDeposit;
+    final double total = advanceRental + securityDepositAmt + utilityDepositAmt;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.deepPurple.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.deepPurple.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.deposit_breakdownTitle,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 12),
+          _buildCostRow(l.deposit_advanceRental, advanceRental),
+          _buildCostRow(
+              '${l.deposit_securityDeposit} (${post.securityDeposit} ${l.deposit_mths})',
+              securityDepositAmt),
+          _buildCostRow(
+              '${l.deposit_utilityDeposit} (${post.utilityDeposit} ${l.deposit_mths})',
+              utilityDepositAmt),
+          const Divider(),
+          _buildCostRow(l.deposit_totalMoveInCost, total, isTotal: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCostRow(String label, double amount, {bool isTotal = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontWeight: isTotal ? FontWeight.bold : FontWeight.normal)),
+          Text(
+            'RM ${amount.toStringAsFixed(0)}',
+            style: TextStyle(
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              color: isTotal ? Colors.deepPurple : Colors.black87,
+              fontSize: isTotal ? 16 : 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDescription(PostModel post, AppLocalizations l) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Description',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          l.postDetail_description,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
           post.description.isEmpty
-              ? 'No description provided.'
+              ? l.postDetail_noDescription
               : post.description,
           style: TextStyle(
             color: Colors.grey[700],
@@ -274,13 +316,14 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
     );
   }
 
-  Widget _buildAgentHeader(BuildContext context, PostModel post) {
+  Widget _buildAgentHeader(
+      BuildContext context, PostModel post, AppLocalizations l) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Listed by',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          l.postDetail_listedBy,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         GestureDetector(
@@ -290,7 +333,8 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
             } else {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => AgentProfileScreen(agentId: post.userId),
+                  builder: (context) =>
+                      AgentProfileScreen(agentId: post.userId),
                 ),
               );
             }
@@ -339,12 +383,11 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
     );
   }
 
-
-  Widget _buildActionBar(
-      BuildContext context, PostActionsViewModel viewModel, PostModel post) { // ★ 6. ViewModel の型を変更
+  Widget _buildActionBar(BuildContext context, PostActionsViewModel viewModel,
+      PostModel post, AppLocalizations l) {
     return Container(
-      padding:
-          const EdgeInsets.fromLTRB(16, 12, 16, 16).copyWith(bottom: 16 + MediaQuery.of(context).padding.bottom),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16)
+          .copyWith(bottom: 16 + MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey[200]!)),
@@ -358,12 +401,12 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
       ),
       child: Row(
         children: [
-          // Action Icons (Save, Comment)
           IconButton(
             icon: Icon(
               post.isSaved ? Icons.bookmark : Icons.bookmark_border,
-              color:
-                  post.isSaved ? Theme.of(context).primaryColor : Colors.grey[700],
+              color: post.isSaved
+                  ? Theme.of(context).primaryColor
+                  : Colors.grey[700],
               size: 28,
             ),
             onPressed: () {
@@ -376,14 +419,14 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
           ),
           const SizedBox(width: 8),
           IconButton(
-            icon: Icon(Icons.chat_bubble_outline, color: Colors.grey[700], size: 28),
+            icon: Icon(Icons.chat_bubble_outline,
+                color: Colors.grey[700], size: 28),
+            tooltip: l.postDetail_commentCount,
             onPressed: () {
               if (FirebaseAuth.instance.currentUser == null) {
                 showSignInModal(context);
               } else {
-                // Close this sheet first
-                Navigator.of(context).pop(); 
-                // Then show the comment sheet
+                Navigator.of(context).pop();
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
@@ -394,22 +437,17 @@ class _PostDetailBottomSheetState extends State<PostDetailBottomSheet> {
             },
           ),
           const SizedBox(width: 16),
-
-          // Main Action Button
           IconButton(
-            icon: const Icon(Icons.message, color: Colors.green, size: 28), // Use a suitable icon
-            tooltip: 'Contact on WhatsApp',
-            onPressed: () => _launchWhatsApp(context, post.phoneNumber),
+            icon: const Icon(Icons.message, color: Colors.green, size: 28),
+            tooltip: l.postDetail_contactOnWhatsapp,
+            onPressed: () => _launchWhatsApp(context, post.phoneNumber, l),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton.icon(
-              icon: Icon(WhatsappIcons.whatsapp),
-              label: const Text('Inquire'),
-              // ★ 7. viewModel.onStartChat! -> widget.onStartChat に変更
+              icon: const Icon(WhatsappIcons.whatsapp),
+              label: Text(l.postDetail_inquire),
               onPressed: () {
-                // The auth check is now handled by the caller,
-                // but we can just call the function. 
                 widget.onStartChat(post);
               },
               style: ElevatedButton.styleFrom(

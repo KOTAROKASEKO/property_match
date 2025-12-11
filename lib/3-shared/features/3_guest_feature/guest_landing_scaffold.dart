@@ -1,8 +1,8 @@
-// lib/3-shared/guest_landing_scaffold.dart
 import 'package:flutter/material.dart';
 import 'package:re_conver/3-shared/features/1_agent_feature/2_tenant_list/view/tenant_list_view.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/view/discover_screen.dart';
 import 'package:re_conver/3-shared/features/authentication/login_placeholder.dart';
+import 'package:re_conver/3-shared/language_selector.dart';
 
 class GuestLandingScaffold extends StatefulWidget {
   const GuestLandingScaffold({super.key});
@@ -14,14 +14,12 @@ class GuestLandingScaffold extends StatefulWidget {
 class _GuestLandingScaffoldState extends State<GuestLandingScaffold> {
   int _selectedIndex = 0;
 
-  // The two pages accessible to guests
   static const List<Widget> _pages = <Widget>[
     DiscoverScreen(),
     TenantListView(),
   ];
 
   void _navigateToLogin() {
-    // Navigate to the login screen
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const LoginPlaceholderScreen()),
     );
@@ -29,11 +27,22 @@ class _GuestLandingScaffoldState extends State<GuestLandingScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    // A common AppBar for both layouts
     final appBar = AppBar(
-      title: const Text(
-        'Bilik Match',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      // ★修正: TitleをRowにして、テキストと言語セレクターを並べる
+      title: const Row(
+        mainAxisSize: MainAxisSize.min, // 必要に応じて調整
+        children: [
+          Text(
+            'Bilik Match',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(width: 12), // 少し間隔を空ける
+          // ★言語セレクターを追加
+          LanguageSelector(
+            iconColor: Colors.white70,
+            textColor: Colors.black87, // ドロップダウン内の文字色
+          ),
+        ],
       ),
       backgroundColor: Colors.deepPurple,
       foregroundColor: Colors.white,
@@ -55,9 +64,9 @@ class _GuestLandingScaffoldState extends State<GuestLandingScaffold> {
       ],
     );
 
+    // ... (以下変更なし)
     return LayoutBuilder(
       builder: (context, constraints) {
-        // --- WIDE SCREEN LAYOUT ---
         if (constraints.maxWidth > 700) {
           return Scaffold(
             appBar: appBar,
@@ -94,9 +103,7 @@ class _GuestLandingScaffoldState extends State<GuestLandingScaffold> {
               ],
             ),
           );
-        }
-        // --- NARROW SCREEN LAYOUT ---
-        else {
+        } else {
           return Scaffold(
             appBar: appBar,
             body: IndexedStack(

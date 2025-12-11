@@ -13,6 +13,12 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -26,8 +32,8 @@ android {
         applicationId = "com.property.match"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = 23
-        versionName = "1.0.1.8"
+        versionCode = 28
+        versionName = "1.0.1.123"
     }
 
     val keyPropertiesFile = rootProject.file("key.properties")

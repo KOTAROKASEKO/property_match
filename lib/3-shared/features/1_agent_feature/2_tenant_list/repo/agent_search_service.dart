@@ -26,11 +26,11 @@ class AgentSearchService {
 
     // 性別条件 (Mixの場合はフィルタしない)
     if (template.gender != 'Mix') {
-      filters.add('gender:${template.gender}');
+      filters.add('gender:${template.gender} OR Mix');
     }
     
     if (template.roomType.isNotEmpty) {
-      filters.add('roomType:${template.roomType}');
+      filters.add('(roomType:${template.roomType} OR roomType:Any)');
     }
 
     pr('🔍 [Algolia Search] Query: "${template.location}", LatLng: $lat, $lng');

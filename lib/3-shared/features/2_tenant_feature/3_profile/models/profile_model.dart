@@ -14,6 +14,8 @@ class UserProfile {
   final double budget;
   final String roomType; // "Single", "Middle", "Master"
   final String propertyType; // "Condo", "Landed", "Apartment"
+  final bool isOnline;
+  final DateTime? lastActive;
   final String nationality;
   final String selfIntroduction;
   final DateTime? moveinDate;
@@ -33,6 +35,7 @@ class UserProfile {
     this.pets = 'No',
     this.pax = 1,
     this.budget = 1000.0,
+    
     this.roomType = 'Middle',
     this.propertyType = 'Condominium',
     this.nationality = 'Not specified',
@@ -42,6 +45,8 @@ class UserProfile {
     this.hobbies = const [],
     this.preferredAreas = const [], // ★ 初期化
     this.geoloc, // ★ 初期化
+    this.isOnline = false,
+    this.lastActive,
   });
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
@@ -66,6 +71,8 @@ class UserProfile {
       hobbies: List<String>.from(data?['hobbies'] ?? []), // Added hobbies
       preferredAreas: List<String>.from(data?['preferredAreas'] ?? []), // ★ 追加
       // Firestoreから読み込む際は型キャストに注意
+      isOnline: data?['isOnline'] as bool? ?? false,
+      lastActive: (data?['lastActive'] as Timestamp?)?.toDate(),
       geoloc: (data?['_geoloc'] as List<dynamic>?)?.map((e) => Map<String, double>.from(e)).toList(),
     );
   }

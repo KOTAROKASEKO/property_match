@@ -1,6 +1,7 @@
 // lib/3-shared/features/2_tenant_feature/3_profile/view/edit_profile_screen.dart
 
 import 'dart:io';
+import 'package:flutter/foundation.dart'; // kIsWeb用
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -11,8 +12,10 @@ import '../services/user_service.dart';
 class EditProfileScreen extends StatefulWidget {
   final UserProfile userProfile;
   final bool isNewUser;
+  final String skipOption;
   const EditProfileScreen({
     super.key,
+    required this.skipOption,
     required this.userProfile,
     this.isNewUser = false,
   });
@@ -42,7 +45,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late String _selfIntroduction;
   late DateTime? _moveInDate;
   late List<String> _hobbies;
-  final _hobbyController = TextEditingController();
   late List<String> _preferredAreas;
   final _areaController = TextEditingController();
 
@@ -132,13 +134,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
 
         if (widget.isNewUser) {
-          // 新規ユーザーの場合はホーム画面へ遷移
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const ResponsiveLayout()),
             (route) => false,
           );
         } else {
-          // 編集の場合は前の画面に戻る
           Navigator.pop(context, true);
         }
       } catch (e) {
@@ -154,7 +154,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _skipProfile() {
-    // プロフィール作成をスキップしてホームへ
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const ResponsiveLayout()),
       (route) => false,
@@ -175,289 +174,369 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  // --- レイアウト構築 ---
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        backgroundColor: Colors.grey[50], // 全体の背景色を明るいグレーに
+        backgroundColor: Colors.grey[50],
         appBar: AppBar(
           foregroundColor: Colors.white,
           backgroundColor: Colors.deepPurple,
           title: Text(widget.isNewUser ? 'Create Profile' : 'Edit Profile'),
           elevation: 0,
           actions: [
-            // 保存ボタンをアイコン化（オプション）
-            TextButton(onPressed: _isLoading ? null : _saveProfile, 
-            child: Text('Skip for now', style: TextStyle(color: Colors.white),))
+            TextButton(
+              onPressed: _isLoading ? null : _saveProfile,
+              child: Text(widget.skipOption, style: const TextStyle(color: Colors.white)),
+            )
           ],
         ),
         body: Form(
           key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // 画面幅が800px以上ならワイドレイアウト
+              if (constraints.maxWidth > 800) {
+                return _buildWideLayout();
+              } else {
+                return _buildNarrowLayout();
+              }
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ★ モバイル用レイアウト (縦一列)
+  Widget _buildNarrowLayout() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
+      child: Column(
+        children: [
+          if (widget.isNewUser) ...[
+            _buildInfoBanner(),
+            const SizedBox(height: 24),
+          ],
+          _buildAvatarSection(),
+          const SizedBox(height: 32),
+          _buildPersonalInfoSection(),
+          const SizedBox(height: 24),
+          _buildPreferencesSection(),
+          const SizedBox(height: 32),
+          _buildSaveButton(),
+          if (widget.isNewUser) _buildSkipButton(),
+        ],
+      ),
+    );
+  }
+
+  // ★ Web/タブレット用レイアウト (2列表示)
+  Widget _buildWideLayout() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1200), // 最大幅を制限
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(32, 32, 32, 60),
+          child: Column(
             children: [
-              // ★ 1. 新規ユーザー向けの説明バナー
               if (widget.isNewUser) ...[
                 _buildInfoBanner(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
               ],
-
-              Center(
-                child: Stack(
+              _buildAvatarSection(),
+              const SizedBox(height: 40),
+              
+              // 左右2カラムのレイアウト
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 左カラム: 個人情報
+                  Expanded(
+                    child: _buildPersonalInfoSection(),
+                  ),
+                  const SizedBox(width: 32), // カラム間のスペース
+                  // 右カラム: 希望条件
+                  Expanded(
+                    child: _buildPreferencesSection(),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 48),
+              // ボタンエリア（幅を制限）
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundColor: Colors.white,
-                      child: CircleAvatar(
-                        radius: 56,
-                        backgroundImage: _imageFile != null
-                            ? FileImage(File(_imageFile!.path))
-                            : (_profileImageUrl.isNotEmpty
-                                ? NetworkImage(_profileImageUrl)
-                                : const AssetImage('assets/default_avatar.png')) as ImageProvider,
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: InkWell(
-                        onTap: _pickImage,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Colors.deepPurple,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                        ),
-                      ),
-                    ),
+                    _buildSaveButton(),
+                    if (widget.isNewUser) _buildSkipButton(),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-              // ★ 2. セクション: Personal Info
-              _buildSectionCard(
-                title: 'Personal Info',
-                icon: Icons.person_outline,
-                children: [
-                  _buildTextField(
-                    label: 'Display Name',
-                    initialValue: _displayName,
-                    onSaved: (val) => _displayName = val!,
-                    validator: (val) => val!.isEmpty ? 'Required' : null,
-                    icon: Icons.badge_outlined,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildHobbiesInput(),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    label: 'Nationality',
-                    initialValue: _nationality,
-                    onSaved: (val) => _nationality = val!,
-                    icon: Icons.flag_outlined,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    label: 'Self Introduction',
-                    initialValue: _selfIntroduction,
-                    onSaved: (val) => _selfIntroduction = val!,
-                    maxLines: 3,
-                    icon: Icons.description_outlined,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    label: 'Occupation',
-                    initialValue: _occupation,
-                    onSaved: (val) => _occupation = val!,
-                    icon: Icons.work_outline,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    label: 'Work/Study Location',
-                    initialValue: _location,
-                    onSaved: (val) => _location = val!,
-                    icon: Icons.location_city_outlined,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSlider(
-                    label: 'Age',
-                    value: _age.toDouble(),
-                    min: 18,
-                    max: 80,
-                    divisions: 62,
-                    onChanged: (val) => setState(() => _age = val.round()),
-                    displayValue: '$_age years',
-                  ),
-                ],
-              ),
+  // --- セクションごとのウィジェット ---
 
-              const SizedBox(height: 24),
-
-              // ★ 3. セクション: Preferences
-              _buildSectionCard(
-                title: 'Preferences',
-                icon: Icons.home_work_outlined,
-                children: [
-                  _buildDropdown(
-                    label: 'Gender',
-                    value: _gender,
-                    items: ['Male', 'Female', 'Mix', 'Not specified'],
-                    onChanged: (val) => setState(() => _gender = val!),
-                    icon: Icons.people_outline,
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.calendar_today, color: Colors.grey),
-                    title: const Text('Move-in Date', style: TextStyle(fontWeight: FontWeight.w500)),
-                    subtitle: Text(
-                      _moveInDate == null ? 'Not set' : DateFormat.yMMMd().format(_moveInDate!),
-                      style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold),
-                    ),
-                    trailing: const Icon(Icons.edit, size: 16, color: Colors.grey),
-                    onTap: () => _selectMoveInDate(context),
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  
-                  // Preferred Areas Input
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Preferred Living Areas', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _areaController,
-                              decoration: const InputDecoration(
-                                hintText: 'Add area (e.g. Bangsar)',
-                                border: UnderlineInputBorder(),
-                              ),
-                              onSubmitted: (val) {
-                                if (val.isNotEmpty) {
-                                  setState(() {
-                                    _preferredAreas.add(val.trim());
-                                    _areaController.clear();
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add_circle, color: Colors.deepPurple),
-                            onPressed: () {
-                              if (_areaController.text.isNotEmpty) {
-                                setState(() {
-                                  _preferredAreas.add(_areaController.text.trim());
-                                  _areaController.clear();
-                                });
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8.0,
-                        children: _preferredAreas.map((area) => Chip(
-                          label: Text(area),
-                          backgroundColor: Colors.deepPurple.shade50,
-                          labelStyle: const TextStyle(color: Colors.deepPurple),
-                          deleteIcon: const Icon(Icons.close, size: 16, color: Colors.deepPurple),
-                          onDeleted: () => setState(() => _preferredAreas.remove(area)),
-                        )).toList(),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  _buildDropdown(
-                    label: 'Allow Pets?',
-                    value: _pets,
-                    items: ['Yes', 'No'],
-                    onChanged: (val) => setState(() => _pets = val!),
-                    icon: Icons.pets_outlined,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSlider(
-                    label: 'Number of Pax',
-                    value: _pax.toDouble(),
-                    min: 1,
-                    max: 10,
-                    divisions: 9,
-                    onChanged: (val) => setState(() => _pax = val.round()),
-                    displayValue: '$_pax pax',
-                  ),
-                  const SizedBox(height: 16),
-                  _buildSlider(
-                    label: 'Monthly Budget',
-                    value: _budget,
-                    min: 500,
-                    max: 5000,
-                    divisions: 90,
-                    onChanged: (val) => setState(() => _budget = val),
-                    displayValue: 'RM ${_budget.toStringAsFixed(0)}',
-                  ),
-                  const SizedBox(height: 24),
-                  _buildDropdown(
-                    label: 'Room Type',
-                    value: _roomType,
-                    items: ['Single', 'Middle', 'Master'],
-                    onChanged: (val) => setState(() => _roomType = val!),
-                    icon: Icons.bed_outlined,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDropdown(
-                    label: 'Property Type',
-                    value: _propertyType,
-                    items: ['Condominium', 'Apartment', 'Landed House', 'Studio'],
-                    onChanged: (val) => setState(() => _propertyType = val!),
-                    icon: Icons.apartment_outlined,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // 保存ボタン
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 2,
-                  ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Save Profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+  Widget _buildAvatarSection() {
+    return Center(
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 60,
+            backgroundColor: Colors.white,
+            child: CircleAvatar(
+              radius: 56,
+              backgroundImage: _imageFile != null
+                  ? (kIsWeb
+                      ? NetworkImage(_imageFile!.path) // Webの場合はFileImageが使えないことがあるため
+                      : FileImage(File(_imageFile!.path))) as ImageProvider
+                  : (_profileImageUrl.isNotEmpty
+                      ? NetworkImage(_profileImageUrl)
+                      : const AssetImage('assets/default_avatar.png')) as ImageProvider,
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: InkWell(
+              onTap: _pickImage,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Colors.deepPurple,
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              // ★ 4. スキップボタン（新規ユーザーのみ）
-              if (widget.isNewUser) ...[
-                const SizedBox(height: 16),
-                Center(
-                  child: TextButton(
-                    onPressed: _skipProfile,
-                    child: const Text(
-                      'Skip creating profile as of now',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 14,
-                        decoration: TextDecoration.underline,
-                      ),
+  Widget _buildPersonalInfoSection() {
+    return _buildSectionCard(
+      title: 'Personal Info',
+      icon: Icons.person_outline,
+      children: [
+        _buildTextField(
+          label: 'Display Name',
+          initialValue: _displayName,
+          onSaved: (val) => _displayName = val!,
+          validator: (val) => val!.isEmpty ? 'Required' : null,
+          icon: Icons.badge_outlined,
+        ),
+        const SizedBox(height: 16),
+        
+        _buildTextField(
+          label: 'Nationality',
+          initialValue: _nationality,
+          onSaved: (val) => _nationality = val!,
+          icon: Icons.flag_outlined,
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          label: 'Self Introduction',
+          initialValue: _selfIntroduction,
+          onSaved: (val) => _selfIntroduction = val!,
+          maxLines: 3,
+          icon: Icons.description_outlined,
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          label: 'Occupation',
+          initialValue: _occupation,
+          onSaved: (val) => _occupation = val!,
+          icon: Icons.work_outline,
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          label: 'Work/Study Location',
+          initialValue: _location,
+          onSaved: (val) => _location = val!,
+          icon: Icons.location_city_outlined,
+        ),
+        const SizedBox(height: 24),
+        _buildSlider(
+          label: 'Age',
+          value: _age.toDouble(),
+          min: 18,
+          max: 80,
+          divisions: 62,
+          onChanged: (val) => setState(() => _age = val.round()),
+          displayValue: '$_age years',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPreferencesSection() {
+    return _buildSectionCard(
+      title: 'Preferences',
+      icon: Icons.home_work_outlined,
+      children: [
+        _buildDropdown(
+          label: 'Gender',
+          value: _gender,
+          items: ['Male', 'Female', 'Mix', 'Not specified'],
+          onChanged: (val) => setState(() => _gender = val!),
+          icon: Icons.people_outline,
+        ),
+        const SizedBox(height: 16),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.calendar_today, color: Colors.grey),
+          title: const Text('Move-in Date', style: TextStyle(fontWeight: FontWeight.w500)),
+          subtitle: Text(
+            _moveInDate == null ? 'Not set' : DateFormat.yMMMd().format(_moveInDate!),
+            style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold),
+          ),
+          trailing: const Icon(Icons.edit, size: 16, color: Colors.grey),
+          onTap: () => _selectMoveInDate(context),
+        ),
+        const Divider(),
+        const SizedBox(height: 16),
+        
+        // Preferred Areas Input
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Preferred Living Areas', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _areaController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add area (e.g. Bangsar)',
+                      border: UnderlineInputBorder(),
                     ),
+                    onSubmitted: (val) {
+                      if (val.isNotEmpty) {
+                        setState(() {
+                          _preferredAreas.add(val.trim());
+                          _areaController.clear();
+                        });
+                      }
+                    },
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle, color: Colors.deepPurple),
+                  onPressed: () {
+                    if (_areaController.text.isNotEmpty) {
+                      setState(() {
+                        _preferredAreas.add(_areaController.text.trim());
+                        _areaController.clear();
+                      });
+                    }
+                  },
                 ),
               ],
-            ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8.0,
+              children: _preferredAreas.map((area) => Chip(
+                label: Text(area),
+                backgroundColor: Colors.deepPurple.shade50,
+                labelStyle: const TextStyle(color: Colors.deepPurple),
+                deleteIcon: const Icon(Icons.close, size: 16, color: Colors.deepPurple),
+                onDeleted: () => setState(() => _preferredAreas.remove(area)),
+              )).toList(),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 24),
+        _buildDropdown(
+          label: 'Allow Pets?',
+          value: _pets,
+          items: ['Yes', 'No'],
+          onChanged: (val) => setState(() => _pets = val!),
+          icon: Icons.pets_outlined,
+        ),
+        const SizedBox(height: 24),
+        _buildSlider(
+          label: 'Number of Pax',
+          value: _pax.toDouble(),
+          min: 1,
+          max: 10,
+          divisions: 9,
+          onChanged: (val) => setState(() => _pax = val.round()),
+          displayValue: '$_pax pax',
+        ),
+        const SizedBox(height: 16),
+        _buildSlider(
+          label: 'Monthly Budget',
+          value: _budget,
+          min: 500,
+          max: 5000,
+          divisions: 90,
+          onChanged: (val) => setState(() => _budget = val),
+          displayValue: 'RM ${_budget.toStringAsFixed(0)}',
+        ),
+        const SizedBox(height: 24),
+        _buildDropdown(
+          label: 'Room Type',
+          value: _roomType,
+          items: ['Single', 'Middle', 'Master', 'Any'],
+          onChanged: (val) => setState(() => _roomType = val!),
+          icon: Icons.bed_outlined,
+        ),
+        const SizedBox(height: 16),
+        _buildDropdown(
+          label: 'Property Type',
+          value: _propertyType,
+          items: ['Condominium', 'Apartment', 'Landed House', 'Studio'],
+          onChanged: (val) => setState(() => _propertyType = val!),
+          icon: Icons.apartment_outlined,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _saveProfile,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.deepPurple,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 2,
+        ),
+        child: _isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text('Save Profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildSkipButton() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Center(
+        child: TextButton(
+          onPressed: _skipProfile,
+          child: const Text(
+            'Skip creating profile as of now',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 14,
+              decoration: TextDecoration.underline,
+            ),
           ),
         ),
       ),
@@ -581,63 +660,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildHobbiesInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextFormField(
-          controller: _hobbyController,
-          decoration: InputDecoration(
-            labelText: 'Tags / Hobbies',
-            hintText: 'e.g. Cooking, Gaming',
-            prefixIcon: const Icon(Icons.tag, color: Colors.grey),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.add_circle, color: Colors.deepPurple),
-              onPressed: () {
-                final hobby = _hobbyController.text.trim(); // ケースは維持
-                if (hobby.isNotEmpty && !_hobbies.contains(hobby)) {
-                  setState(() {
-                    _hobbies.add(hobby);
-                    _hobbyController.clear();
-                  });
-                }
-              },
-            ),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-          ),
-          onFieldSubmitted: (value) {
-            final hobby = value.trim();
-            if (hobby.isNotEmpty && !_hobbies.contains(hobby)) {
-              setState(() {
-                _hobbies.add(hobby);
-                _hobbyController.clear();
-              });
-            }
-          },
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8.0,
-          children: _hobbies.map((hobby) => Chip(
-            label: Text(hobby),
-            backgroundColor: Colors.deepPurple.shade50,
-            labelStyle: const TextStyle(color: Colors.deepPurple),
-            deleteIcon: const Icon(Icons.close, size: 16, color: Colors.deepPurple),
-            onDeleted: () {
-              setState(() {
-                _hobbies.remove(hobby);
-              });
-            },
-          )).toList(),
-        ),
-      ],
-    );
-  }
-
+  
   Widget _buildSlider({
     required String label,
     required double value,

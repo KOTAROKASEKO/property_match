@@ -1,11 +1,6 @@
-// lib/features/2_tenant_feature/1_discover/viewmodel/post_service.dart
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:algoliasearch/algoliasearch_lite.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_data/shared_data.dart';
 import '../../../../core/model/PostModel.dart';
 import '../model/comment_model.dart';

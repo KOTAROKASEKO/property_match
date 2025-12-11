@@ -1,4 +1,5 @@
 // lib/features/1_agent_feature/2_tenant_list/viewodel/tenant_list_viewmodel.dart
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:re_conver/3-shared/features/1_agent_feature/2_tenant_list/repo/agent_search_service.dart';
@@ -10,7 +11,7 @@ import '../../../2_tenant_feature/3_profile/models/profile_model.dart';
 
 class TenantListViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final int _limit = 10; 
+  final int _limit = 10;
 
   List<UserProfile> _allTenants = [];
   List<UserProfile> _filteredTenants = [];
@@ -19,21 +20,26 @@ class TenantListViewModel extends ChangeNotifier {
   String _searchQuery = '';
   DocumentSnapshot? _lastDocument;
   bool _hasMoreTenants = true;
-  final PostService _postService = PostService(); 
+  final PostService _postService = PostService();
   final AgentSearchService _agentSearchService = AgentSearchService();
 
-  // ★ ADDED: Track selected property template
+  // ★ 追加: 検索が行われたかどうかのフラグ (初期値は false)
+  bool _hasSearched = false;
+
+  // Track selected property template
   PropertyTemplate? _selectedTemplate;
 
   List<UserProfile> get filteredTenants => _filteredTenants;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
+  // ★ 追加: Getter
+  bool get hasSearched => _hasSearched;
+
   List<String> _blockedUserIds = [];
   TenantFilterOptions _filterOptions =
       TenantFilterOptions(minBudget: 0, maxBudget: 5000);
   TenantFilterOptions get filterOptions => _filterOptions;
-  
-  // ★ ADDED: Getter for the UI
+
   PropertyTemplate? get selectedTemplate => _selectedTemplate;
 
   TenantListViewModel() {
@@ -55,17 +61,19 @@ class TenantListViewModel extends ChangeNotifier {
 
   Future<void> _fetchBlockedUsersAndThenTenants() async {
     await _fetchBlockedUsers();
-    fetchTenants(isInitial: true);
+    // ★ 変更: ここで fetchTenants(isInitial: true) を呼ばないようにする
+    // 自動ロードを停止し、ユーザーの検索アクションを待ちます
   }
 
   Future<void> fetchTenants({bool isInitial = false}) async {
     // If a property is selected, we shouldn't fetch normal list pagination
-    // unless we are resetting. 
+    // unless we are resetting.
     if (_selectedTemplate != null && !isInitial) return;
-    // If isInitial is true, we might be resetting from the UI, so we proceed but clear selection if needed logic exists.
-    // (In this simple flow, clearing selection calls this method).
 
     if (_isLoadingMore || (!isInitial && !_hasMoreTenants)) return;
+
+    // ★ 追加: 検索アクションが実行されたのでフラグを立てる
+    _hasSearched = true;
 
     if (isInitial) {
       _isLoading = true;
@@ -105,8 +113,10 @@ class TenantListViewModel extends ChangeNotifier {
       if (_filterOptions.gender != null) {
         query = query.where('gender', isEqualTo: _filterOptions.gender);
       }
-      if (_filterOptions.hobbies != null && _filterOptions.hobbies!.isNotEmpty) {
-        query = query.where('hobbies', arrayContainsAny: _filterOptions.hobbies);
+      if (_filterOptions.hobbies != null &&
+          _filterOptions.hobbies!.isNotEmpty) {
+        query =
+            query.where('hobbies', arrayContainsAny: _filterOptions.hobbies);
       }
       if (_filterOptions.moveinDate != null) {
         query = query.where('moveinDate',
@@ -130,12 +140,11 @@ class TenantListViewModel extends ChangeNotifier {
         _lastDocument = snapshot.docs.last;
         final newTenants = snapshot.docs
             .map((doc) => UserProfile.fromFirestore(doc))
-            .where((tenant) => !_blockedUserIds.contains(
-                tenant.uid)); 
+            .where((tenant) => !_blockedUserIds.contains(tenant.uid));
         _allTenants.addAll(newTenants);
       }
 
-      _applyLocalSearchFilter(); 
+      _applyLocalSearchFilter();
     } catch (e) {
       print("Error fetching tenants: $e");
     } finally {
@@ -148,10 +157,11 @@ class TenantListViewModel extends ChangeNotifier {
     }
   }
 
-
   Future<void> searchTenantsForProperty(PropertyTemplate template) async {
     _isLoading = true;
-    _selectedTemplate = template; // ★ ADDED: Store the selection
+    _selectedTemplate = template;
+    // ★ 追加: 検索アクションとしてマーク
+    _hasSearched = true;
     notifyListeners();
 
     try {
@@ -171,31 +181,38 @@ class TenantListViewModel extends ChangeNotifier {
       );
 
       // 3. 結果のフィルタリング
-      final validResults = results.where((tenant) => !_blockedUserIds.contains(tenant.uid)).toList();
+      final validResults = results
+          .where((tenant) => !_blockedUserIds.contains(tenant.uid))
+          .toList();
 
-      _allTenants = validResults;       
-      _filteredTenants = validResults;  
+      _allTenants = validResults;
+      _filteredTenants = validResults;
 
       _searchQuery = '';
-      _hasMoreTenants = false; 
+      _hasMoreTenants = false;
       _lastDocument = null;
 
-      print('✅ [TenantListViewModel] Found ${validResults.length} tenants. Lists updated.');
-
+      print(
+          '✅ [TenantListViewModel] Found ${validResults.length} tenants. Lists updated.');
     } catch (e) {
       print('❌ [TenantListViewModel] Error searching: $e');
       _allTenants = [];
-      _applyLocalSearchFilter(); 
+      _applyLocalSearchFilter();
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // ★ ADDED: Method to clear selection and reset list
+  // Method to clear selection and reset list
   void clearSelectedProperty() {
     _selectedTemplate = null;
-    fetchTenants(isInitial: true); // Reload default list
+    // ★ 変更: クリアした場合は未検索状態（初期状態）に戻す
+    _hasSearched = false;
+    _allTenants = [];
+    _filteredTenants = [];
+    // fetchTenants(isInitial: true); // 自動取得はしない
+    notifyListeners();
   }
 
   void applySearchQuery(String query) {
@@ -206,8 +223,9 @@ class TenantListViewModel extends ChangeNotifier {
   void applyFilters(TenantFilterOptions newFilters) {
     _filterOptions = newFilters;
     // Ensure we clear property selection if manual filters are applied
-    _selectedTemplate = null; 
-    fetchTenants(isInitial: true); 
+    _selectedTemplate = null;
+    // フィルター適用は能動的な検索とみなす
+    fetchTenants(isInitial: true);
   }
 
   void _applyLocalSearchFilter() {

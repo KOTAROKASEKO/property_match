@@ -1,3 +1,5 @@
+// lib/3-shared/features/2_tenant_feature/3_profile/view/saved_posts_scen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../1_discover/view/post_card.dart';
@@ -13,6 +15,8 @@ class SavedPostsScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Saved Listings'),
+          backgroundColor: Colors.deepPurple,
+          foregroundColor: Colors.white,
         ),
         body: Consumer<SavedPostsViewModel>(
           builder: (context, viewModel, child) {
@@ -35,16 +39,50 @@ class SavedPostsScreen extends StatelessWidget {
 
             return RefreshIndicator(
               onRefresh: () => viewModel.fetchSavedPosts(),
-              child: ListView.builder(
-                itemCount: viewModel.savedPosts.length,
-                itemBuilder: (context, index) {
-                  final post = viewModel.savedPosts[index];
-                  // 既存のPostCardウィジェットを再利用します
-                  return PostCard(
-                    post: post,
-                    onToggleLike: viewModel.toggleLike,
-                    onToggleSave: viewModel.savePost,
-                  );
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // レスポンシブ対応の閾値
+                  const double gridBreakpoint = 600.0;
+                  final bool useGridView = constraints.maxWidth >= gridBreakpoint;
+
+                  if (useGridView) {
+                    // --- ワイド画面 (Grid表示) ---
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(16.0),
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 400, // カードの最大幅
+                        mainAxisSpacing: 16.0,
+                        crossAxisSpacing: 16.0,
+                        childAspectRatio: 0.70, // PostCardのアスペクト比に合わせて調整
+                      ),
+                      itemCount: viewModel.savedPosts.length,
+                      itemBuilder: (context, index) {
+                        final post = viewModel.savedPosts[index];
+                        return PostCard(
+                          post: post,
+                          onToggleLike: viewModel.toggleLike,
+                          onToggleSave: viewModel.savePost,
+                        );
+                      },
+                    );
+                  } else {
+                    // --- モバイル画面 (List表示) ---
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                      itemCount: viewModel.savedPosts.length,
+                      itemBuilder: (context, index) {
+                        final post = viewModel.savedPosts[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: PostCard(
+                            post: post,
+                            onToggleLike: viewModel.toggleLike,
+                            onToggleSave: viewModel.savePost,
+                          ),
+                        );
+                      },
+                    );
+                  }
                 },
               ),
             );

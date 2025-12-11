@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_data/shared_data.dart';
 
 class PostModel {
+  final double securityDeposit; // 敷金 (例: 家賃の2ヶ月分なら 2.0)
+  final double utilityDeposit;
   final String condominiumName_searchKey;
   final String id;
   final String userId;
@@ -27,10 +29,11 @@ class PostModel {
   final DateTime? durationStart;
   final DateTime? moveInDate;
   final int? durationMonths;
-  final List<String> hobbies;
   final String phoneNumber;
 
   PostModel({
+    this.securityDeposit = 2.0, // デフォルト値 (マレーシア等の慣習に合わせて調整)
+    this.utilityDeposit = 0.5,
     this.moveInDate,
     required this.id,
     required this.userId,
@@ -54,7 +57,6 @@ class PostModel {
     this.condominiumName_searchKey = '',
     this.durationStart,
     this.durationMonths,
-    this.hobbies = const [], // ★★★ ADDED ★★★
     this.phoneNumber = '',
   });
 
@@ -82,6 +84,8 @@ class PostModel {
     }
 
     return PostModel(
+      securityDeposit: (data?['securityDeposit'] as num?)?.toDouble() ?? 2.0,
+      utilityDeposit: (data?['utilityDeposit'] as num?)?.toDouble() ?? 0.5,
       id: doc.id,
       userId: data['userId'] ?? '',
       username: data['username'] ?? 'Anonymous',
@@ -104,7 +108,6 @@ class PostModel {
       location: data['location'] as String? ?? '',
       durationStart: (data['durationStart'] as Timestamp?)?.toDate(),
       durationMonths: data['durationMonths'] as int? ?? 12,
-      hobbies: List<String>.from(data['hobbies'] ?? []),
       phoneNumber: data['phoneNumber'] ?? '',
     );
   }
@@ -128,6 +131,8 @@ class PostModel {
     }
 
     return PostModel(
+      securityDeposit: (hit['securityDeposit'] as num?)?.toDouble() ?? 2.0,
+      utilityDeposit: (hit['utilityDeposit'] as num?)?.toDouble() ?? 0.5,
       id: hit['objectID'] ?? '',
       userId: hit['userId'] ?? '',
       username: hit['username'] ?? 'Anonymous',
@@ -150,7 +155,6 @@ class PostModel {
       position: geoPoint,
       durationStart: safeTimestamp(hit['durationStart']).toDate(),
       durationMonths: hit['durationMonths'] as int?,
-      hobbies: List<String>.from(hit['hobbies'] ?? []), // ★★★ ADDED ★★★
       phoneNumber: hit['phoneNumber'] ?? '',
     );
   }

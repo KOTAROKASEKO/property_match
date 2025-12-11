@@ -1,3 +1,5 @@
+// lib/3-shared/features/2_tenant_feature/3_profile/view/profile_screen.dart
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -81,6 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                   ),
                 ),
+                const SizedBox(height: 16),
                 _buildProfileDetailsCard(userProfile),
               ],
             ),
@@ -96,7 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         CircleAvatar(
           radius: 50,
           backgroundImage: userProfile.profileImageUrl.isNotEmpty
-            ? CachedNetworkImageProvider(userProfile.profileImageUrl) // ★★★ 変更 ★★★
+            ? CachedNetworkImageProvider(userProfile.profileImageUrl)
             : const AssetImage('assets/default_avatar.png') as ImageProvider,
           child: userProfile.profileImageUrl.isEmpty
               ? Text(
@@ -123,7 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => EditProfileScreen(userProfile: userProfile,isNewUser: false,),
+                builder: (context) => EditProfileScreen(skipOption: 'Save',userProfile: userProfile,isNewUser: false,),
               ),
             );
             // If the profile was updated, refresh the data
@@ -152,7 +155,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- Personal Info Section ---
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                'Personal Info',
+                style: TextStyle(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.bold, 
+                  color: Colors.deepPurple.shade700
+                ),
+              ),
+            ),
             _ProfileDetailRow(
               icon: Icons.cake_outlined,
               title: 'Age',
@@ -164,11 +180,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               value: userProfile.gender,
             ),
             _ProfileDetailRow(
-              icon: Icons.calendar_today_outlined,
-              title: 'Move-in Date',
-              value: userProfile.moveinDate == null
-                  ? 'Not specified'
-                  : DateFormat.yMMMd().format(userProfile.moveinDate!),
+              icon: Icons.flag_outlined,
+              title: 'Nationality',
+              value: userProfile.nationality,
             ),
             _ProfileDetailRow(
               icon: Icons.work_outline,
@@ -176,25 +190,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
               value: userProfile.occupation,
             ),
             _ProfileDetailRow(
-              icon: Icons.location_on_outlined,
-              title: 'Preferred Location',
+              icon: Icons.location_city_outlined,
+              title: 'Work/Study Location',
               value: userProfile.location,
             ),
-            _ProfileDetailRow(
-              icon: Icons.pets_outlined,
-              title: 'Pets',
-              value: userProfile.pets,
+            if (userProfile.selfIntroduction.isNotEmpty)
+              _ProfileDetailRow(
+                icon: Icons.description_outlined,
+                title: 'About Me',
+                value: userProfile.selfIntroduction,
+              ),
+            if (userProfile.hobbies.isNotEmpty)
+              _ProfileDetailRow(
+                icon: Icons.interests_outlined,
+                title: 'Hobbies',
+                value: userProfile.hobbies.join(', '),
+              ),
+
+            const Divider(height: 32, indent: 16, endIndent: 16),
+
+            // --- Preferences Section ---
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                'Preferences',
+                style: TextStyle(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.bold, 
+                  color: Colors.deepPurple.shade700
+                ),
+              ),
             ),
-            const Divider(indent: 16, endIndent: 16),
             _ProfileDetailRow(
-              icon: Icons.group_outlined,
-              title: 'Number of Pax',
-              value: '${userProfile.pax} person(s)',
+              icon: Icons.calendar_today_outlined,
+              title: 'Move-in Date',
+              value: userProfile.moveinDate == null
+                  ? 'Not specified'
+                  : DateFormat.yMMMd().format(userProfile.moveinDate!),
             ),
+            if (userProfile.preferredAreas.isNotEmpty)
+              _ProfileDetailRow(
+                icon: Icons.map_outlined,
+                title: 'Preferred Areas',
+                value: userProfile.preferredAreas.join(', '),
+              ),
             _ProfileDetailRow(
               icon: Icons.account_balance_wallet_outlined,
               title: 'Budget',
               value: 'RM ${userProfile.budget.toStringAsFixed(0)} / month',
+            ),
+            _ProfileDetailRow(
+              icon: Icons.group_outlined,
+              title: 'Number of Pax',
+              value: '${userProfile.pax} person(s)',
             ),
             _ProfileDetailRow(
               icon: Icons.bed_outlined,
@@ -205,33 +253,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: Icons.apartment_outlined,
               title: 'Property Preference',
               value: userProfile.propertyType,
+            ),
+            _ProfileDetailRow(
+              icon: Icons.pets_outlined,
+              title: 'Pets',
+              value: userProfile.pets,
               isLast: true,
             ),
+
             const Divider(indent: 16, endIndent: 16),
+            
+            // Logout Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: TextButton.icon(
-              onPressed: () async {
-                await showSignOutModal(context);
-              },
-              icon: const Icon(Icons.logout, color: Colors.red),
-              label: const Padding(
-                padding: EdgeInsetsGeometry.fromLTRB(10,5,10,5),
-                child:Text(
-                'Logout',
-                style: TextStyle(
-                color: Colors.red,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    await showSignOutModal(context);
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.red),
+                  label: const Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    backgroundColor: Colors.red.withOpacity(0.1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
-              ),),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                backgroundColor: Colors.red.withOpacity(0.1),
-                shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                ),
-              ),
               ),
             ),
           ],
@@ -257,24 +314,27 @@ class _ProfileDetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, isLast ? 12 : 0),
+      padding: EdgeInsets.fromLTRB(20, 8, 20, isLast ? 12 : 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.grey.shade600),
+          Icon(icon, color: Colors.grey.shade600, size: 20),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value.isEmpty ? 'Not specified' : value,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+              ],
+            ),
           )
         ],
       ),

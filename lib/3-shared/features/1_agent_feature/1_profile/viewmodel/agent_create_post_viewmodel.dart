@@ -35,7 +35,8 @@ class CreatePostViewModel extends ChangeNotifier {
   int? _durationMonths;
   bool _isPosting = false;
   bool _hasUnsavedChanges = false;
-  List<String> _hobbies = [];
+  double _securityDeposit = 2.0; // 月数で管理する場合
+  double _utilityDeposit = 0.5;
 
   CreatePostViewModel(this._editingPost) {
     if (_editingPost != null) {
@@ -48,7 +49,8 @@ class CreatePostViewModel extends ChangeNotifier {
       _location = _editingPost.location;
       _durationStart = _editingPost.durationStart;
       _durationMonths = _editingPost.durationMonths;
-      _hobbies = List.from(_editingPost.hobbies);
+      _securityDeposit = _editingPost.securityDeposit;
+      _utilityDeposit = _editingPost.utilityDeposit;
 
       if (_editingPost.position != null) {
         _position = GeoPoint(_editingPost.position!.latitude,_editingPost.position!.longitude); 
@@ -75,11 +77,27 @@ class CreatePostViewModel extends ChangeNotifier {
   int? get durationMonths => _durationMonths;
   bool get isPosting => _isPosting;
   bool get hasUnsavedChanges => _hasUnsavedChanges;
-  List<String> get hobbies => _hobbies;
   bool get isEditing => _editingPost != null;
+  double get securityDeposit => _securityDeposit;
+  double get utilityDeposit => _utilityDeposit;
 
   bool get canSubmit =>
       (formKey.currentState?.validate() ?? false) && !_isPosting;
+
+  
+  set securityDeposit(double value) {
+    if (_securityDeposit != value) {
+      _securityDeposit = value;
+      _updateUnsavedChangesFlag();
+    }
+  }
+  
+  set utilityDeposit(double value) {
+    if (_utilityDeposit != value) {
+      _utilityDeposit = value;
+      _updateUnsavedChangesFlag();
+    }
+  }
 
   set description(String value) {
     if (_description != value) {
@@ -137,21 +155,7 @@ class CreatePostViewModel extends ChangeNotifier {
     }
   }
 
-  void addHobby(String hobby) {
-    final trimmedHobby = hobby.trim().toLowerCase();
-    if (trimmedHobby.isNotEmpty && !_hobbies.contains(trimmedHobby)) {
-      _hobbies.add(trimmedHobby);
-      _updateUnsavedChangesFlag();
-    }
-  }
-
-  void removeHobby(String hobby) {
-    final trimmedHobby = hobby.trim().toLowerCase();
-    if (_hobbies.contains(trimmedHobby)) {
-      _hobbies.remove(trimmedHobby);
-      _updateUnsavedChangesFlag();
-    }
-  }
+  
 
   void _updateUnsavedChangesFlag() {
     if (!_hasUnsavedChanges) {
@@ -179,6 +183,8 @@ class CreatePostViewModel extends ChangeNotifier {
 
       // 4. すべてのデータをpostDataにまとめる (この時点ではimageUrlsは空か既存のもの)
       final postData = {
+        'securityDeposit': _securityDeposit,
+        'utilityDeposit': _utilityDeposit,
         'description': _description,
         'imageUrls': _editingPost?.imageUrls ?? [], // ★ 編集時は既存のURL、新規は空
         'condominiumName': _condominiumName,
@@ -196,7 +202,7 @@ class CreatePostViewModel extends ChangeNotifier {
             ? Timestamp.fromDate(_durationStart!)
             : null,
         'durationMonths': _durationMonths != null ? durationMonths! : null,
-        'hobbies': _hobbies,
+        
       };
 
       String postId;
@@ -530,7 +536,6 @@ class CreatePostViewModel extends ChangeNotifier {
     _durationStart = null;
     _durationMonths = null;
     _hasUnsavedChanges = false;
-    _hobbies = [];
     notifyListeners();
   }
 }

@@ -23,7 +23,12 @@ class TenantDetailScreen extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       // ★ 再利用ウィジェットをそのまま使う
-      body: TenantDetailSheetContent(tenant: tenant),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: TenantDetailSheetContent(tenant: tenant),
+        ),
+      ),
     );
   }
 }

@@ -192,6 +192,7 @@ class _TenantMainScaffoldState extends State<TenantMainScaffold> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => EditProfileScreen(
+                    skipOption: 'Save',
                     userProfile: userProfile,
                     isNewUser: false,
                   ),

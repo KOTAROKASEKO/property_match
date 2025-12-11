@@ -52,6 +52,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1049878222012',
     projectId: 'whatsappclone-5ad8f',
     storageBucket: 'whatsappclone-5ad8f.firebasestorage.app',
+    
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -61,6 +62,7 @@ class DefaultFirebaseOptions {
     projectId: 'whatsappclone-5ad8f',
     storageBucket: 'whatsappclone-5ad8f.firebasestorage.app',
     iosBundleId: 'com.example.reConver',
+    databaseURL: 'https://whatsappclone-5ad8f-default-rtdb.firebaseio.com',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
@@ -72,5 +74,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'whatsappclone-5ad8f.firebasestorage.app',
     measurementId: 'G-EQ99QMVB2Y',
   );
-
 }

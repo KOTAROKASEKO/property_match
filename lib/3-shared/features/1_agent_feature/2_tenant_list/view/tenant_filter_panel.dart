@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/l10n/app_localizations.dart'; // ★ 追加
 import '../model/tenant_filter_options.dart';
 import '../viewodel/tenant_list_viewmodel.dart';
 
@@ -19,7 +20,7 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
   late String? _gender;
   DateTime? _moveinDate;
 
-  // チップ選択用のオプション定義
+  // チップ選択用のオプション定義 (内部ロジック用)
   final List<String> _genderOptions = ['Male', 'Female', 'Mix'];
   final List<String> _roomTypeOptions = ['Single', 'Middle', 'Master'];
 
@@ -81,59 +82,61 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!; // ★ Localization取得
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeader(),
+          _buildHeader(l),
           const Divider(height: 24),
           Expanded(
             child: ListView(
               children: [
                 _buildSectionCard(
                   icon: Icons.article_outlined,
-                  title: 'Tenancy Details',
+                  title: l.tenantFilter_tenancyDetails, // ★ 翻訳
                   children: [
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: _buildMoveInDatePicker()),
+                        Expanded(child: _buildMoveInDatePicker(l)),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildPaxDropdown()),
+                        Expanded(child: _buildPaxDropdown(l)),
                       ],
                     ),
                   ],
                 ),
                 _buildSectionCard(
                   icon: Icons.tune_outlined,
-                  title: 'Tenant Preferences',
+                  title: l.tenantFilter_tenantPreferences, // ★ 翻訳
                   children: [
-                    const Text("Room Type", style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(l.tenantFilter_roomType, style: const TextStyle(fontWeight: FontWeight.w500)), // ★ 翻訳
                     const SizedBox(height: 8),
-                    _buildRoomTypeChips(), // モダンなチップ選択に変更
+                    _buildRoomTypeChips(l), // モダンなチップ選択に変更
                     const SizedBox(height: 24),
-                    const Text("Budget Range", style: TextStyle(fontWeight: FontWeight.w500)),
-                    _buildBudgetSlider(),
+                    Text(l.tenantFilter_budgetRange, style: const TextStyle(fontWeight: FontWeight.w500)), // ★ 翻訳
+                    _buildBudgetSlider(l),
                   ],
                 ),
                 _buildSectionCard(
                   icon: Icons.person_outline,
-                  title: 'Tenant Profile',
+                  title: l.tenantFilter_tenantProfile, // ★ 翻訳
                   children: [
-                    const Text("Gender", style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(l.tenantFilter_gender, style: const TextStyle(fontWeight: FontWeight.w500)), // ★ 翻訳
                     const SizedBox(height: 8),
-                    _buildGenderChips(), // モダンなチップ選択に変更
+                    _buildGenderChips(l), // モダンなチップ選択に変更
                     const SizedBox(height: 16),
-                    _buildNationalityInput(),
+                    _buildNationalityInput(l),
                   ],
                 ),
                 const SizedBox(height: 32),
               ],
             ),
           ),
-          _buildApplyButton(),
+          _buildApplyButton(l),
         ],
       ),
     );
@@ -141,21 +144,21 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
 
   // --- UI Components ---
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text('Filters',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(l.tenantFilter_title, // ★ 翻訳
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         TextButton(
           onPressed: _clearAllFilters,
-          child: const Text('Clear All'),
+          child: Text(l.tenantFilter_clearAll), // ★ 翻訳
         ),
       ],
     );
   }
 
-  Widget _buildApplyButton() {
+  Widget _buildApplyButton(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
       child: ElevatedButton(
@@ -167,8 +170,8 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: _applyFilters,
-        child: const Text('Apply Filters',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        child: Text(l.tenantFilter_applyFilters, // ★ 翻訳
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -214,13 +217,20 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
   }
 
   // Room Type Chips
-  Widget _buildRoomTypeChips() {
+  Widget _buildRoomTypeChips(AppLocalizations l) {
     return Wrap(
       spacing: 8.0,
       children: _roomTypeOptions.map((type) {
         final isSelected = _roomType == type;
+        
+        // ★ 表示名の変換
+        String label = type;
+        if(type == 'Single') label = l.tenantFilter_roomSingle;
+        if(type == 'Middle') label = l.tenantFilter_roomMiddle;
+        if(type == 'Master') label = l.tenantFilter_roomMaster;
+
         return ChoiceChip(
-          label: Text(type),
+          label: Text(label),
           selected: isSelected,
           onSelected: (selected) {
             setState(() {
@@ -243,13 +253,20 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
   }
 
   // Gender Chips
-  Widget _buildGenderChips() {
+  Widget _buildGenderChips(AppLocalizations l) {
     return Wrap(
       spacing: 8.0,
       children: _genderOptions.map((gender) {
         final isSelected = _gender == gender;
+
+        // ★ 表示名の変換
+        String label = gender;
+        if(gender == 'Male') label = l.tenantFilter_genderMale;
+        if(gender == 'Female') label = l.tenantFilter_genderFemale;
+        if(gender == 'Mix') label = l.tenantFilter_genderMix;
+
         return ChoiceChip(
-          label: Text(gender),
+          label: Text(label),
           selected: isSelected,
           onSelected: (selected) {
             setState(() {
@@ -271,7 +288,7 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
     );
   }
 
-  Widget _buildMoveInDatePicker() {
+  Widget _buildMoveInDatePicker(AppLocalizations l) {
     return InkWell(
       onTap: () async {
         final pickedDate = await showDatePicker(
@@ -286,25 +303,25 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
       },
       child: InputDecorator(
         decoration: InputDecoration(
-          labelText: 'Move-in Date',
+          labelText: l.tenantFilter_moveInDate, // ★ 翻訳
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           filled: true,
           fillColor: Colors.white,
         ),
         child: Text(
-          _moveinDate != null ? DateFormat.yMMMd().format(_moveinDate!) : 'Any Date',
+          _moveinDate != null ? DateFormat.yMMMd().format(_moveinDate!) : l.tenantFilter_anyDate, // ★ 翻訳
           style: const TextStyle(fontSize: 14),
         ),
       ),
     );
   }
 
-  Widget _buildPaxDropdown() {
+  Widget _buildPaxDropdown(AppLocalizations l) {
     return DropdownButtonFormField<String>(
       value: _pax?.toString(),
       decoration: InputDecoration(
-        labelText: 'Pax',
+        labelText: l.tenantFilter_pax, // ★ 翻訳
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         filled: true,
@@ -317,12 +334,12 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
     );
   }
 
-  Widget _buildNationalityInput() {
+  Widget _buildNationalityInput(AppLocalizations l) {
     return TextFormField(
       controller: _nationalityController,
       decoration: InputDecoration(
-        labelText: 'Nationality',
-        hintText: 'e.g. Japanese',
+        labelText: l.tenantFilter_nationality, // ★ 翻訳
+        hintText: l.tenantFilter_nationalityHint, // ★ 翻訳
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: Colors.white,
@@ -330,7 +347,7 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
     );
   }
 
-  Widget _buildBudgetSlider() {
+  Widget _buildBudgetSlider(AppLocalizations l) {
     return Column(
       children: [
         RangeSlider(
@@ -351,7 +368,7 @@ class _TenantFilterPanelState extends State<TenantFilterPanel> {
           children: [
             Text('RM ${_budgetRange.start.round()}', style: const TextStyle(fontWeight: FontWeight.bold)),
             Text(_budgetRange.end.round() == 5000
-                ? "RM 5000+"
+                ? l.tenantFilter_budget5000Plus // ★ 翻訳
                 : 'RM ${_budgetRange.end.round()}', style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         )

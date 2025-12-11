@@ -87,6 +87,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => EditProfileScreen(
+              skipOption: 'Skip for now',
               userProfile: newUserProfile,
               isNewUser: true,
             ),
@@ -166,7 +167,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     );
   }
 
-  /// 役割選択画面の構築（既存のUIをメソッド化）
+
   Widget _buildSelectionView() {
     return Center(
       key: const ValueKey('selection'),
@@ -176,6 +177,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ... (省略: Welcome! テキストなど) ...
             const Text(
               'Welcome!',
               textAlign: TextAlign.center,
@@ -195,33 +197,38 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               ),
             ),
             const SizedBox(height: 48),
+
+            // --- Tenant (Rent a room) ---
             _buildRoleCard(
               context,
-              iconDisplay: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.door_back_door_outlined,
-                      size: 40, color: Colors.deepPurple),
-                  SizedBox(width: 16),
-                  Icon(Icons.bed, size: 40, color: Colors.deepPurple),
-                ],
+              // ClipOvalでラップして丸く切り抜く
+              iconDisplay: ClipOval(
+                child: Image.asset(
+                  'tenant_pic.png',
+                  width: 120,  // 正円にするため幅と高さを同じにする
+                  height: 120,
+                  fit: BoxFit.cover, // 画像が円全体を覆うように調整
+                ),
               ),
-              label: "rent a room",
+              label: "I want a room",
               onPressed: () => _onRoleSelected(Roles.tenant),
             ),
+
             const SizedBox(height: 16),
+
+            // --- Agent (Agent/want roommate) ---
             _buildRoleCard(
               context,
-              iconDisplay: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.add_business_sharp,
-                      size: 40, color: Colors.deepPurple),
-                  SizedBox(width: 16),
-                  Icon(Icons.people, size: 40, color: Colors.deepPurple),
-                ],
+              // ClipOvalでラップして丸く切り抜く
+              iconDisplay: ClipOval(
+                child: Image.asset(
+                  'agent_pic.png',
+                  width: 120,  // 正円にするため幅と高さを同じにする
+                  height: 120,
+                  fit: BoxFit.cover,
+                ),
               ),
-              label: "Agent/want roommate",
+              label: "I want a tenant",
               onPressed: () => _onRoleSelected(Roles.agent),
             ),
           ],

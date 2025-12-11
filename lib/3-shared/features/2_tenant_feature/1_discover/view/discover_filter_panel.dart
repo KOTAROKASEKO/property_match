@@ -1,10 +1,10 @@
-// lib/features/2_tenant_feature/1_discover/view/discover_filter_panel.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/model/filter_options.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/viewmodel/discover_viewmodel.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_main_layout.dart';
-import '../model/filter_options.dart';
-import '../viewmodel/discover_viewmodel.dart';
+import 'package:re_conver/l10n/app_localizations.dart';
 
 class DiscoverFilterPanel extends StatefulWidget {
   const DiscoverFilterPanel({super.key});
@@ -24,7 +24,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   final List<String> _genderOptions = ['Male', 'Female', 'Mix', 'Any'];
   final List<String> _roomTypeOptions = ['Single', 'Middle', 'Master'];
 
-  late DiscoverViewModel _viewModel; 
+  late DiscoverViewModel _viewModel;
 
   final _hobbyController = TextEditingController();
   late List<String> _hobbies;
@@ -44,7 +44,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   }
 
   void _initializeFilters(FilterOptions filters) {
-    _gender = filters.gender ?? 'Any'; 
+    _gender = filters.gender ?? 'Any';
     _selectedRoomTypes = filters.roomType ?? [];
     _semanticQueryController =
         TextEditingController(text: filters.semanticQuery);
@@ -59,7 +59,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
 
   void _applyFilters() {
     final filters = FilterOptions(
-      gender: _gender == 'Any' ? null : _gender, 
+      gender: _gender == 'Any' ? null : _gender,
       roomType: _selectedRoomTypes.isEmpty ? null : _selectedRoomTypes,
       semanticQuery: _semanticQueryController.text.trim().isEmpty
           ? null
@@ -89,93 +89,80 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeader(),
+          _buildHeader(l),
           const Divider(height: 24),
           Expanded(
             child: ListView(
               children: [
                 _buildSectionCard(
                   color: Colors.amber,
-                  icon: Icons.auto_awesome, 
-                  title: 'AI Search Assistant', 
+                  icon: Icons.auto_awesome,
+                  title: l.discover_aiSearchAssistant,
                   children: [
-                    _buildAIChatButton(context), 
+                    _buildAIChatButton(context, l),
                   ],
                 ),
                 _buildSectionCard(
-                  icon: Icons.calendar_today_outlined, 
-                  title: 'Availability', 
+                  icon: Icons.calendar_today_outlined,
+                  title: l.discover_availability,
                   children: [
-                    _buildDateRangePicker(context),
+                    _buildDateRangePicker(context, l),
                   ],
                 ),
                 _buildSectionCard(
-                  icon: Icons.home_outlined, 
-                  title: 'Property Details', 
+                  icon: Icons.home_outlined,
+                  title: l.discover_propertyDetails,
                   children: [
-                    const Text("Gender",
-                        style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(l.discover_gender,
+                        style: const TextStyle(fontWeight: FontWeight.w500)),
                     const SizedBox(height: 8),
                     _buildGenderChips(),
                     const SizedBox(height: 16),
-                    const Text("Room Type",
-                        style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(l.discover_roomType,
+                        style: const TextStyle(fontWeight: FontWeight.w500)),
                     const SizedBox(height: 8),
                     _buildRoomTypeToggle(),
                   ],
                 ),
                 _buildSectionCard(
-                  icon: Icons.attach_money_outlined, 
-                  title: 'Rent Range (RM)', 
+                  icon: Icons.attach_money_outlined,
+                  title: l.discover_rentRange,
                   children: [
-                    _buildRentSlider(),
+                    _buildRentSlider(l),
                   ],
                 ),
-                _buildSectionCard(
-                  icon: Icons.lightbulb_outline, 
-                  title: 'Atmosphere / Keywords', 
-                  children: [
-                    _buildSemanticQueryInput(),
-                  ],
-                ),
-                _buildSectionCard(
-                  icon: Icons.pool_outlined, 
-                  title: 'Hobbies & Lifestyle', 
-                  children: [
-                    _buildHobbiesInput(),
-                  ],
-                ),
-                const SizedBox(height: 32),
               ],
             ),
           ),
-          _buildApplyButton(),
+          _buildApplyButton(l),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text('Filters',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(l.discover_filtersTitle,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         TextButton(
           onPressed: _clearAllFilters,
-          child: const Text('Clear All'),
+          child: Text(l.discover_clearAll),
         ),
       ],
     );
   }
 
-  Widget _buildApplyButton() {
+  Widget _buildApplyButton(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
       child: ElevatedButton(
@@ -187,19 +174,19 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: _applyFilters,
-        child: const Text('Apply Filters',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        child: Text(l.discover_applyFilters,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );
   }
 
-
-  Widget _buildAIChatButton(BuildContext context) {
+  Widget _buildAIChatButton(BuildContext context, AppLocalizations l) {
     return ElevatedButton.icon(
       icon: const Padding(
         padding: EdgeInsetsGeometry.only(left: 10),
-        child:Icon(Icons.rocket_launch, size: 18),),
-      label: const Text('Try Me!!!  '),
+        child: Icon(Icons.rocket_launch, size: 18),
+      ),
+      label: Text('${l.discover_tryMe}  '),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.deepPurple.shade50,
         foregroundColor: Colors.deepPurple.shade700,
@@ -211,7 +198,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
       ),
       onPressed: () async {
         if (!context.mounted) return;
-        
+
         final aiFilters = await Navigator.push<FilterOptions>(
           context,
           MaterialPageRoute(builder: (_) => const AIChatMainLayout()),
@@ -243,7 +230,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
           children: [
             Row(
               children: [
-                Icon(icon, color: color??Colors.deepPurple, size: 20),
+                Icon(icon, color: color ?? Colors.deepPurple, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   title,
@@ -262,58 +249,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     );
   }
 
-  Widget _buildHobbiesInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextFormField(
-          onFieldSubmitted: (value) {
-            final hobby = value.trim().toLowerCase();
-            if (hobby.isNotEmpty) {
-              setState(() {
-                if (!_hobbies.contains(hobby)) {
-                  _hobbies.add(hobby);
-                }
-                _hobbyController.clear();
-              });
-            }
-          },
-          controller: _hobbyController,
-          decoration: InputDecoration(
-            labelText: 'Looking for hobbies',
-            hintText: 'e.g., Hiking, Cooking',
-            border: const OutlineInputBorder(),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: () {
-                final hobby = _hobbyController.text.trim().toLowerCase();
-                if (hobby.isNotEmpty) {
-                  setState(() {
-                    if (!_hobbies.contains(hobby)) {
-                      _hobbies.add(hobby);
-                    }
-                    _hobbyController.clear();
-                  });
-                }
-              },
-            ),
-          ),
-        ),
-        if (_hobbies.isNotEmpty) const SizedBox(height: 8),
-        Wrap(
-          spacing: 8.0,
-          children: _hobbies
-              .map((hobby) => Chip(
-                    label: Text(hobby),
-                    onDeleted: () => setState(() => _hobbies.remove(hobby)),
-                  ))
-              .toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDateRangePicker(BuildContext context) {
+  Widget _buildDateRangePicker(BuildContext context, AppLocalizations l) {
     return Row(
       children: [
         Expanded(
@@ -333,7 +269,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
             },
             child: InputDecorator(
               decoration: const InputDecoration(
-                labelText: 'From', 
+                labelText: 'From',
                 border: OutlineInputBorder(),
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 12, vertical: 16),
@@ -341,7 +277,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
               child: Text(
                 _durationStart != null
                     ? DateFormat.yMMMd().format(_durationStart!)
-                    : 'Any Date',
+                    : l.discover_anyDate,
               ),
             ),
           ),
@@ -351,11 +287,11 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
           child: TextFormField(
             initialValue: _durationMonth?.toString(),
             decoration: InputDecoration(
-              labelText: 'Duration (Months)', 
-              border: OutlineInputBorder(),
+              labelText: l.discover_durationMonths,
+              border: const OutlineInputBorder(),
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-              suffixText: 'months',
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              suffixText: l.deposit_mths,
             ),
             keyboardType: TextInputType.number,
             onChanged: (value) {
@@ -451,7 +387,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
   }
 
   BorderRadius _getBorderRadius(int index) {
-    const radius = Radius.circular(15); 
+    const radius = Radius.circular(15);
     if (index == 0) {
       return const BorderRadius.horizontal(left: radius);
     } else if (index == _roomTypeOptions.length - 1) {
@@ -460,7 +396,7 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
     return BorderRadius.zero;
   }
 
-  Widget _buildRentSlider() {
+  Widget _buildRentSlider(AppLocalizations l) {
     return Column(
       children: [
         RangeSlider(
@@ -491,37 +427,6 @@ class _DiscoverFilterPanelState extends State<DiscoverFilterPanel> {
           ],
         )
       ],
-    );
-  }
-
-  Widget _buildSemanticQueryInput() {
-    return TextFormField(
-      controller: _semanticQueryController, 
-      decoration: InputDecoration(
-        hintText: 'e.g., "sunny", "stylish furniture"', 
-        hintStyle: TextStyle(color: Colors.grey[500]),
-        filled: true,
-        fillColor: Colors.white, 
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.deepPurple, width: 1.5),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
-        ),
-        prefixIcon:
-            Icon(Icons.auto_awesome_outlined, color: Colors.grey[500]), 
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      ),
-      style: const TextStyle(fontSize: 16),
-      onChanged: (value) {
-      },
     );
   }
 }

@@ -2,6 +2,8 @@
 import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/viewmodel/deeplink_viewmodel.dart';
 import 'package:re_conver/3-shared/features/3_guest_feature/guest_landing_scaffold.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_event_listener.dart';
+import 'package:re_conver/app/language_provider.dart';
+import 'package:re_conver/l10n/app_localizations.dart';
 import 'package:template_hive/template_hive.dart';
 import '3-shared/features/authentication/role_selection_screen.dart';
 import '3-shared/features/notifications/viewmodel/notification_viewmodel.dart';
@@ -26,16 +28,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '3-shared/features/1_agent_feature/chat_template/viewmodel/agent_template_viewmodel.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 // ★★★ IMPORT THE NEW GUEST SCAFFOLD ★★★
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
+  // 名前は指定しない
+  pr('breakpoint1');
+  if (Firebase.apps.isEmpty) {
+    pr('initializing');
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }else{
+    Firebase.app();
+  }
+  pr('breakpoint2');
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  pr('breakpoint3');
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     pr('Got a message whilst in the foreground!');
@@ -43,11 +58,13 @@ void main() async {
       _firebaseMessagingBackgroundHandler(message);
     }
   });
+  pr('breakpoint4');
 
   await dotenv.load(fileName: ".env");
   await _setupInteractedMessage();
   await RiveFile.initialize();
   await Hive.initFlutter();
+  pr('breakpoint5');
 
   Hive.registerAdapter(TimestampAdapter());
   Hive.registerAdapter(TemplateModelAdapter());
@@ -72,6 +89,7 @@ void main() async {
           },
         ),
         ChangeNotifierProvider(create: (_) => NotificationViewModel()),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
       ],
       child: const SafeArea(child: MyApp()),
     ),
@@ -85,7 +103,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final Map<String, dynamic> data = message.data;
   if (data['type'] == 'block_update') {
     final chatRepo = getChatRepository();
-
     final currentUserId = userData.userId;
     if (currentUserId.isEmpty) {
       pr('Background handler: Could not get current user ID. Aborting.');
@@ -137,31 +154,39 @@ void _handleMessage(RemoteMessage message) {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+  
 
   @override
   Widget build(BuildContext context) {
+    final languageProvider = context.watch<LanguageProvider>();
     return MaterialApp(
+      locale: languageProvider.locale, 
+      
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('ja'),
+      ],
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Property_match',
       theme: ThemeData(
-        fontFamily: 'fancy',
+        fontFamily: 'Poppins',
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       initialRoute: '/',
-
-      // 2. ルート定義を追加
       routes: {'/': (context) => const AuthWrapper()},
-
-      // 3. シェア用URLをキャッチして詳細画面を開くロジック
+      
       onGenerateRoute: (settings) {
-        // settings.name には "/listing/123" が入ってきます
         final uri = Uri.parse(settings.name ?? '');
-
         if (uri.pathSegments.length == 2 && uri.pathSegments[0] == 'listing') {
           final postId = uri.pathSegments[1];
-          // ここで詳細画面へ遷移
           return MaterialPageRoute(
             builder: (context) => DeepLinkPostView(postId: postId),
           );
@@ -185,7 +210,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
     super.initState();
   }
 
-  // ★ 1. _getRoleFromPrefs が User オブジェクトを引数に取るように変更
   Future<String?> _getRoleFromPrefs(User user) async {
     final prefs = await SharedPreferences.getInstance();
     String? role = prefs.getString('role');
@@ -337,7 +361,6 @@ class _DelayedFrameBuilderState extends State<DelayedFrameBuilder> {
 
   @override
   Widget build(BuildContext context) {
-    // 1フレーム待機する間は、ローディングインジケーターを表示する
     return _showChild
         ? widget.builder(context)
         : const Scaffold(body: Center(child: CircularProgressIndicator()));

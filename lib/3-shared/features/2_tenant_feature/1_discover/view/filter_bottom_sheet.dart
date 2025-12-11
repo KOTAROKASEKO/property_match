@@ -1,7 +1,7 @@
-// lib/features/2_tenant_feature/1_discover/view/filter_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_main_layout.dart';
+import 'package:re_conver/l10n/app_localizations.dart';
 import '../model/filter_options.dart';
 
 class FilterBottomSheet extends StatefulWidget {
@@ -74,6 +74,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -81,7 +83,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ハンドル
           Container(
             margin: const EdgeInsets.only(top: 12, bottom: 8),
             width: 40,
@@ -91,11 +92,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-
-          // ヘッダー
-          _buildHeader(),
-
-          // ★★★ 変更点: Expanded の子を SingleChildScrollView に変更 ★★★
+          _buildHeader(l),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -103,51 +100,51 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionCard(
-                    icon: Icons.auto_awesome, // ★ アイコン
-                    title: 'AI Search Assistant', // ★ タイトル
+                    icon: Icons.auto_awesome,
+                    title: l.discover_aiSearchAssistant,
                     children: [
-                      _buildAIChatButton(context), // ★ AIチャットボタン
+                      _buildAIChatButton(context, l),
                     ],
                   ),
                   _buildSectionCard(
-                    icon: Icons.calendar_today_outlined, // ★ アイコン
-                    title: 'Availability', // ★ タイトル
+                    icon: Icons.calendar_today_outlined,
+                    title: l.discover_availability,
                     children: [
-                      _buildDateRangePicker(context),
+                      _buildDateRangePicker(context, l),
                     ],
                   ),
                   _buildSectionCard(
-                    icon: Icons.home_outlined, // ★ アイコン
-                    title: 'Property Details', // ★ タイトル
+                    icon: Icons.home_outlined,
+                    title: l.discover_propertyDetails,
                     children: [
-                      const Text("Gender",
-                          style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text(l.discover_gender,
+                          style: const TextStyle(fontWeight: FontWeight.w500)),
                       const SizedBox(height: 8),
                       _buildGenderChips(),
                       const SizedBox(height: 16),
-                      const Text("Room Type",
-                          style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text(l.discover_roomType,
+                          style: const TextStyle(fontWeight: FontWeight.w500)),
                       const SizedBox(height: 8),
                       _buildRoomTypeToggle(),
                     ],
                   ),
                   _buildSectionCard(
-                    icon: Icons.attach_money_outlined, // ★ アイコン
-                    title: 'Rent Range (RM)', // ★ タイトル
+                    icon: Icons.attach_money_outlined,
+                    title: l.discover_rentRange,
                     children: [
                       _buildRentSlider(),
                     ],
                   ),
                   _buildSectionCard(
-                    icon: Icons.lightbulb_outline, // ★ アイコン
-                    title: 'Atmosphere / Keywords', // ★ タイトル
+                    icon: Icons.lightbulb_outline,
+                    title: 'Atmosphere / Keywords',
                     children: [
                       _buildSemanticQueryInput(),
                     ],
                   ),
                   _buildSectionCard(
-                    icon: Icons.pool_outlined, // ★ アイコン
-                    title: 'Hobbies & Lifestyle', // ★ タイトル
+                    icon: Icons.pool_outlined,
+                    title: 'Hobbies & Lifestyle',
                     children: [
                       _buildHobbiesInput(),
                     ],
@@ -157,18 +154,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               ),
             ),
           ),
-
-          // ボタンエリア
-          _buildButtonArea(),
+          _buildButtonArea(l),
         ],
       ),
     );
   }
 
-  Widget _buildAIChatButton(BuildContext context) {
+  Widget _buildAIChatButton(BuildContext context, AppLocalizations l) {
     return ElevatedButton.icon(
       icon: const Icon(Icons.chat_outlined, size: 18),
-      label: const Text('Click me ;)'),
+      label: Text(l.discover_tryMe),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.deepPurple.shade50,
         foregroundColor: Colors.deepPurple.shade700,
@@ -178,21 +173,19 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           borderRadius: BorderRadius.circular(8),
         ),
       ),
-    onPressed: () async {
+      onPressed: () async {
         final aiFilters = await Navigator.push<FilterOptions>(
           context,
-          // ★ AIChatScreen ではなく AIChatListScreen を呼び出す
           MaterialPageRoute(builder: (_) => const AIChatMainLayout()),
         );
-        
+
         if (aiFilters != null && context.mounted) {
-          // AIチャット画面からフィルターが返ってきたら、このボトムシートも閉じる
           Navigator.of(context).pop(aiFilters);
         }
       },
     );
   }
-  
+
   Widget _buildSectionCard({
     required IconData icon,
     required String title,
@@ -210,7 +203,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // アイコンとタイトル
             Row(
               children: [
                 Icon(icon, color: Colors.deepPurple, size: 20),
@@ -225,7 +217,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               ],
             ),
             const Divider(height: 24),
-            // 子ウィジェット
             ...children,
           ],
         ),
@@ -233,7 +224,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
   }
 
-  Widget _buildDateRangePicker(BuildContext context) {
+  Widget _buildDateRangePicker(BuildContext context, AppLocalizations l) {
     return Row(
       children: [
         Expanded(
@@ -253,7 +244,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             },
             child: InputDecorator(
               decoration: const InputDecoration(
-                labelText: 'Available From',
+                labelText: 'From',
                 border: OutlineInputBorder(),
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 12, vertical: 16),
@@ -261,7 +252,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               child: Text(
                 _durationStart != null
                     ? DateFormat.yMMMd().format(_durationStart!)
-                    : 'Any',
+                    : l.discover_anyDate,
               ),
             ),
           ),
@@ -274,11 +265,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 child: TextFormField(
                   initialValue: _durationMonth?.toString(),
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Duration',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l.discover_durationMonths,
+                    border: const OutlineInputBorder(),
                     contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -288,9 +279,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
-                'months',
-                style: TextStyle(fontSize: 16),
+              Text(
+                l.deposit_mths,
+                style: const TextStyle(fontSize: 16),
               ),
             ],
           ),
@@ -299,7 +290,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
@@ -311,9 +302,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Filters',
-            style: TextStyle(
+          Text(
+            l.discover_filtersTitle,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: Colors.black87,
@@ -321,9 +312,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           ),
           TextButton(
             onPressed: _clearAllFilters,
-            child: const Text(
-              'Clear All',
-              style: TextStyle(
+            child: Text(
+              l.discover_clearAll,
+              style: const TextStyle(
                 color: Colors.deepPurple,
                 fontWeight: FontWeight.w600,
               ),
@@ -517,65 +508,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
   }
 
-  Widget _buildButtonArea() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Colors.grey[100]!, width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 52),
-                side: BorderSide(color: Colors.grey[300]!),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(0, 52),
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-                shadowColor: Colors.transparent,
-              ),
-              onPressed: _applyFilters,
-              child: const Text(
-                'Apply',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildHobbiesInput() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,6 +556,65 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               .toList(),
         ),
       ],
+    );
+  }
+
+  Widget _buildButtonArea(AppLocalizations l) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: Colors.grey[100]!, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 52),
+                side: BorderSide(color: Colors.grey[300]!),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                l.common_cancel,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(0, 52),
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+                shadowColor: Colors.transparent,
+              ),
+              onPressed: _applyFilters,
+              child: Text(
+                l.discover_applyFilters,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

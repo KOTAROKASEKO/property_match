@@ -1,11 +1,11 @@
-// lib/features/1_agent_feature/2_tenant_list/view/tenant_list_view.dart
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:re_conver/3-shared/features/1_agent_feature/2_tenant_list/view/shimmer_tenant_grid_card.dart';
 import 'package:re_conver/3-shared/features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
-import 'package:template_hive/template_hive.dart'; // Needed for PropertyTemplate
+import 'package:re_conver/l10n/app_localizations.dart';
+import 'package:template_hive/template_hive.dart';
 import '../model/tenant_filter_options.dart';
 import 'tenant_detail_screen.dart';
 import 'tenant_filter_bottom_sheet.dart';
@@ -13,6 +13,7 @@ import 'tenant_grid_card.dart';
 import '../viewodel/tenant_list_viewmodel.dart';
 import '../../../2_tenant_feature/3_profile/models/profile_model.dart';
 import 'tenant_filter_panel.dart';
+// ★追加: Localizationのインポート
 
 class TenantListView extends StatelessWidget {
   const TenantListView({super.key});
@@ -111,6 +112,7 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<TenantListViewModel>();
+    final l = AppLocalizations.of(context)!; // ★ Localization取得
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -118,6 +120,14 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
         builder: (context, constraints) {
           const double wideScreenThreshold = 800.0;
           final bool isWideScreen = constraints.maxWidth >= wideScreenThreshold;
+
+          Widget content;
+          
+          if (!viewModel.hasSearched) {
+            content = _buildSearchPrompt(context, viewModel, l); // ★ lを渡す
+          } else {
+            content = _buildTenantGrid(viewModel, isWideScreen: isWideScreen);
+          }
 
           if (isWideScreen) {
             return Row(
@@ -130,14 +140,10 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                 Expanded(
                   child: Column( 
                     children: [
-                      _buildSmartSearchBar(context),
-                      // ★ ADDED: Selected Property Card
+                      _buildSmartSearchBar(context, l), // ★ lを渡す
                       if (viewModel.selectedTemplate != null)
-                        _buildSelectedPropertyCard(context, viewModel.selectedTemplate!, viewModel),
-                        
-                      Expanded(
-                        child: _buildTenantGrid(viewModel, isWideScreen: true),
-                      ),
+                        _buildSelectedPropertyCard(context, viewModel.selectedTemplate!, viewModel, l), // ★ lを渡す
+                      Expanded(child: content),
                     ],
                   ),
                 ),
@@ -146,32 +152,21 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
           } else {
             return Scaffold(
               appBar: AppBar(
-                toolbarHeight: 80.0,
-                actions: [
-                  IconButton(
-                    onPressed: _showFilterSheet,
-                    icon: const Icon(Icons.filter_alt_outlined),
-                  )
-                ],
-                title: const Row(children: [
-                  Icon(Icons.people_outline, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text('Find Roommates', style: TextStyle(color: Colors.white)),
+                title: Row(children: [
+                  const Icon(Icons.search, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Text(l.tenantList_title, style: const TextStyle(color: Colors.white)), // ★ 翻訳適用
                 ]),
-                elevation: 0,
                 backgroundColor: Colors.deepPurple,
+                elevation: 0,
                 foregroundColor: Colors.white,
               ),
               body: Column( 
                 children: [
-                  _buildSmartSearchBar(context),
-                  // ★ ADDED: Selected Property Card
+                  _buildSmartSearchBar(context, l), // ★ lを渡す
                   if (viewModel.selectedTemplate != null)
-                    _buildSelectedPropertyCard(context, viewModel.selectedTemplate!, viewModel),
-                    
-                  Expanded(
-                    child: _buildTenantGrid(viewModel, isWideScreen: false),
-                  ),
+                    _buildSelectedPropertyCard(context, viewModel.selectedTemplate!, viewModel, l), // ★ lを渡す
+                  Expanded(child: content),
                 ],
               ),
             );
@@ -181,13 +176,75 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
     );
   }
 
-  // ★ NEW: Futuristic Property Card
-  Widget _buildSelectedPropertyCard(BuildContext context, PropertyTemplate template, TenantListViewModel viewModel) {
+  // ★ 修正: lを受け取る
+  Widget _buildSearchPrompt(BuildContext context, TenantListViewModel viewModel, AppLocalizations l) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.person_search_rounded,
+                size: 64,
+                color: Colors.deepPurple,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              l.tenantList_searchPromptTitle, // ★ 翻訳適用
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l.tenantList_searchPromptDesc, // ★ 翻訳適用
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            
+            ElevatedButton.icon(
+              onPressed: () => _showPropertySelectorSheet(context),
+              icon: const Icon(Icons.auto_awesome),
+              label: Text(l.tenantList_matchButton), // ★ 翻訳適用
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ★ 修正: lを受け取る
+  Widget _buildSelectedPropertyCard(BuildContext context, PropertyTemplate template, TenantListViewModel viewModel, AppLocalizations l) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2E004F), Color(0xFF1A1A1A)], // Deep Purple to Dark Grey
+          colors: [Color(0xFF2E004F), Color(0xFF1A1A1A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -206,7 +263,6 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
         borderRadius: BorderRadius.circular(20),
         child: Stack(
           children: [
-            // Decorative background glow
             Positioned(
               right: -20,
               top: -20,
@@ -217,7 +273,7 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                   color: Colors.purpleAccent.withOpacity(0.15),
                   shape: BoxShape.circle,
                   image: const DecorationImage(
-                    image: AssetImage('noise.png'), // Optional texture
+                    image: AssetImage('noise.png'), 
                     fit: BoxFit.cover,
                     opacity: 0.1
                   )
@@ -229,7 +285,6 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  // Futuristic Icon Container
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -241,7 +296,6 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                   ),
                   const SizedBox(width: 16),
                   
-                  // Text Info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,7 +303,7 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                         Row(
                           children: [
                             Text(
-                              "ACTIVE MATCHING",
+                              l.tenantList_activeMatching, // ★ 翻訳適用
                               style: TextStyle(
                                 color: Colors.purpleAccent[100],
                                 fontSize: 10,
@@ -292,16 +346,15 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                     ),
                   ),
                   
-                  // Close/Clear Button
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () {
                         viewModel.clearSelectedProperty();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Matching cleared. Showing all tenants.'),
-                            duration: Duration(seconds: 1),
+                          SnackBar(
+                            content: Text(l.tenantList_clearSnackBar), // ★ 翻訳適用
+                            duration: const Duration(seconds: 1),
                           ),
                         );
                       },
@@ -326,39 +379,18 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
   }
 
   Widget _buildTenantGrid(TenantListViewModel viewModel, {required bool isWideScreen}) {
-    if (viewModel.isLoading && viewModel.filteredTenants.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-     if (!viewModel.isLoading && viewModel.filteredTenants.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person_search_outlined, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text("No tenants found.", style: TextStyle(color: Colors.grey[500], fontSize: 16)),
-            if (viewModel.selectedTemplate != null)
-              TextButton(
-                onPressed: () => viewModel.clearSelectedProperty(),
-                child: const Text("Clear Property Filter"),
-              )
-          ],
-        ),
-      );
-    }
-
     final SliverGridDelegate delegate = isWideScreen
         ? const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 300.0, 
+            maxCrossAxisExtent: 600.0,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.75,
+            childAspectRatio: 2.2, 
           )
         : const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, 
+            crossAxisCount: 1, 
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.75,
+            childAspectRatio: 1.6, 
           );
 
     return RefreshIndicator(
@@ -385,10 +417,10 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
     );
   }
 
-  Widget _buildSmartSearchBar(BuildContext context) {
-    // Same as previous implementation
+  // ★ 修正: lを受け取る
+  Widget _buildSmartSearchBar(BuildContext context, AppLocalizations l) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16), // Increased bottom padding slightly
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16), 
       child: Material(
         elevation: 3,
         shadowColor: Colors.black.withOpacity(0.1),
@@ -397,8 +429,6 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
         child: InkWell(
           borderRadius: BorderRadius.circular(30),
           onTap: () =>  _showPropertySelectorSheet(context),
-            
-            
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
@@ -412,18 +442,18 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                   child: const Icon(Icons.auto_awesome, size: 20, color: Colors.deepPurple),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        "Find with your property",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        l.tenantList_searchBarTitle, // ★ 翻訳適用
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                       Text(
-                        "Tap here!!",
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        l.tenantList_searchBarSubtitle, // ★ 翻訳適用
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ],
                   ),
@@ -439,13 +469,13 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
 
   void _showPropertySelectorSheet(BuildContext context) {
     final bool isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    final l = AppLocalizations.of(context)!; // ★ ここでも取得
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // ★重要: これをtrueにするとコンテンツの高さに応じてシートが伸縮します
+      isScrollControlled: true, 
       backgroundColor: Colors.transparent,
       builder: (context) {
-        // 1. ログイン済みの場合: リストを表示するため DraggableScrollableSheet を使用
         if (isLoggedIn) {
           return DraggableScrollableSheet(
             initialChildSize: 0.5,
@@ -453,24 +483,21 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
             maxChildSize: 0.8,
             expand: false,
             builder: (_, scrollController) {
-              return _buildLoggedInSheetContent(context);
+              return _buildLoggedInSheetContent(context, l); // ★ lを渡す
             },
           );
-        } 
-        // 2. 未ログインの場合: コンテンツの高さに合わせて自動調整 (DraggableScrollableSheetを使わない)
-        else {
+        } else {
           return SingleChildScrollView(
-            // キーボードが出ても隠れないようにpaddingを調整
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: _buildGuestUpsellContent(context),
+            child: _buildGuestUpsellContent(context, l), // ★ lを渡す
           );
         }
       },
     );
   }
 
-  // --- ログイン済みユーザー用のコンテンツ (リスト表示) ---
-  Widget _buildLoggedInSheetContent(BuildContext context) {
+  // ★ 修正: lを受け取る
+  Widget _buildLoggedInSheetContent(BuildContext context, AppLocalizations l) {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -487,11 +514,11 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16.0),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
             child: Text(
-              "Select a Property",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              l.tenantList_sheetTitle, // ★ 翻訳適用
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(
@@ -503,7 +530,7 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                     .searchTenantsForProperty(template);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Searching tenants for ${template.name}...'),
+                    content: Text(l.tenantList_searchingSnackBar(template.name)), // ★ 翻訳適用
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
@@ -515,8 +542,8 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
     );
   }
 
-  // --- 未ログインユーザー用のコンテンツ (高さ自動調整 & オーバーフロー防止) ---
-  Widget _buildGuestUpsellContent(BuildContext context) {
+  // ★ 修正: lを受け取る
+  Widget _buildGuestUpsellContent(BuildContext context, AppLocalizations l) {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -525,9 +552,8 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: SafeArea(
         child: Column(
-          mainAxisSize: MainAxisSize.min, // ★重要: コンテンツの高さに合わせて縮む設定
+          mainAxisSize: MainAxisSize.min, 
           children: [
-            // ドラッグハンドル
             Container(
               margin: const EdgeInsets.only(bottom: 24),
               width: 40,
@@ -538,7 +564,6 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
               ),
             ),
             
-            // アイコン
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -553,11 +578,10 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
             ),
             const SizedBox(height: 20),
 
-            // タイトル
-            const Text(
-              "Search with your Property!!",
+            Text(
+              l.tenantList_guestSheetTitle, // ★ 翻訳適用
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
@@ -565,8 +589,8 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
             ),
             const SizedBox(height: 12),
 
-            const Text(
-              "Don't search manually. Select one of your properties, and we'll instantly show you tenants whose budget and location preferences match yours.",
+            Text(
+              l.tenantList_guestSheetDesc, // ★ 翻訳適用
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
@@ -576,14 +600,12 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
             ),
             const SizedBox(height: 24),
 
-            // ベネフィットリスト
-            _buildBenefitRow(Icons.check_circle, "Match by Budget & Location"),
+            _buildBenefitRow(Icons.check_circle, l.tenantList_benefitMatch), // ★ 翻訳適用
             const SizedBox(height: 8),
-            _buildBenefitRow(Icons.check_circle, "Save hours of scrolling"),
+            _buildBenefitRow(Icons.check_circle, l.tenantList_benefitSaveTime), // ★ 翻訳適用
             
             const SizedBox(height: 32),
 
-            // アクションボタン
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -600,9 +622,9 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  "Log in to Match Properties",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                child: Text(
+                  l.tenantList_loginButton, // ★ 翻訳適用
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -613,7 +635,6 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
     );
   }
 
-  // ヘルパーウィジェット
   Widget _buildBenefitRow(IconData icon, String text) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -631,6 +652,4 @@ class _TenantListViewBodyState extends State<_TenantListViewBody> {
       ],
     );
   }
-
-  
 }

@@ -180,6 +180,7 @@ class AIChatViewModel extends ChangeNotifier {
       return true; 
     }
     bool isPremiumUser = false; // Default to false for now
+    // ignore: dead_code
     if (isPremiumUser) {
       //TODO : Implement actual premium check
       return true;

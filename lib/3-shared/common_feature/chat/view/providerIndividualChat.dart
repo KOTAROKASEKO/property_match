@@ -1,8 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:re_conver/3-shared/common_feature/repository_provider.dart';
+import 'package:re_conver/3-shared/features/1_agent_feature/2_tenant_list/view/tenant_detail_screen.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/3_profile/models/profile_model.dart';
 import 'package:shared_data/shared_data.dart';
 import 'package:template_hive/template_hive.dart';
 import '../../../features/1_agent_feature/chat_template/view/property_template_carousel_widget.dart';
@@ -185,7 +188,8 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: GestureDetector(
-          onTap: () {
+          onTap: () async {
+            // ★ テナントがエージェントを見る場合 (既存ロジック)
             if (userData.role == Roles.tenant) {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -193,6 +197,66 @@ class _IndividualChatScreenViewState extends State<_IndividualChatScreenView> {
                       AgentProfileScreen(agentId: widget.otherUserUid),
                 ),
               );
+            } 
+            // ★ エージェントがテナントを見る場合 (追加ロジック)
+            else if (userData.role == Roles.agent) {
+              try {
+                // プロフィールデータを取得
+                final doc = await FirebaseFirestore.instance
+                    .collection('users_prof')
+                    .doc(widget.otherUserUid)
+                    .get();
+
+                if (doc.exists && context.mounted) {
+                  final tenantProfile = UserProfile.fromFirestore(doc);
+                  
+                  // ★★★ 修正: 画面遷移ではなくボトムシートを表示 ★★★
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true, // コンテンツの高さに応じて調整、フルスクリーンに近い表示が可能
+                    backgroundColor: Colors.transparent, // 背景を透明にして角丸などを綺麗に見せる
+                    builder: (context) {
+                      return DraggableScrollableSheet(
+                        initialChildSize: 0.85, // 画面の85%の高さで開始
+                        maxChildSize: 0.95,     // 最大95%
+                        minChildSize: 0.5,      // 最小50%
+                        expand: false,          // コンテンツサイズに合わせる設定 (Center配置のためfalse推奨)
+                        builder: (context, scrollController) {
+                          // ★ レスポンシブ対応: Center と ConstrainedBox で最大幅を制限
+                          return Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 600), // PC等で広がりすぎないように制限
+                              child: Container(
+                                clipBehavior: Clip.antiAlias,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                ),
+                                // TenantDetailSheetContent自体がスクロール可能なので、ここではそのまま配置
+                                // (scrollControllerを渡していないため、ドラッグ操作との連動は限定的ですが、コンテンツのスクロールは可能です)
+                                child: TenantDetailSheetContent(tenant: tenantProfile),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Profile not found.')),
+                    );
+                  }
+                }
+              } catch (e) {
+                print("Error fetching tenant profile: $e");
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not load profile.')),
+                  );
+                }
+              }
             }
           },
           child: Row(
