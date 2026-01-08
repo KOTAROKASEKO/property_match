@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="google-signin-client_id" content="1049878222012-tromh38165m6n4vcg9atv5u7abqh4euq.apps.googleusercontent.com">
+  <base href="/app/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Your new roommates are waiting you!!">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="bililk match">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png">
+
+  <title>bilik match</title>
+  <link rel="manifest" href="manifest.json">
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+  
+  <style>
+    /* 基本設定 */
+    html { height: 100% }
+    body {
+      margin: 0;
+      min-height: 100%;
+      background-color: #ffffff;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loading_container">
+    <div class="loader"></div>
+    <div id="tips_text">マレーシアは移住したい国ランキング14年連続1位です</div>
+  </div>
+
+  <style>
+    /* ローディング画面のデザイン */
+    #loading_container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column; 
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      background-color: #ffffff;
+      transition: opacity 0.5s ease-out;
+    }
+
+    .loader {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e0e0e0;
+      border-top: 4px solid #3498db; /* 青色 */
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px; 
+    }
+
+    #tips_text {
+      font-size: 16px;
+      color: #555;
+      text-align: center;
+      max-width: 80%;
+      line-height: 1.5;
+      min-height: 1.5em; 
+      font-weight: 500;
+      transition: opacity 0.5s ease; 
+      opacity: 1;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-messaging-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBCCxQ0AYTHy6A6DrfW7ylYxjGW6AZA1OQ",
+      authDomain: "whatsappclone-5ad8f.firebaseapp.com",
+      projectId: "whatsappclone-5ad8f",
+      storageBucket: "whatsappclone-5ad8f.firebasestorage.app",
+      messagingSenderId: "1049878222012",
+      appId: "1:1049878222012:web:54584a8098728e70acecb9",
+      measurementId: "G-EQ99QMVB2Y"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
+  </script>
+
+  <script>
+  // 豆知識リスト
+  const tips = [
+    "マレーシアは移住したい国ランキング14年連続1位です", 
+    "マレーシアは基本的に初期費用として3ヶ月分の家賃を払います",
+    "コンドミニアムにはプールとジムがついているのが一般的です",
+    "家賃交渉はエージェントを通して行うのが一般的です",
+    "多民族国家なので、英語、マレー語、中国語が飛び交っています"
+  ];
+
+  const tipsElement = document.getElementById('tips_text');
+
+  // 🔹 ランダムな開始位置
+  let currentTipIndex = Math.floor(Math.random() * tips.length);
+
+  // 最初にランダムな豆知識を表示
+  tipsElement.innerText = tips[currentTipIndex];
+
+  // テキスト切り替え関数（1つずつ進む）
+  function rotateTips() {
+    tipsElement.style.opacity = '0';
+
+    setTimeout(() => {
+      currentTipIndex = (currentTipIndex + 1) % tips.length;
+      tipsElement.innerText = tips[currentTipIndex];
+      tipsElement.style.opacity = '1';
+    }, 500);
+  }
+
+  // 3.5秒ごとに切り替え
+  const tipInterval = setInterval(rotateTips, 3500);
+
+  // Flutter 初回描画後にローディング解除
+  window.addEventListener('flutter-first-frame', function() {
+    clearInterval(tipInterval);
+
+    const loadingContainer = document.getElementById('loading_container');
+    if (loadingContainer) {
+      loadingContainer.style.opacity = '0';
+      setTimeout(() => {
+        loadingContainer.remove();
+      }, 500);
+    }
+  });
+</script>
+
+  <script src="flutter_bootstrap.js" async=""></script>
+
+</body>
+</html>

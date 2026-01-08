@@ -1,0 +1,159 @@
+{
+  "@@locale": "en",
+  "common_discover": "Discover",
+  "common_myProfile": "My Profile",
+  "common_savedListings": "Saved Listings",
+  "common_chat": "Chat",
+  "common_editProfile": "Edit Profile",
+  "common_save": "Save",
+  "common_post": "Post",
+  "common_cancel": "Cancel",
+
+  "discover_searchHint": "Bukit Jalil LRT, APU, Sunway Pyramid",
+  "discover_noPostsFound": "No posts found matching your criteria.\nTry adjusting the filters.",
+  "discover_filtersTitle": "Filters",
+  "discover_clearAll": "Clear All",
+  "discover_applyFilters": "Apply Filters",
+  "discover_aiSearchAssistant": "AI Search Assistant",
+  "discover_tryMe": "Try Me!!",
+  "discover_propertyDetails": "Property Details",
+  "discover_gender": "Gender",
+  "discover_roomType": "Room Type",
+  "discover_rentRange": "Rent Range (RM)",
+  "discover_availability": "Availability",
+  "discover_durationMonths": "Duration (Months)",
+  "discover_anyDate": "Any Date",
+
+  "postDetail_listedBy": "Listed by",
+  "postDetail_inquire": "Inquire",
+  "postDetail_description": "Description",
+  "postDetail_noDescription": "No description provided.",
+  "postDetail_contactOnWhatsapp": "Contact on WhatsApp",
+  "postDetail_noPhoneNumber": "No phone number available for this agent.",
+  "postDetail_commentCount": "View Comments",
+  "postDetail_deletePost": "Delete Post",
+  "postDetail_editPost": "Edit Post",
+  "postDetail_chat": "Start Chat",
+
+  "deposit_breakdownTitle": "Initial Payment Breakdown",
+  "deposit_advanceRental": "Advance Rental (1st month)",
+  "deposit_securityDeposit": "Security Deposit",
+  "deposit_utilityDeposit": "Utility Deposit",
+  "deposit_totalMoveInCost": "Total Move-in Cost",
+  "deposit_mths": "mths",
+
+  "tenantList_title": "Find Roommates",
+  "tenantList_searchPromptTitle": "Find Your Ideal Tenant",
+  "tenantList_searchPromptDesc": "Select one of your properties or use filters\nto find tenants matching your criteria.",
+  "tenantList_matchButton": "Match with Property",
+  "tenantList_searchBarTitle": "Find with your property",
+  "tenantList_searchBarSubtitle": "Tap here!!",
+  "tenantList_sheetTitle": "Select a Property",
+  "tenantList_guestSheetTitle": "Search with your Property!!",
+  "tenantList_guestSheetDesc": "Don't search manually. Select one of your properties, and we'll instantly show you tenants whose budget and location preferences match yours.",
+  "tenantList_benefitMatch": "Match by Budget & Location",
+  "tenantList_benefitSaveTime": "Save hours of scrolling",
+  "tenantList_loginButton": "Log in to Match Properties",
+  "tenantList_activeMatching": "ACTIVE MATCHING",
+  "tenantList_clearSnackBar": "Matching cleared. Showing all tenants.",
+  "tenantList_searchingSnackBar": "Searching tenants for {name}...",
+  "@tenantList_searchingSnackBar": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+
+  "placeholder_rmPerMonth": "RM {amount} / month",
+  "@placeholder_rmPerMonth": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "placeholder_age": "{age} years old",
+  "@placeholder_age": {
+    "placeholders": {
+      "age": {}
+    }
+  },
+
+  "tenantFilter_title": "Filters",
+  "tenantFilter_clearAll": "Clear All",
+  "tenantFilter_tenancyDetails": "Tenancy Details",
+  "tenantFilter_moveInDate": "Move-in Date",
+  "tenantFilter_anyDate": "Any Date",
+  "tenantFilter_pax": "Pax",
+  "tenantFilter_tenantPreferences": "Tenant Preferences",
+  "tenantFilter_roomType": "Room Type",
+  "tenantFilter_budgetRange": "Budget Range",
+  "tenantFilter_budget5000Plus": "RM 5000+",
+  "tenantFilter_tenantProfile": "Tenant Profile",
+  "tenantFilter_gender": "Gender",
+  "tenantFilter_nationality": "Nationality",
+  "tenantFilter_nationalityHint": "e.g. Japanese",
+  "tenantFilter_applyFilters": "Apply Filters",
+  "tenantFilter_roomSingle": "Single",
+  "tenantFilter_roomMiddle": "Middle",
+  "tenantFilter_roomMaster": "Master",
+  "tenantFilter_genderMale": "Male",
+  "tenantFilter_genderFemale": "Female",
+  "tenantFilter_genderMix": "Mix",
+
+  "profile_personalInfo": "Personal Info",
+  "profile_occupation": "Occupation",
+  "profile_workLocation": "Work/Study Location",
+  "profile_aboutMe": "About Me",
+  "profile_hobbies": "Hobbies",
+  "profile_preferences": "Preferences",
+  "profile_preferredAreas": "Preferred Areas",
+  "profile_budget": "Budget",
+  "profile_numberOfPax": "Number of Pax",
+  "profile_paxCount": "{count} person(s)",
+  "@profile_paxCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "profile_roomPreference": "Room Preference",
+  "profile_propertyPreference": "Property Preference",
+  "profile_pets": "Pets",
+  "profile_logout": "Logout",
+  "profile_createProfile": "Create Profile",
+  "profile_benefitBanner": "If you create profile, agent who has your ideal room can find you!",
+  "profile_displayName": "Display Name",
+  "profile_required": "Required",
+  "profile_selfIntroduction": "Self Introduction",
+  "profile_ageYears": "{age} years",
+  "@profile_ageYears": {
+    "placeholders": {
+      "age": {}
+    }
+  },
+  "profile_notSet": "Not set",
+  "profile_preferredLivingAreas": "Preferred Living Areas",
+  "profile_addAreaHint": "Add area (e.g. Bangsar)",
+  "profile_allowPets": "Allow Pets?",
+  "profile_monthlyBudget": "Monthly Budget",
+  "profile_saveProfile": "Save Profile",
+  "profile_skip": "Skip creating profile as of now",
+  "profile_updatedSuccess": "Profile updated successfully!",
+  "profile_updateFailed": "Failed to update profile: {error}",
+  "@profile_updateFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profile_uploadFailed": "Failed to upload image: {error}",
+  "@profile_uploadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profile_notSpecified": "Not specified",
+  "profile_yes": "Yes",
+  "profile_no": "No",
+  "profile_any": "Any",
+  "propertyType_condo": "Condominium",
+  "propertyType_apartment": "Apartment",
+  "propertyType_landed": "Landed House",
+  "propertyType_studio": "Studio"
+}

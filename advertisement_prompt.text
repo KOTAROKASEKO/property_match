@@ -1,0 +1,126 @@
+TITLE: Zombie Room Survival Comedy Ad
+
+----------------------------------------
+WORLD COORDINATES (IMPORTANT)
+----------------------------------------
+Use standard game coordinate system:
+
+- X axis = left (negative) / right (positive)
+- Y axis = forward (positive) / backward (negative)
+- Z axis = vertical height (0 = floor)
+
+Characters are facing positive y direction, zombies are facing negative y direction.
+----------------------------------------
+NON-NEGOTIABLE SCENE RULES
+----------------------------------------
+- Characters do NOT face each other.
+- Characters do NOT rotate away from forward (+Y).
+- Characters ONLY shoot forward toward +Y direction.
+- Zombies ONLY spawn from the front area (+Y region).
+- Zombies NEVER carry weapons. Only claws and hands.
+- No enemies come from behind (Y < 0).
+
+----------------------------------------
+ROOM DIMENSIONS
+----------------------------------------
+Room size:
+- Width: 6 meters (X = -3 to +3)
+- Depth: 10 meters (Y = -5 to +5)
+- Height: 2 meters (Z max = 3)
+
+Environment:
+- Dim lighting, broken floor tiles, flickering ceiling light,
+- Visible dust particles in air.
+
+----------------------------------------
+CHARACTER POSITIONS & DIRECTIONS
+----------------------------------------
+
+KENJI
+- Position: (-0.5, -2, 1.7)
+- Facing vector: (0, +1, 0)
+- Behavior: continuous forward gunfire with recoil.
+- Personality: frustrated and panicked.
+
+TAKESHI
+- Position: (+0.5, -2, 1.7)
+- Facing vector: (0, +1, 0)
+- Behavior: fires forward while talking casually.
+- Personality: calm but chaotic.
+
+----------------------------------------
+ZOMBIE LOGIC
+----------------------------------------
+Spawn zone:
+- X: -3 to +3
+- Y: +4 to +10
+- Z: random 1.6 to 1.8 (head height)
+
+Movement:
+- Vector direction: (0, -1, 0) → directly toward characters.
+
+Appearance:
+- Rotting skin, damaged clothing, NO weapons.
+
+----------------------------------------
+CAMERA SETUPS
+----------------------------------------
+
+SCENE 1 — Wide Shot (0.3s)
+- Camera position: (0, -4.5, 1.7)
+- Camera target: midpoint at (0, -2, 1.7)
+- FOV: 35°, handheld shake.
+
+Audio: gunfire, low zombie groans, heartbeat bass.
+
+
+SCENE 2 — Kenji Close-Up (0.8s)
+- Camera: (-1.1, -2.2, 1.7)
+- Target: (-0.5, -2, 1.7)
+- Depth of field: shallow.
+
+Dialogue:
+Kenji: 「あーくそっ！なんでこの部屋こんな狭いんだよ！！」
+
+
+SCENE 3 — Takeshi Close-Up (0.7s)
+- Camera: (1.1, -2.2, 1.6)
+- Target: (0.5, -2, 1.7)
+
+Dialogue:
+Takeshi: 「おいケンジ…まだびりくまっち使ってねぇの？」
+
+
+SCENE 4 — Kenji Reaction (0.6s)
+Same camera as Scene 2.
+
+Zombies approach to at least Y=+1.0.
+
+Dialogue:
+Kenji: 「は？びっくりまっち？！」
+
+
+SCENE 5 — Takeshi Final Line (0.6s)
+- Slight zoom-in:
+Camera: (1.0, -2.0, 1.65)
+Target: (0.5, -2, 1.7)
+
+Dialogue (serious tone):
+Takeshi: 「びりくまっち。」
+
+A zombie grabs Kenji from front (Y > 0.5).
+
+Kenji scream:
+「うわあああ！！！」
+
+
+SCENE 6 — Comedy Freeze (0.3s)
+Static camera at (0, -4.5, 1.7)
+Both still face forward.
+
+Kenji expression: deadpan "bruh 💀"
+
+
+----------------------------------------
+END
+----------------------------------------
