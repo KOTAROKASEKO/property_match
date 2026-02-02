@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/3-shared/common_feature/post_actions_viewmodel.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/view/shimmer_postcard.dart';
 import 'package:re_conver/3-shared/features/2_tenant_feature/2_ai_chat/view/ai_chat_main_layout.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_service.dart';
@@ -16,7 +15,7 @@ import '../model/filter_options.dart';
 import 'discover_filter_panel.dart';
 import 'filter_bottom_sheet.dart';
 import '../../../../core/model/PostModel.dart';
-import 'post_detail_bottomsheet.dart';
+import 'property_detail_screen.dart';
 
 class DiscoverScreen extends StatelessWidget {
   const DiscoverScreen({super.key});
@@ -100,33 +99,13 @@ class _DiscoverViewState extends State<_DiscoverView>
   }
 
   void _showPostDetails(PostModel post) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        return ChangeNotifierProvider<PostActionsViewModel>.value(
-          value: context.read<DiscoverViewModel>(),
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.9,
-            maxChildSize: 0.9,
-            expand: false,
-            builder: (context, scrollController) {
-              return Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                child: PostDetailBottomSheet(
-                  post: post,
-                  onStartChat: _startChat,
-                ),
-              );
-            },
-          ),
-        );
-      },
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PropertyDetailScreen(
+          postId: post.id,
+          post: post,
+        ),
+      ),
     );
   }
 

@@ -1,7 +1,6 @@
 // lib/3-shared/features/2_tenant_feature/1_discover/view/agent_profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:re_conver/3-shared/common_feature/post_actions_viewmodel.dart';
 import 'package:shared_data/shared_data.dart';
 import 'package:template_hive/template_hive.dart';
 import '../../../1_agent_feature/1_profile/model/agent_profile_model.dart';
@@ -13,7 +12,7 @@ import '../viewmodel/public_agent_profile_viewmodel.dart';
 import '../../../reservation/view/reservation_section.dart';
 
 import '../../../../core/model/PostModel.dart';
-import 'post_detail_bottomsheet.dart';
+import 'property_detail_screen.dart';
 
 
 class AgentProfileScreen extends StatelessWidget {
@@ -32,36 +31,13 @@ class AgentProfileScreen extends StatelessWidget {
     PostModel post,
     PublicAgentProfileViewModel viewModel,
   ) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        return ChangeNotifierProvider<PostActionsViewModel>.value(
-          value: viewModel, 
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.9,
-            maxChildSize: 0.9,
-            expand: false,
-            builder: (context, scrollController) {
-              return Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                child: PostDetailBottomSheet(
-                  post: post,
-                  onStartChat: (PostModel postFromSheet) {
-                    _startChat(context, postFromSheet, viewModel);
-                  },
-                ),
-              );
-            },
-          ),
-        );
-      },
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PropertyDetailScreen(
+          postId: post.id,
+          post: post,
+        ),
+      ),
     );
   }
 

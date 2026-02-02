@@ -1,5 +1,5 @@
 // lib/main.dart
-import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/viewmodel/deeplink_viewmodel.dart';
+import 'package:re_conver/3-shared/features/2_tenant_feature/1_discover/view/property_detail_screen.dart';
 import 'package:re_conver/3-shared/features/3_guest_feature/guest_landing_scaffold.dart';
 import 'package:re_conver/3-shared/features/authentication/auth_event_listener.dart';
 import 'package:re_conver/app/language_provider.dart';
@@ -201,7 +201,10 @@ class MyApp extends StatelessWidget {
         if (uri.pathSegments.length == 2 && uri.pathSegments[0] == 'listing') {
           final postId = uri.pathSegments[1];
           return MaterialPageRoute(
-            builder: (context) => DeepLinkPostView(postId: postId),
+            builder: (context) => PropertyDetailScreen(
+              postId: postId,
+              post: null,
+            ),
           );
         }
         return null;
